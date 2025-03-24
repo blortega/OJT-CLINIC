@@ -3,18 +3,19 @@ import { Link, useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
-import boygirl from "../assets/boygirl-removebg.png";
-import aqualogo from "../assets/aqualogo.png";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import ladydoctor from "../assets/lady-doctor.png";
+import doctorpatient from "../assets/doctor-patient-vector.png";
+import loginbg from "../assets/loginbg.png";
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const navigate = useNavigate();
+  const igate = useNavigate();
 
   const handleLogin = async () => {
-    setError(""); // Clear previous errors
     try {
       const userCredential = await signInWithEmailAndPassword(
         auth,
@@ -28,27 +29,30 @@ function Login() {
 
       if (userDoc.exists()) {
         console.log("User details:", userDoc.data());
-        navigate("/user-manage"); // Redirect to dashboard
+        navigate("/dashboard"); // Redirect to dashboard
       } else {
-        setError("User record not found. Please contact support.");
+        toast.error("User record not found. Please contact support.");
       }
     } catch (error) {
-      setError("Invalid email or password.");
+      toast.error("Invalid email or password.");
     }
   };
 
   return (
     <div style={styles.container}>
+      <ToastContainer position="top-right" autoClose={5000} />
       <div style={styles.leftSection}>
-        <img src={aqualogo} alt="AquaRoute Logo" style={styles.logo} />
+        <img src={doctorpatient} alt="Doctor & Patient" style={styles.logo} />
       </div>
 
       <div style={styles.rightSection}>
-        <img src={boygirl} alt="Admin Illustration" style={styles.loginImage} />
-        <h2 style={styles.heading}>Welcome back Admin!</h2>
+        <img
+          src={ladydoctor}
+          alt="Admin Illustration"
+          style={styles.loginImage}
+        />
+        <h2 style={styles.heading}>Welcome Ma'am Amy!</h2>
         <p style={styles.subText}>Login to an Admin account to use the app</p>
-
-        {error && <p style={{ color: "red" }}>{error}</p>}
 
         <div style={styles.inputGroup}>
           <input
@@ -76,7 +80,7 @@ function Login() {
               {showPassword ? "👁️" : "👁️‍🗨️"}
             </span>
           </div>
-          <Link to="/forgot-password" style={styles.forgotPassword}>
+          <Link to="/register" style={styles.forgotPassword}>
             Forgot password?
           </Link>
         </div>
@@ -105,14 +109,16 @@ const styles = {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    background: "linear-gradient(to bottom, #cce4ff, #7bb0ff)",
+    backgroundImage: `url(${loginbg})`,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
     borderTopRightRadius: "40px",
     borderBottomRightRadius: "40px",
     overflow: "hidden",
     position: "relative",
   },
   logo: {
-    width: "250px",
+    width: "750px",
   },
   rightSection: {
     flex: 1,
@@ -124,8 +130,7 @@ const styles = {
     backgroundColor: "#fff",
   },
   loginImage: {
-    width: "200px",
-    marginBottom: "1rem",
+    width: "350px",
   },
   heading: {
     marginBottom: "0.5rem",
@@ -149,11 +154,11 @@ const styles = {
   input: {
     width: "100%",
     padding: "14px",
-    border: "1px solid #000",
-    borderRadius: "4px",
+    border: "1px solid #D9D9D9",
+    borderRadius: "1px",
     fontSize: "16px",
     outline: "none",
-    backgroundColor: "#fff",
+    backgroundColor: "#F7F7F7",
     boxSizing: "border-box",
     color: "#000",
   },
@@ -182,15 +187,16 @@ const styles = {
     backgroundColor: "#2E588F",
     color: "#fff",
     border: "none",
-    padding: "20px",
+    padding: "15px",
     width: "100%",
-    maxWidth: "400px",
-    borderRadius: "30px",
+    maxWidth: "350px",
+    borderRadius: "8px",
     cursor: "pointer",
     fontSize: "18px",
     fontWeight: "bold",
     textAlign: "center",
     marginTop: "10px",
+    transition: "background 0.3s ease-in-out",
   },
   dashboardBtn: {
     backgroundColor: "#007bff",
