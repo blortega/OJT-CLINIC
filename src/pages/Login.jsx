@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-// import { signInWithEmailAndPassword } from "firebase/auth";
-// import { doc, getDoc } from "firebase/firestore";
-// import { auth, db } from "../firebase"; // Ensure this is the correct path
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../firebase";
 import boygirl from "../assets/boygirl-removebg.png";
 import aqualogo from "../assets/aqualogo.png";
 
