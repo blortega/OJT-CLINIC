@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { auth, db } from "../firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 
 const Register = () => {
   const [email, setEmail] = useState("");
@@ -9,6 +10,7 @@ const Register = () => {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   const handleRegister = async () => {
     setError("");
@@ -27,6 +29,8 @@ const Register = () => {
         phone,
         createdAt: new Date(),
       });
+
+      navigate("/");
     } catch (error) {
       setError(error.message);
     }
