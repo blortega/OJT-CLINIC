@@ -13,7 +13,7 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const igate = useNavigate();
+  const navigate = useNavigate();
 
   const handleLogin = async () => {
     try {
@@ -89,7 +89,7 @@ function Login() {
           Login
         </button>
 
-        <Link to="/analytics">
+        <Link to="/dashboard">
           <button style={styles.dashboardBtn}>Go to Dashboard</button>
         </Link>
       </div>
