@@ -84,7 +84,6 @@ const styles = {
     marginBottom: "20px",
   },
   navLinks: {
-    flex: 1,
     display: "flex",
     flexDirection: "column",
     gap: "10px",
@@ -115,6 +114,7 @@ const styles = {
     padding: "10px",
     gap: "10px",
     transition: "background 0.3s ease",
+    marginTop: "550px",
   },
 };
 
