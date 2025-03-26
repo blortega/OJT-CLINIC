@@ -1,12 +1,18 @@
+import { useState } from "react";
 import {
   FiBell,
   FiSettings,
-  FiLogOut,
   FiUsers,
   FiBarChart2,
   FiClipboard,
+  FiChevronUp,
+  FiChevronDown,
+  FiUser,
+  FiLogOut,
 } from "react-icons/fi";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+import { auth } from "../firebase"; // Import Firebase auth
+import { signOut } from "firebase/auth";
 
 const sidebarLinks = [
   { to: "/dashboard", icon: <FiBarChart2 />, label: "Dashboard" },
@@ -17,6 +23,18 @@ const sidebarLinks = [
 ];
 
 const Sidebar = ({ children }) => {
+  const [showDropdown, setShowDropdown] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate("/"); // Redirect to login page after logout
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
   return (
     <div style={styles.container}>
       {/* Sidebar */}
@@ -40,10 +58,49 @@ const Sidebar = ({ children }) => {
           ))}
         </nav>
 
-        {/* Logout Button */}
-        <button style={styles.logoutButton}>
-          <FiLogOut /> Logout
-        </button>
+        {/* User Dropdown */}
+        <div style={styles.userContainer}>
+          <div
+            style={styles.userButton}
+            onClick={() => setShowDropdown(!showDropdown)}
+          >
+            <FiUser style={styles.userIcon} />
+            <div>
+              <span style={styles.userName}>James</span>
+              <p style={styles.userEmail}>james@example.com</p>
+            </div>
+            {showDropdown ? <FiChevronUp /> : <FiChevronDown />}
+          </div>
+
+          {showDropdown && (
+            <div style={styles.dropdown}>
+              <button
+                style={styles.dropdownItem}
+                onClick={() => navigate("/account")}
+                onMouseEnter={(e) =>
+                  (e.target.style.background = "rgba(255, 255, 255, 0.2)")
+                }
+                onMouseLeave={(e) =>
+                  (e.target.style.background = "transparent")
+                }
+              >
+                <FiUser /> Account Settings
+              </button>
+              <button
+                style={styles.dropdownItem}
+                onClick={handleLogout}
+                onMouseEnter={(e) =>
+                  (e.target.style.background = "rgba(255, 255, 255, 0.2)")
+                }
+                onMouseLeave={(e) =>
+                  (e.target.style.background = "transparent")
+                }
+              >
+                <FiLogOut /> Sign Out
+              </button>
+            </div>
+          )}
+        </div>
       </aside>
 
       {/* Main Content */}
@@ -103,18 +160,64 @@ const styles = {
     color: "white",
     fontWeight: "bold",
   },
-  logoutButton: {
+  userContainer: {
+    position: "relative",
+    marginTop: "530px",
+    padding: "10px",
+    borderTop: "1px solid #ddd",
+  },
+  userButton: {
     display: "flex",
     alignItems: "center",
+    width: "100%",
+    padding: "10px",
     background: "none",
     border: "none",
-    color: "#333",
-    fontSize: "1rem",
     cursor: "pointer",
-    padding: "10px",
-    gap: "10px",
+    fontSize: "1rem",
+    color: "#333",
     transition: "background 0.3s ease",
-    marginTop: "550px",
+    gap: "10px",
+  },
+  userIcon: {
+    fontSize: "1.5rem",
+    color: "#2d97e9",
+  },
+  userName: {
+    fontSize: "1rem",
+    fontWeight: "bold",
+    color: "#333",
+  },
+  userEmail: {
+    fontSize: "0.8rem",
+    color: "#666",
+    margin: "0",
+  },
+  dropdown: {
+    position: "absolute",
+    bottom: "100%",
+    left: 0,
+    background: "#2d5b89", // Use the same blue color
+    boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)",
+    borderRadius: "10px", // Make the dropdown a single rounded container
+    padding: "0",
+    width: "100%",
+    zIndex: 10,
+    overflow: "hidden", // Ensures rounded borders apply to child elements
+  },
+  dropdownItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    background: "none",
+    color: "white", // White text for contrast
+    border: "none",
+    padding: "12px",
+    width: "100%",
+    cursor: "pointer",
+    textAlign: "left",
+    fontSize: "1rem",
+    transition: "background 0.3s ease",
   },
 };
 
