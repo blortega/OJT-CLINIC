@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   FiBell,
   FiSettings,
@@ -11,7 +11,7 @@ import {
   FiLogOut,
 } from "react-icons/fi";
 import { NavLink, useNavigate } from "react-router-dom";
-import { auth } from "../firebase"; // Import Firebase auth
+import { auth } from "../firebase";
 import { signOut } from "firebase/auth";
 
 const sidebarLinks = [
@@ -24,12 +24,26 @@ const sidebarLinks = [
 
 const Sidebar = ({ children }) => {
   const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      navigate("/"); // Redirect to login page after logout
+      navigate("/");
     } catch (error) {
       console.error("Logout error:", error);
     }
@@ -37,11 +51,9 @@ const Sidebar = ({ children }) => {
 
   return (
     <div style={styles.container}>
-      {/* Sidebar */}
       <aside style={styles.sidebar}>
         <h1 style={styles.logoText}>Innodata Clinic</h1>
 
-        {/* Navigation Links */}
         <nav style={styles.navLinks}>
           {sidebarLinks.map(({ to, icon, label }) => (
             <NavLink
@@ -58,8 +70,7 @@ const Sidebar = ({ children }) => {
           ))}
         </nav>
 
-        {/* User Dropdown */}
-        <div style={styles.userContainer}>
+        <div style={styles.userContainer} ref={dropdownRef}>
           <div
             style={styles.userButton}
             onClick={() => setShowDropdown(!showDropdown)}
@@ -72,38 +83,43 @@ const Sidebar = ({ children }) => {
             {showDropdown ? <FiChevronUp /> : <FiChevronDown />}
           </div>
 
-          {showDropdown && (
-            <div style={styles.dropdown}>
-              <button
-                style={styles.dropdownItem}
-                onClick={() => navigate("/account")}
-                onMouseEnter={(e) =>
-                  (e.target.style.background = "rgba(255, 255, 255, 0.2)")
-                }
-                onMouseLeave={(e) =>
-                  (e.target.style.background = "transparent")
-                }
-              >
-                <FiUser /> Account Settings
-              </button>
-              <button
-                style={styles.dropdownItem}
-                onClick={handleLogout}
-                onMouseEnter={(e) =>
-                  (e.target.style.background = "rgba(255, 255, 255, 0.2)")
-                }
-                onMouseLeave={(e) =>
-                  (e.target.style.background = "transparent")
-                }
-              >
-                <FiLogOut /> Sign Out
-              </button>
-            </div>
-          )}
+          <div
+            style={{
+              ...styles.dropdown,
+              maxHeight: showDropdown ? "200px" : "0",
+              opacity: showDropdown ? 1 : 0,
+            }}
+          >
+            <button
+              style={styles.dropdownItem}
+              onClick={() => navigate("/account")}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor =
+                  styles.dropdownItemHover.backgroundColor)
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = "transparent")
+              }
+            >
+              <FiUser /> Account Settings
+            </button>
+            <button
+              style={styles.dropdownItem}
+              onClick={handleLogout}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor =
+                  styles.dropdownItemHover.backgroundColor)
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = "transparent")
+              }
+            >
+              <FiLogOut /> Sign Out
+            </button>
+          </div>
         </div>
       </aside>
 
-      {/* Main Content */}
       <main style={styles.contentWrapper}>{children}</main>
     </div>
   );
@@ -197,20 +213,21 @@ const styles = {
     position: "absolute",
     bottom: "100%",
     left: 0,
-    background: "#2d5b89", // Use the same blue color
+    background: "#2d5b89",
     boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)",
-    borderRadius: "10px", // Make the dropdown a single rounded container
+    borderRadius: "10px",
     padding: "0",
     width: "100%",
     zIndex: 10,
-    overflow: "hidden", // Ensures rounded borders apply to child elements
+    overflow: "hidden",
+    transition: "max-height 0.3s ease-out, opacity 0.3s ease-out",
   },
   dropdownItem: {
     display: "flex",
     alignItems: "center",
     gap: "10px",
     background: "none",
-    color: "white", // White text for contrast
+    color: "white",
     border: "none",
     padding: "12px",
     width: "100%",
@@ -218,6 +235,9 @@ const styles = {
     textAlign: "left",
     fontSize: "1rem",
     transition: "background 0.3s ease",
+  },
+  dropdownItemHover: {
+    backgroundColor: "#1c3f60",
   },
 };
 
