@@ -5,8 +5,10 @@ const ManageUser = () => {
   return (
     <Sidebar>
       <div style={styles.container}>
-        <h1>Manage User Page</h1>
-        <p>This is a test page to check if navigation is working properly.</p>
+        <h1 style={styles.text}>Manage User Page</h1>
+        <p style={styles.text}>
+          This is a test page to check if navigation is working properly.
+        </p>
       </div>
     </Sidebar>
   );
@@ -16,6 +18,9 @@ const styles = {
   container: {
     padding: "20px",
     textAlign: "center",
+  },
+  text: {
+    color: "black",
   },
 };
 
