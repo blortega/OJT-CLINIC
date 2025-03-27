@@ -62,7 +62,7 @@ const Sidebar = ({ children }) => {
           style={styles.toggleButton}
           onClick={() => setIsCollapsed(!isCollapsed)}
         >
-          <FiMenu size={24} />
+          <FiMenu size={24} style={{ color: "#000" }} />
         </button>
 
         {!isCollapsed && <h1 style={styles.logoText}>Innodata Clinic</h1>}
@@ -97,7 +97,11 @@ const Sidebar = ({ children }) => {
               </div>
             )}
             {!isCollapsed &&
-              (showDropdown ? <FiChevronUp /> : <FiChevronDown />)}
+              (showDropdown ? (
+                <FiChevronUp style={{ color: "#333" }} /> // Change color to visible one
+              ) : (
+                <FiChevronDown style={{ color: "#333" }} />
+              ))}
           </div>
 
           {/* Dropdown Items */}

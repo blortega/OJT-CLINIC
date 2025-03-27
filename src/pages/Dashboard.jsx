@@ -22,7 +22,6 @@ const Dashboard = () => {
   const [topConditions, setTopConditions] = useState([]);
 
   useEffect(() => {
-    // Simulate gender distribution updates every 5 seconds
     const interval = setInterval(() => {
       const malePercentage = Math.floor(Math.random() * 100);
       const femalePercentage = 100 - malePercentage;
@@ -38,7 +37,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchConditions = async () => {
       try {
-        const usersSnapshot = await getDocs(collection(db, "users")); // Adjust collection name if needed
+        const usersSnapshot = await getDocs(collection(db, "users"));
         let conditionCounts = {};
 
         usersSnapshot.forEach((doc) => {
@@ -48,7 +47,6 @@ const Dashboard = () => {
           });
         });
 
-        // Convert to array, sort by occurrences, and get top 5
         const sortedConditions = Object.entries(conditionCounts)
           .map(([name, value]) => ({ name, value }))
           .sort((a, b) => b.value - a.value)
@@ -66,13 +64,14 @@ const Dashboard = () => {
   return (
     <Sidebar>
       <div style={styles.container}>
-        <h1>Dashboard</h1>
-        <p>This is a test page to check if navigation is working properly.</p>
+        <h1 style={styles.text}>Dashboard</h1>
+        <p style={styles.text}>
+          This is a test page to check if navigation is working properly.
+        </p>
 
         <div style={styles.chartWrapper}>
-          {/* Gender Pie Chart */}
           <div style={styles.chartContainer}>
-            <h2>Gender Distribution</h2>
+            <h2 style={styles.text}>Gender Distribution</h2>
             <PieChart width={300} height={300}>
               <Pie
                 data={genderData}
@@ -94,9 +93,8 @@ const Dashboard = () => {
             </PieChart>
           </div>
 
-          {/* Top 5 Conditions Pie Chart */}
           <div style={styles.chartContainer}>
-            <h2>Top 5 Conditions</h2>
+            <h2 style={styles.text}>Top 5 Conditions</h2>
             <PieChart width={300} height={300}>
               <Pie
                 data={topConditions}
@@ -127,20 +125,23 @@ const styles = {
   container: {
     padding: "20px",
     textAlign: "center",
-    maxWidth: "100%", // Prevents content from exceeding screen width
-    overflowX: "hidden", // Removes unwanted horizontal scroll
+    maxWidth: "100%",
+    overflowX: "hidden",
   },
   chartWrapper: {
     display: "flex",
-    flexWrap: "wrap", // Ensures charts wrap instead of causing horizontal overflow
-    justifyContent: "center", // Centers the charts and prevents them from going off-screen
+    flexWrap: "wrap",
+    justifyContent: "center",
     alignItems: "center",
-    gap: "20px", // Adds spacing between charts
+    gap: "20px",
     width: "100%",
   },
   chartContainer: {
     maxWidth: "100%",
-    minWidth: "320px", // Ensures proper spacing on small screens
+    minWidth: "320px",
+  },
+  text: {
+    color: "black",
   },
 };
 
