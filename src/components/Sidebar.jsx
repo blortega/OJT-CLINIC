@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import {
+  FiMenu,
   FiBell,
   FiSettings,
   FiUsers,
@@ -23,6 +24,7 @@ const sidebarLinks = [
 ];
 
 const Sidebar = ({ children }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
@@ -51,8 +53,19 @@ const Sidebar = ({ children }) => {
 
   return (
     <div style={styles.container}>
-      <aside style={styles.sidebar}>
-        <h1 style={styles.logoText}>Innodata Clinic</h1>
+      {/* Sidebar */}
+      <aside
+        style={{ ...styles.sidebar, width: isCollapsed ? "60px" : "250px" }}
+      >
+        {/* Toggle Button */}
+        <button
+          style={styles.toggleButton}
+          onClick={() => setIsCollapsed(!isCollapsed)}
+        >
+          <FiMenu size={24} />
+        </button>
+
+        {!isCollapsed && <h1 style={styles.logoText}>Innodata Clinic</h1>}
 
         <nav style={styles.navLinks}>
           {sidebarLinks.map(({ to, icon, label }) => (
@@ -65,24 +78,29 @@ const Sidebar = ({ children }) => {
                   : styles.sidebarLink
               }
             >
-              {icon} {label}
+              {icon} {!isCollapsed && label}
             </NavLink>
           ))}
         </nav>
 
+        {/* User Dropdown */}
         <div style={styles.userContainer} ref={dropdownRef}>
           <div
             style={styles.userButton}
             onClick={() => setShowDropdown(!showDropdown)}
           >
             <FiUser style={styles.userIcon} />
-            <div>
-              <span style={styles.userName}>James</span>
-              <p style={styles.userEmail}>james@example.com</p>
-            </div>
-            {showDropdown ? <FiChevronUp /> : <FiChevronDown />}
+            {!isCollapsed && (
+              <div>
+                <span style={styles.userName}>James</span>
+                <p style={styles.userEmail}>james@example.com</p>
+              </div>
+            )}
+            {!isCollapsed &&
+              (showDropdown ? <FiChevronUp /> : <FiChevronDown />)}
           </div>
 
+          {/* Dropdown Items */}
           <div
             style={{
               ...styles.dropdown,
@@ -93,34 +111,25 @@ const Sidebar = ({ children }) => {
             <button
               style={styles.dropdownItem}
               onClick={() => navigate("/account")}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor =
-                  styles.dropdownItemHover.backgroundColor)
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.backgroundColor = "transparent")
-              }
             >
               <FiUser /> Account Settings
             </button>
-            <button
-              style={styles.dropdownItem}
-              onClick={handleLogout}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor =
-                  styles.dropdownItemHover.backgroundColor)
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.backgroundColor = "transparent")
-              }
-            >
+            <button style={styles.dropdownItem} onClick={handleLogout}>
               <FiLogOut /> Sign Out
             </button>
           </div>
         </div>
       </aside>
 
-      <main style={styles.contentWrapper}>{children}</main>
+      {/* Main Content */}
+      <main
+        style={{
+          ...styles.contentWrapper,
+          marginLeft: isCollapsed ? "60px" : "250px",
+        }}
+      >
+        {children}
+      </main>
     </div>
   );
 };
@@ -133,28 +142,36 @@ const styles = {
     background: "#f5f6fa",
   },
   sidebar: {
-    width: "250px",
     height: "100vh",
     backgroundColor: "white",
     boxShadow: "2px 0 5px rgba(0, 0, 0, 0.1)",
     display: "flex",
     flexDirection: "column",
-    padding: "20px",
+    padding: "10px",
     position: "fixed",
     left: 0,
     top: 0,
     overflowY: "auto",
+    transition: "width 0.3s ease-in-out",
   },
   contentWrapper: {
-    marginLeft: "250px",
     flexGrow: 1,
     padding: "20px",
+    transition: "margin-left 0.3s ease-in-out",
+  },
+  toggleButton: {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    padding: "10px",
+    alignSelf: "flex-start",
   },
   logoText: {
     fontSize: "1.2rem",
     fontWeight: "bold",
     color: "#2d97e9",
     marginBottom: "20px",
+    textAlign: "center",
   },
   navLinks: {
     display: "flex",
@@ -170,6 +187,7 @@ const styles = {
     borderRadius: "5px",
     transition: "background 0.3s ease",
     gap: "10px",
+    fontSize: "1rem",
   },
   activeLink: {
     backgroundColor: "#2d97e9",
@@ -177,8 +195,9 @@ const styles = {
     fontWeight: "bold",
   },
   userContainer: {
-    position: "relative",
-    marginTop: "530px",
+    position: "absolute",
+    bottom: "20px",
+    width: "100%",
     padding: "10px",
     borderTop: "1px solid #ddd",
   },
@@ -235,9 +254,6 @@ const styles = {
     textAlign: "left",
     fontSize: "1rem",
     transition: "background 0.3s ease",
-  },
-  dropdownItemHover: {
-    backgroundColor: "#1c3f60",
   },
 };
 
