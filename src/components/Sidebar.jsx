@@ -65,8 +65,6 @@ const Sidebar = ({ children }) => {
           <FiMenu size={24} style={{ color: "#000" }} />
         </button>
 
-        {!isCollapsed && <h1 style={styles.logoText}>Innodata Clinic</h1>}
-
         <nav style={styles.navLinks}>
           {sidebarLinks.map(({ to, icon, label }) => (
             <NavLink
