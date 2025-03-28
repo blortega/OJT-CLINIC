@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
-import { app } from "../firebase"; // Assuming you have a firebase.js file that exports the initialized Firebase app
+import { app } from "../firebase";
+import { FiPlus } from "react-icons/fi";
 
 const ManageUser = () => {
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   // Fetch users from Firestore
   useEffect(() => {
@@ -33,7 +35,7 @@ const ManageUser = () => {
   const filterUsers = (user) => {
     const searchLower = search.toLowerCase();
     const fieldsToSearch = [
-      user.name || "Not Available", // Use "Not Available" as default if the field is empty
+      user.name || "Not Available",
       user.email || "Not Available",
       user.role || "Not Available",
     ];
@@ -51,18 +53,31 @@ const ManageUser = () => {
           This is a test page to check if navigation is working properly.
         </p>
 
-        {/* Search Bar */}
-        <input
-          style={styles.searchBar}
-          type="text"
-          placeholder="Search by Name, Email, or Role"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        {/* Search and Add User Button Container */}
+        <div style={styles.searchContainer}>
+          <input
+            style={styles.searchBar}
+            type="text"
+            placeholder="Search by Name, Email, or Role"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <button
+            style={{
+              ...styles.addUserButton,
+              backgroundColor: isHovered ? "#162d5e" : "#1e3a8a",
+            }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
+            <FiPlus style={styles.addIcon} />
+            Add Patient
+          </button>
+        </div>
 
         <div style={styles.card}>
           {loading ? (
-            <div>Loading...</div> // Replace this with a Spinner component if you have one
+            <div>Loading...</div>
           ) : (
             <table style={styles.table}>
               <thead>
@@ -73,27 +88,27 @@ const ManageUser = () => {
                 </tr>
               </thead>
               <tbody>
-                {users
-                  .filter(filterUsers) // Filter based on the search term
-                  .map((user, index) => (
-                    <tr
-                      key={index}
-                      style={{
-                        ...(index % 2 === 0 ? styles.evenRow : styles.oddRow),
-                        ...styles.tableRow, // Apply hover effect here
-                      }}
-                    >
-                      <td style={styles.tableCell}>
-                        {user.name || "Not Available"}
-                      </td>
-                      <td style={styles.tableCell}>
-                        {user.email || "Not Available"}
-                      </td>
-                      <td style={styles.tableCell}>
-                        {user.role || "Not Available"}
-                      </td>
-                    </tr>
-                  ))}
+                {users.filter(filterUsers).map((user) => (
+                  <tr
+                    key={user.id}
+                    style={{
+                      ...(users.indexOf(user) % 2 === 0
+                        ? styles.evenRow
+                        : styles.oddRow),
+                      ...styles.tableRow,
+                    }}
+                  >
+                    <td style={styles.tableCell}>
+                      {user.name || "Not Available"}
+                    </td>
+                    <td style={styles.tableCell}>
+                      {user.email || "Not Available"}
+                    </td>
+                    <td style={styles.tableCell}>
+                      {user.role || "Not Available"}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           )}
@@ -118,14 +133,36 @@ const styles = {
     color: "#555",
     marginBottom: "30px",
   },
+  searchContainer: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "80%",
+    margin: "0 auto 15px auto",
+  },
+
   searchBar: {
-    width: "50%", // Adjusted from full width to 50% for better balance
-    minWidth: "250px", // Ensures it doesn't shrink too much on small screens
+    width: "250px",
     padding: "8px",
-    margin: "10px auto", // Centers it properly
-    display: "block",
     borderRadius: "6px",
     border: "1px solid #ccc",
+  },
+  addUserButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "10px 16px",
+    backgroundColor: "#1e3a8a",
+    color: "#fff",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    transition: "background 0.3s",
+    fontSize: "16px",
+    fontWeight: "bold",
+  },
+  addIcon: {
+    fontSize: "20px",
   },
   card: {
     width: "80%",
@@ -147,7 +184,6 @@ const styles = {
     color: "#fff",
     borderBottom: "2px solid #ddd",
   },
-  tableRow: { transition: "background 0.2s" },
   tableCell: {
     padding: "12px",
     borderBottom: "1px solid #ccc",
@@ -160,8 +196,8 @@ const styles = {
     backgroundColor: "#ffffff",
   },
   tableRow: {
-    cursor: "pointer", // Change the cursor to indicate hover
-    transition: "background-color 0.3s ease", // Smooth transition for background color
+    cursor: "pointer",
+    transition: "background-color 0.3s ease, background 0.2s",
   },
 };
 
