@@ -45,8 +45,12 @@ const ManageUser = () => {
     );
   };
 
-  const handleAddUser = () => {
-    toast.success("User added successfully!");
+  const handleAddUser = (role) => {
+    if (role === "patient") {
+      toast.success("Patient added successfully!");
+    } else if (role === "admin") {
+      toast.success("Admin added successfully!");
+    }
   };
 
   const handleEdit = (user) => {
@@ -78,18 +82,32 @@ const ManageUser = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <button
-            style={{
-              ...styles.addUserButton,
-              backgroundColor: isHovered ? "#162d5e" : "#1e3a8a",
-            }}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            onClick={handleAddUser}
-          >
-            <FiPlus style={styles.addIcon} />
-            Add Patient
-          </button>
+          <div style={styles.buttonContainer}>
+            <button
+              style={{
+                ...styles.addUserButton,
+                backgroundColor: isHovered ? "#162d5e" : "#1e3a8a",
+              }}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              onClick={() => handleAddUser("admin")}
+            >
+              <FiPlus style={styles.addIcon} />
+              Add Admin
+            </button>
+            <button
+              style={{
+                ...styles.addUserButton,
+                backgroundColor: isHovered ? "#162d5e" : "#1e3a8a",
+              }}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              onClick={() => handleAddUser("patient")}
+            >
+              <FiPlus style={styles.addIcon} />
+              Add Patient
+            </button>
+          </div>
         </div>
 
         <div style={styles.card}>
@@ -197,6 +215,10 @@ const styles = {
     backgroundColor: "#fff",
     color: "#000",
   },
+  buttonContainer: {
+    display: "flex",
+    gap: "10px", // Add gap between buttons
+  },
   addUserButton: {
     display: "flex",
     alignItems: "center",
@@ -243,7 +265,6 @@ const styles = {
   actionCell: {
     display: "flex",
     justifyContent: "center",
-    // gap: "2px",
     padding: "6px",
     borderBottom: "1px solid #ccc",
   },
