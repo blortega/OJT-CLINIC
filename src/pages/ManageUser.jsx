@@ -146,6 +146,7 @@ const styles = {
     padding: "8px",
     borderRadius: "6px",
     border: "1px solid #ccc",
+    backgroundColor: "#fff",
   },
   addUserButton: {
     display: "flex",
@@ -188,6 +189,7 @@ const styles = {
     padding: "12px",
     borderBottom: "1px solid #ccc",
     borderRight: "1px solid #ddd",
+    color: "#000",
   },
   evenRow: {
     backgroundColor: "#f9f9f9",
