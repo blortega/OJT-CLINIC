@@ -3,23 +3,22 @@ import Sidebar from "../components/Sidebar";
 import { getFirestore, collection, getDocs, getDoc } from "firebase/firestore";
 import { app } from "../firebase";
 
-
 const Inventory = () => {
   const [medicines, setMedicines] = useState([]);
 
   useEffect(() => {
     const fetchMedicines = async () => {
       try {
-        const db = getFirestore (app);
+        const db = getFirestore(app);
         const medicineCollection = collection(db, "medicine");
         const snapshot = await getDocs(medicineCollection);
         const medicineLists = snapshot.docs.map((doc) => doc.data());
         setMedicines(medicineLists);
       } catch (error) {
-        console.error ("Failed to fetch Medicines: ", error)
+        console.error("Failed to fetch Medicines: ", error);
       }
     };
-  
+
     fetchMedicines();
   }, []);
 
@@ -27,9 +26,7 @@ const Inventory = () => {
     <Sidebar>
       <div style={styles.container}>
         <h1 style={styles.text}>Inventory Page</h1>
-        <p style={styles.text}>
-          LEBRON LEBRON LEBRON JAMES - Glorious King
-        </p>
+        <p style={styles.text}>LEBRON LEBRON LEBRON JAMES - Glorious King</p>
         <div style={styles.card}>
           <table style={styles.table}>
             <thead>
@@ -49,7 +46,7 @@ const Inventory = () => {
                   <td style={styles.tdata}>{medicine.type}</td>
                 </tr>
               ))}
-            </tbody> 
+            </tbody>
           </table>
         </div>
       </div>
@@ -93,7 +90,7 @@ const styles = {
     borderBottom: "1px solid #ccc",
     borderRight: "1px solid #ddd",
     color: "#000",
-  }
+  },
 };
 
 export default Inventory;
