@@ -37,6 +37,7 @@ const ManageUser = () => {
       user.name || "Not Available",
       user.email || "Not Available",
       user.role || "Not Available",
+      user.department || "Not Available",
     ];
 
     return fieldsToSearch.some((field) =>
@@ -69,7 +70,7 @@ const ManageUser = () => {
           <input
             style={styles.searchBar}
             type="text"
-            placeholder="Search by Name, Email, or Role"
+            placeholder="Search by Name, Email, Role, or Department"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -94,9 +95,12 @@ const ManageUser = () => {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={{ ...styles.tableHead, width: "275px" }}>Name</th>
-                  <th style={{ ...styles.tableHead, width: "150px" }}>Email</th>
-                  <th style={{ ...styles.tableHead, width: "70px" }}>Role</th>
+                  <th style={{ ...styles.tableHead, width: "200px" }}>Name</th>
+                  <th style={{ ...styles.tableHead, width: "180px" }}>Email</th>
+                  <th style={{ ...styles.tableHead, width: "100px" }}>Role</th>
+                  <th style={{ ...styles.tableHead, width: "150px" }}>
+                    Department
+                  </th>
                   <th style={{ ...styles.tableHead, width: "100px" }}>
                     Actions
                   </th>
@@ -121,6 +125,9 @@ const ManageUser = () => {
                     </td>
                     <td style={styles.tableCell}>
                       {user.role || "Not Available"}
+                    </td>
+                    <td style={styles.tableCell}>
+                      {user.department || "Not Available"}
                     </td>
                     <td style={styles.tableCell}>
                       <button
