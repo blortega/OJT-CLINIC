@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
 import { app } from "../firebase";
-import { FiPlus, FiEdit, FiTrash } from "react-icons/fi";
+import { FiPlus, FiEdit, FiTrash, FiUserX } from "react-icons/fi";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -37,6 +37,7 @@ const ManageUser = () => {
       user.name || "Not Available",
       user.email || "Not Available",
       user.role || "Not Available",
+      user.department || "Not Available",
     ];
 
     return fieldsToSearch.some((field) =>
@@ -56,6 +57,10 @@ const ManageUser = () => {
     toast.error(`Deleted user: ${user.name || "Unknown"}`);
   };
 
+  const handleSuspend = (user) => {
+    toast.warn(`Suspended user: ${user.name || "Unknown"}`);
+  };
+
   return (
     <Sidebar>
       <ToastContainer position="top-right" autoClose={2000} />
@@ -69,7 +74,7 @@ const ManageUser = () => {
           <input
             style={styles.searchBar}
             type="text"
-            placeholder="Search by Name, Email, or Role"
+            placeholder="Search by Name, Email, Role, or Department"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -94,10 +99,13 @@ const ManageUser = () => {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={{ ...styles.tableHead, width: "275px" }}>Name</th>
-                  <th style={{ ...styles.tableHead, width: "150px" }}>Email</th>
-                  <th style={{ ...styles.tableHead, width: "70px" }}>Role</th>
-                  <th style={{ ...styles.tableHead, width: "100px" }}>
+                  <th style={{ ...styles.tableHead, width: "200px" }}>Name</th>
+                  <th style={{ ...styles.tableHead, width: "180px" }}>Email</th>
+                  <th style={{ ...styles.tableHead, width: "100px" }}>Role</th>
+                  <th style={{ ...styles.tableHead, width: "150px" }}>
+                    Department
+                  </th>
+                  <th style={{ ...styles.tableHead, width: "120px" }}>
                     Actions
                   </th>
                 </tr>
@@ -123,15 +131,27 @@ const ManageUser = () => {
                       {user.role || "Not Available"}
                     </td>
                     <td style={styles.tableCell}>
+                      {user.department || "Not Available"}
+                    </td>
+                    <td style={styles.actionCell}>
                       <button
                         style={styles.iconButton}
                         onClick={() => handleEdit(user)}
+                        title="Edit"
                       >
                         <FiEdit />
                       </button>
                       <button
                         style={styles.iconButton}
+                        onClick={() => handleSuspend(user)}
+                        title="Suspend"
+                      >
+                        <FiUserX />
+                      </button>
+                      <button
+                        style={styles.iconButton}
                         onClick={() => handleDelete(user)}
+                        title="Delete"
                       >
                         <FiTrash />
                       </button>
@@ -170,7 +190,7 @@ const styles = {
     margin: "0 auto 15px auto",
   },
   searchBar: {
-    width: "250px",
+    width: "22%",
     padding: "8px",
     borderRadius: "6px",
     border: "1px solid #ccc",
@@ -217,9 +237,15 @@ const styles = {
   tableCell: {
     padding: "6px",
     borderBottom: "1px solid #ccc",
-    borderRight: "1px solid #ddd",
-    color: "#000",
     textAlign: "center",
+    color: "#000",
+  },
+  actionCell: {
+    display: "flex",
+    justifyContent: "center",
+    // gap: "2px",
+    padding: "6px",
+    borderBottom: "1px solid #ccc",
   },
   evenRow: {
     backgroundColor: "#f9f9f9",
@@ -228,13 +254,12 @@ const styles = {
     backgroundColor: "#ffffff",
   },
   tableRow: {
-    transition: "background-color 0.3s ease, background 0.2s",
+    transition: "background-color 0.3s ease",
   },
   iconButton: {
     background: "none",
     border: "none",
     cursor: "pointer",
-    margin: "0 5px",
     fontSize: "18px",
     color: "#1e3a8a",
   },
