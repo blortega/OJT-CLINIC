@@ -2,7 +2,9 @@ import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
 import { app } from "../firebase";
-import { FiPlus } from "react-icons/fi";
+import { FiPlus, FiEdit, FiTrash } from "react-icons/fi";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const ManageUser = () => {
   const [users, setUsers] = useState([]);
@@ -10,18 +12,16 @@ const ManageUser = () => {
   const [loading, setLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
-  // Fetch users from Firestore
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const db = getFirestore(app); // Get Firestore instance
-        const usersCollection = collection(db, "users"); // Access the 'users' collection
-        const snapshot = await getDocs(usersCollection); // Get all documents from the collection
-        const usersList = snapshot.docs.map((doc) => doc.data()); // Map the documents to an array
+        const db = getFirestore(app);
+        const usersCollection = collection(db, "users");
+        const snapshot = await getDocs(usersCollection);
+        const usersList = snapshot.docs.map((doc) => doc.data());
         setUsers(usersList);
       } catch (error) {
-        // No toast notification, just a console log or other method if needed
         console.error("Failed to fetch users:", error);
       } finally {
         setLoading(false);
@@ -31,7 +31,6 @@ const ManageUser = () => {
     fetchUsers();
   }, []);
 
-  // Function to check if the search term matches any of the fields, including "Not Available"
   const filterUsers = (user) => {
     const searchLower = search.toLowerCase();
     const fieldsToSearch = [
@@ -45,15 +44,27 @@ const ManageUser = () => {
     );
   };
 
+  const handleAddUser = () => {
+    toast.success("User added successfully!");
+  };
+
+  const handleEdit = (user) => {
+    toast.info(`Editing user: ${user.name || "Unknown"}`);
+  };
+
+  const handleDelete = (user) => {
+    toast.error(`Deleted user: ${user.name || "Unknown"}`);
+  };
+
   return (
     <Sidebar>
+      <ToastContainer position="top-right" autoClose={2000} />
       <div style={styles.container}>
         <h1 style={styles.heading}>Manage User Page</h1>
         <p style={styles.subheading}>
           This is a test page to check if navigation is working properly.
         </p>
 
-        {/* Search and Add User Button Container */}
         <div style={styles.searchContainer}>
           <input
             style={styles.searchBar}
@@ -69,6 +80,7 @@ const ManageUser = () => {
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
+            onClick={handleAddUser}
           >
             <FiPlus style={styles.addIcon} />
             Add Patient
@@ -82,9 +94,12 @@ const ManageUser = () => {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={styles.tableHead}>Name</th>
-                  <th style={styles.tableHead}>Email</th>
-                  <th style={styles.tableHead}>Role</th>
+                  <th style={{ ...styles.tableHead, width: "275px" }}>Name</th>
+                  <th style={{ ...styles.tableHead, width: "150px" }}>Email</th>
+                  <th style={{ ...styles.tableHead, width: "70px" }}>Role</th>
+                  <th style={{ ...styles.tableHead, width: "100px" }}>
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -106,6 +121,20 @@ const ManageUser = () => {
                     </td>
                     <td style={styles.tableCell}>
                       {user.role || "Not Available"}
+                    </td>
+                    <td style={styles.tableCell}>
+                      <button
+                        style={styles.iconButton}
+                        onClick={() => handleEdit(user)}
+                      >
+                        <FiEdit />
+                      </button>
+                      <button
+                        style={styles.iconButton}
+                        onClick={() => handleDelete(user)}
+                      >
+                        <FiTrash />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -176,7 +205,6 @@ const styles = {
   table: {
     width: "100%",
     borderCollapse: "collapse",
-    textAlign: "left",
     background: "#fff",
   },
   tableHead: {
@@ -184,12 +212,14 @@ const styles = {
     background: "#1e3a8a",
     color: "#fff",
     borderBottom: "2px solid #ddd",
+    textAlign: "center",
   },
   tableCell: {
-    padding: "12px",
+    padding: "6px",
     borderBottom: "1px solid #ccc",
     borderRight: "1px solid #ddd",
     color: "#000",
+    textAlign: "center",
   },
   evenRow: {
     backgroundColor: "#f9f9f9",
@@ -198,8 +228,15 @@ const styles = {
     backgroundColor: "#ffffff",
   },
   tableRow: {
-    cursor: "pointer",
     transition: "background-color 0.3s ease, background 0.2s",
+  },
+  iconButton: {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    margin: "0 5px",
+    fontSize: "18px",
+    color: "#1e3a8a",
   },
 };
 
