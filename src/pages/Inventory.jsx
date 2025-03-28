@@ -1,7 +1,28 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
+import { getFirestore, collection, getDocs, getDoc } from "firebase/firestore";
+import { app } from "../firebase";
+
 
 const Inventory = () => {
+  const [medicines, setMedicines] = useState([]);
+
+  useEffect(() => {
+    const fetchMedicines = async () => {
+      try {
+        const db = getFirestore (app);
+        const medicineCollection = collection(db, "medicine");
+        const snapshot = await getDocs(medicineCollection);
+        const medicineLists = snapshot.docs.map((doc) => doc.data());
+        setMedicines(medicineLists);
+      } catch (error) {
+        console.error ("Failed to fetch Medicines: ", error)
+      }
+    };
+  
+    fetchMedicines();
+  }, []);
+
   return (
     <Sidebar>
       <div style={styles.container}>
@@ -12,18 +33,22 @@ const Inventory = () => {
         <div style={styles.card}>
           <table style={styles.table}>
             <thead>
-            <tr>
-              <th style={styles.thead}>Medicine</th>
-              <th style={styles.thead}>Category</th>
-              <th style={styles.thead}>Stocks</th>
-            </tr>
+              <tr>
+                <th style={styles.thead}>Medicine</th>
+                <th style={styles.thead}>Dosage</th>
+                <th style={styles.thead}>Stocks</th>
+                <th style={styles.thead}>Type</th>
+              </tr>
             </thead>
             <tbody>
-            <tr>
-              <td style={styles.tdata}>Biogesic</td>
-              <td style={styles.tdata}>Paracetamol</td>
-              <td style={styles.tdata}>100</td>
-            </tr>
+              {medicines.map((medicine, index) => (
+                <tr key={index}>
+                  <td style={styles.tdata}>{medicine.name}</td>
+                  <td style={styles.tdata}>{medicine.dosage}</td>
+                  <td style={styles.tdata}>{medicine.stock}</td>
+                  <td style={styles.tdata}>{medicine.type}</td>
+                </tr>
+              ))}
             </tbody> 
           </table>
         </div>

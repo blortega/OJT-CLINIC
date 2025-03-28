@@ -17,6 +17,9 @@ const styles = {
     padding: "20px",
     textAlign: "center",
   },
+  text:{
+    color: 'black',
+  }
 };
 
 export default Setting;
