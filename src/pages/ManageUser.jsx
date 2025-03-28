@@ -140,13 +140,13 @@ const styles = {
     width: "80%",
     margin: "0 auto 15px auto",
   },
-
   searchBar: {
     width: "250px",
     padding: "8px",
     borderRadius: "6px",
     border: "1px solid #ccc",
     backgroundColor: "#fff",
+    color: "#000",
   },
   addUserButton: {
     display: "flex",
