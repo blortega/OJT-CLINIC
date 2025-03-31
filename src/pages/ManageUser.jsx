@@ -212,7 +212,8 @@ const ManageUser = () => {
         });
         toast.success("User updated successfully!");
       } else {
-        await addDoc(collection(db, "users"), {
+        // Add new user
+        const newUserData = {
           firstname: userForm.firstname,
           lastname: userForm.lastname,
           email: userForm.email,
@@ -220,7 +221,11 @@ const ManageUser = () => {
           department: userForm.department,
           phone: userForm.phone,
           createdAt: Timestamp.fromDate(new Date()),
-        });
+          status: "Active", // Set default status for all users
+        };
+
+        // Create new user document
+        await addDoc(collection(db, "users"), newUserData);
         toast.success(
           `${
             userForm.role.charAt(0).toUpperCase() + userForm.role.slice(1)
@@ -239,6 +244,7 @@ const ManageUser = () => {
       });
       setCurrentUser(null);
 
+      // Refresh the user list
       const snapshot = await getDocs(collection(db, "users"));
       const updatedUsersList = snapshot.docs.map((doc) => ({
         id: doc.id,
