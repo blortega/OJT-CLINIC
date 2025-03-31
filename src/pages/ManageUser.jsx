@@ -1,8 +1,18 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
-import { getFirestore, collection, getDocs } from "firebase/firestore";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  doc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  Timestamp,
+} from "firebase/firestore";
 import { app } from "../firebase";
 import { FiPlus, FiEdit, FiTrash, FiUserX } from "react-icons/fi";
+import { FaUserCheck } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -11,6 +21,25 @@ const ManageUser = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [userForm, setUserForm] = useState({
+    firstname: "",
+    lastname: "",
+    email: "",
+    role: "",
+    department: "",
+    phone: "",
+  });
+  const [formErrors, setFormErrors] = useState({
+    firstname: "",
+    lastname: "",
+    email: "",
+    role: "",
+    department: "",
+    phone: "",
+  });
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -19,7 +48,10 @@ const ManageUser = () => {
         const db = getFirestore(app);
         const usersCollection = collection(db, "users");
         const snapshot = await getDocs(usersCollection);
-        const usersList = snapshot.docs.map((doc) => doc.data());
+        const usersList = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         setUsers(usersList);
       } catch (error) {
         console.error("Failed to fetch users:", error);
@@ -34,7 +66,7 @@ const ManageUser = () => {
   const filterUsers = (user) => {
     const searchLower = search.toLowerCase();
     const fieldsToSearch = [
-      user.name || "Not Available",
+      (user.firstname || "Not Available") + " " + (user.lastname || ""),
       user.email || "Not Available",
       user.role || "Not Available",
       user.department || "Not Available",
@@ -46,23 +78,183 @@ const ManageUser = () => {
   };
 
   const handleAddUser = (role) => {
-    if (role === "patient") {
-      toast.success("Patient added successfully!");
-    } else if (role === "admin") {
-      toast.success("Admin added successfully!");
-    }
+    setUserForm({
+      firstname: "",
+      lastname: "",
+      email: "",
+      role: role,
+      department: "",
+      phone: "",
+    });
+    setModalVisible(true);
   };
 
   const handleEdit = (user) => {
-    toast.info(`Editing user: ${user.name || "Unknown"}`);
+    setCurrentUser(user);
+    setUserForm({
+      firstname: user.firstname,
+      lastname: user.lastname,
+      email: user.email,
+      role: user.role,
+      department: user.department,
+      phone: user.phone || "",
+    });
+    setModalVisible(true);
   };
 
-  const handleDelete = (user) => {
-    toast.error(`Deleted user: ${user.name || "Unknown"}`);
+  const handleSuspend = async (user) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to ${
+          user.status === "Active" ? "suspend" : "activate"
+        } this user?`
+      )
+    ) {
+      return;
+    }
+    const db = getFirestore(app);
+    const userRef = doc(db, "users", user.id);
+
+    try {
+      if (user.status === "Active") {
+        await updateDoc(userRef, { status: "Suspended" });
+        toast.warn(`User ${user.firstname} ${user.lastname} is now Suspended.`);
+      } else {
+        await updateDoc(userRef, { status: "Active" });
+        toast.success(`User ${user.firstname} ${user.lastname} is now Active.`);
+      }
+
+      const snapshot = await getDocs(collection(db, "users"));
+      const updatedUsersList = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setUsers(updatedUsersList);
+    } catch (error) {
+      console.error("Failed to update status:", error);
+      toast.error("Failed to update status.");
+    }
   };
 
-  const handleSuspend = (user) => {
-    toast.warn(`Suspended user: ${user.name || "Unknown"}`);
+  const handleDelete = async (user) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete this user? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    const db = getFirestore(app);
+    const userRef = doc(db, "users", user.id);
+
+    try {
+      await deleteDoc(userRef);
+      toast.success(
+        `User ${user.firstname} ${user.lastname} deleted successfully!`
+      );
+      setUsers(users.filter((u) => u.id !== user.id));
+    } catch (error) {
+      console.error("Failed to delete user:", error);
+      toast.error("Failed to delete user.");
+    }
+  };
+
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setUserForm((prevForm) => ({ ...prevForm, [name]: value }));
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    let isValid = true;
+
+    if (!userForm.firstname) {
+      errors.firstname = "First name is required";
+      isValid = false;
+    }
+    if (!userForm.lastname) {
+      errors.lastname = "Last name is required";
+      isValid = false;
+    }
+    if (!userForm.email) {
+      errors.email = "Email is required";
+      isValid = false;
+    }
+    if (!userForm.role) {
+      errors.role = "Role is required";
+      isValid = false;
+    }
+    if (!userForm.department) {
+      errors.department = "Department is required";
+      isValid = false;
+    }
+
+    setFormErrors(errors);
+    return isValid;
+  };
+
+  const handleSaveUser = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    const db = getFirestore(app);
+    try {
+      if (currentUser) {
+        // Update existing user
+        const userRef = doc(db, "users", currentUser.id);
+        await updateDoc(userRef, {
+          firstname: userForm.firstname,
+          lastname: userForm.lastname,
+          email: userForm.email,
+          phone: userForm.phone,
+          department: userForm.department,
+        });
+        toast.success("User updated successfully!");
+      } else {
+        // Add new user
+        const newUserData = {
+          firstname: userForm.firstname,
+          lastname: userForm.lastname,
+          email: userForm.email,
+          role: userForm.role,
+          department: userForm.department,
+          phone: userForm.phone,
+          createdAt: Timestamp.fromDate(new Date()),
+          status: "Active", // Set default status for all users
+        };
+
+        // Create new user document
+        await addDoc(collection(db, "users"), newUserData);
+        toast.success(
+          `${
+            userForm.role.charAt(0).toUpperCase() + userForm.role.slice(1)
+          } added successfully!`
+        );
+      }
+
+      setModalVisible(false);
+      setUserForm({
+        firstname: "",
+        lastname: "",
+        email: "",
+        role: "",
+        department: "",
+        phone: "",
+      });
+      setCurrentUser(null);
+
+      // Refresh the user list
+      const snapshot = await getDocs(collection(db, "users"));
+      const updatedUsersList = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setUsers(updatedUsersList);
+    } catch (error) {
+      console.error("Failed to save user:", error);
+      toast.error("Failed to save user");
+    }
   };
 
   return (
@@ -90,7 +282,7 @@ const ManageUser = () => {
               }}
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
-              onClick={() => handleAddUser("admin")}
+              onClick={() => handleAddUser("Admin")}
             >
               <FiPlus style={styles.addIcon} />
               Add Admin
@@ -102,7 +294,7 @@ const ManageUser = () => {
               }}
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
-              onClick={() => handleAddUser("patient")}
+              onClick={() => handleAddUser("Patient")}
             >
               <FiPlus style={styles.addIcon} />
               Add Patient
@@ -137,10 +329,13 @@ const ManageUser = () => {
                         ? styles.evenRow
                         : styles.oddRow),
                       ...styles.tableRow,
+                      ...(user.status === "Suspended"
+                        ? { backgroundColor: "#FFCCCB", opacity: 0.8 }
+                        : {}),
                     }}
                   >
                     <td style={styles.tableCell}>
-                      {user.name || "Not Available"}
+                      {user.firstname} {user.lastname || "Not Available"}
                     </td>
                     <td style={styles.tableCell}>
                       {user.email || "Not Available"}
@@ -159,13 +354,23 @@ const ManageUser = () => {
                       >
                         <FiEdit />
                       </button>
-                      <button
-                        style={styles.iconButton}
-                        onClick={() => handleSuspend(user)}
-                        title="Suspend"
-                      >
-                        <FiUserX />
-                      </button>
+                      {user.status === "Suspended" ? (
+                        <button
+                          style={styles.iconButton}
+                          onClick={() => handleSuspend(user)}
+                          title="Activate"
+                        >
+                          <FaUserCheck />
+                        </button>
+                      ) : (
+                        <button
+                          style={styles.iconButton}
+                          onClick={() => handleSuspend(user)}
+                          title="Suspend"
+                        >
+                          <FiUserX />
+                        </button>
+                      )}
                       <button
                         style={styles.iconButton}
                         onClick={() => handleDelete(user)}
@@ -181,11 +386,112 @@ const ManageUser = () => {
           )}
         </div>
       </div>
+
+      {modalVisible && (
+        <div style={styles.modal}>
+          <div style={styles.modalContent}>
+            <h2>{currentUser ? "Edit User" : "Add User"}</h2>
+            <div style={styles.formGroup}>
+              <label>First Name:</label>
+              <input
+                type="text"
+                name="firstname"
+                value={userForm.firstname}
+                onChange={handleFormChange}
+                style={styles.input}
+              />
+              {formErrors.firstname && (
+                <p style={styles.errorMessage}>{formErrors.firstname}</p>
+              )}
+            </div>
+            <div style={styles.formGroup}>
+              <label>Last Name:</label>
+              <input
+                type="text"
+                name="lastname"
+                value={userForm.lastname}
+                onChange={handleFormChange}
+                style={styles.input}
+              />
+              {formErrors.lastname && (
+                <p style={styles.errorMessage}>{formErrors.lastname}</p>
+              )}
+            </div>
+            <div style={styles.formGroup}>
+              <label>Email:</label>
+              <input
+                type="email"
+                name="email"
+                value={userForm.email}
+                onChange={handleFormChange}
+                style={styles.input}
+              />
+              {formErrors.email && (
+                <p style={styles.errorMessage}>{formErrors.email}</p>
+              )}
+            </div>
+            <div style={styles.formGroup}>
+              <label>Role:</label>
+              <input
+                type="text"
+                name="role"
+                value={userForm.role}
+                onChange={handleFormChange}
+                style={styles.input}
+                disabled={true} // Prevent role from being changed
+              />
+              {formErrors.role && (
+                <p style={styles.errorMessage}>{formErrors.role}</p>
+              )}
+            </div>
+            <div style={styles.formGroup}>
+              <label>Department:</label>
+              <input
+                type="text"
+                name="department"
+                value={userForm.department}
+                onChange={handleFormChange}
+                style={styles.input}
+              />
+              {formErrors.department && (
+                <p style={styles.errorMessage}>{formErrors.department}</p>
+              )}
+            </div>
+            <div style={styles.formGroup}>
+              <label>Phone:</label>
+              <input
+                type="text"
+                name="phone"
+                value={userForm.phone}
+                onChange={handleFormChange}
+                style={styles.input}
+              />
+              {formErrors.phone && (
+                <p style={styles.errorMessage}>{formErrors.phone}</p>
+              )}
+            </div>
+            <button onClick={handleSaveUser} style={styles.saveButton}>
+              Save Changes
+            </button>
+            <button
+              onClick={() => setModalVisible(false)}
+              style={styles.cancelButton}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </Sidebar>
   );
 };
 
 const styles = {
+  errorMessage: {
+    color: "red",
+    fontSize: "12px",
+    marginTop: "5px",
+  },
   container: {
     padding: "20px",
     textAlign: "center",
@@ -217,7 +523,7 @@ const styles = {
   },
   buttonContainer: {
     display: "flex",
-    gap: "10px", // Add gap between buttons
+    gap: "10px",
   },
   addUserButton: {
     display: "flex",
@@ -283,6 +589,53 @@ const styles = {
     cursor: "pointer",
     fontSize: "18px",
     color: "#1e3a8a",
+  },
+  modal: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    padding: "20px",
+    borderRadius: "8px",
+    width: "500px",
+  },
+  formGroup: {
+    marginBottom: "15px",
+  },
+  input: {
+    width: "100%",
+    padding: "8px",
+    borderRadius: "5px",
+    border: "1px solid #ccc",
+  },
+  saveButton: {
+    backgroundColor: "#1e3a8a",
+    color: "#fff",
+    padding: "10px 20px",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+    fontWeight: "bold",
+    fontSize: "16px",
+  },
+  cancelButton: {
+    backgroundColor: "#ccc",
+    color: "#000",
+    padding: "10px 20px",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+    marginLeft: "10px",
+    fontWeight: "bold",
+    fontSize: "16px",
   },
 };
 
