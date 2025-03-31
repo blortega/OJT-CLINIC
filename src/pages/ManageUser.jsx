@@ -7,10 +7,12 @@ import {
   doc,
   addDoc,
   updateDoc,
-  Timestamp, // Importing Timestamp
+  deleteDoc,
+  Timestamp,
 } from "firebase/firestore";
 import { app } from "../firebase";
 import { FiPlus, FiEdit, FiTrash, FiUserX } from "react-icons/fi";
+import { FaUserCheck } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -21,6 +23,7 @@ const ManageUser = () => {
   const [isHovered, setIsHovered] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [userForm, setUserForm] = useState({
     name: "",
     email: "",
@@ -95,12 +98,43 @@ const ManageUser = () => {
     setModalVisible(true);
   };
 
-  const handleDelete = (user) => {
-    toast.error(`Deleted user: ${user.name || "Unknown"}`);
+  const handleSuspend = async (user) => {
+    const db = getFirestore(app);
+    const userRef = doc(db, "users", user.id);
+
+    try {
+      if (user.status === "Active") {
+        await updateDoc(userRef, { status: "Suspended" });
+        toast.warn(`User ${user.name} is now Suspended.`);
+      } else {
+        await updateDoc(userRef, { status: "Active" });
+        toast.success(`User ${user.name} is now Active.`);
+      }
+
+      const snapshot = await getDocs(collection(db, "users"));
+      const updatedUsersList = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setUsers(updatedUsersList);
+    } catch (error) {
+      console.error("Failed to update status:", error);
+      toast.error("Failed to update status.");
+    }
   };
 
-  const handleSuspend = (user) => {
-    toast.warn(`Suspended user: ${user.name || "Unknown"}`);
+  const handleDelete = async (user) => {
+    const db = getFirestore(app);
+    const userRef = doc(db, "users", user.id);
+
+    try {
+      await deleteDoc(userRef);
+      toast.success(`User ${user.name || "Unknown"} deleted successfully!`);
+      setUsers(users.filter((u) => u.id !== user.id));
+    } catch (error) {
+      console.error("Failed to delete user:", error);
+      toast.error("Failed to delete user.");
+    }
   };
 
   const handleFormChange = (e) => {
@@ -166,12 +200,10 @@ const ManageUser = () => {
         );
       }
 
-      // Close modal and reset form
       setModalVisible(false);
       setUserForm({ name: "", email: "", role: "", department: "", phone: "" });
       setCurrentUser(null);
 
-      // Refetch users after adding or updating
       const snapshot = await getDocs(collection(db, "users"));
       const updatedUsersList = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -256,6 +288,9 @@ const ManageUser = () => {
                         ? styles.evenRow
                         : styles.oddRow),
                       ...styles.tableRow,
+                      ...(user.status === "Suspended"
+                        ? { backgroundColor: "#FFCCCB", opacity: 0.8 }
+                        : {}),
                     }}
                   >
                     <td style={styles.tableCell}>
@@ -278,13 +313,23 @@ const ManageUser = () => {
                       >
                         <FiEdit />
                       </button>
-                      <button
-                        style={styles.iconButton}
-                        onClick={() => handleSuspend(user)}
-                        title="Suspend"
-                      >
-                        <FiUserX />
-                      </button>
+                      {user.status === "Suspended" ? (
+                        <button
+                          style={styles.iconButton}
+                          onClick={() => handleSuspend(user)}
+                          title="Activate"
+                        >
+                          <FaUserCheck />
+                        </button>
+                      ) : (
+                        <button
+                          style={styles.iconButton}
+                          onClick={() => handleSuspend(user)}
+                          title="Suspend"
+                        >
+                          <FiUserX />
+                        </button>
+                      )}
                       <button
                         style={styles.iconButton}
                         onClick={() => handleDelete(user)}
@@ -493,8 +538,8 @@ const styles = {
   },
   modal: {
     position: "fixed",
-    top: "0",
-    left: "0",
+    top: 0,
+    left: 0,
     width: "100%",
     height: "100%",
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -506,7 +551,7 @@ const styles = {
     backgroundColor: "#fff",
     padding: "20px",
     borderRadius: "8px",
-    width: "400px",
+    width: "500px",
   },
   formGroup: {
     marginBottom: "15px",
@@ -514,26 +559,29 @@ const styles = {
   input: {
     width: "100%",
     padding: "8px",
-    borderRadius: "6px",
+    borderRadius: "5px",
     border: "1px solid #ccc",
-    fontSize: "16px",
   },
   saveButton: {
-    padding: "10px 20px",
     backgroundColor: "#1e3a8a",
     color: "#fff",
+    padding: "10px 20px",
     border: "none",
-    borderRadius: "6px",
+    borderRadius: "5px",
     cursor: "pointer",
+    fontWeight: "bold",
+    fontSize: "16px",
   },
   cancelButton: {
-    padding: "10px 20px",
     backgroundColor: "#ccc",
     color: "#000",
+    padding: "10px 20px",
     border: "none",
-    borderRadius: "6px",
+    borderRadius: "5px",
     cursor: "pointer",
     marginLeft: "10px",
+    fontWeight: "bold",
+    fontSize: "16px",
   },
 };
 
