@@ -5,7 +5,9 @@ import {
   collection,
   getDocs,
   doc,
+  addDoc,
   updateDoc,
+  Timestamp, // Importing Timestamp
 } from "firebase/firestore";
 import { app } from "../firebase";
 import { FiPlus, FiEdit, FiTrash, FiUserX } from "react-icons/fi";
@@ -71,11 +73,14 @@ const ManageUser = () => {
   };
 
   const handleAddUser = (role) => {
-    if (role === "patient") {
-      toast.success("Patient added successfully!");
-    } else if (role === "admin") {
-      toast.success("Admin added successfully!");
-    }
+    setUserForm({
+      name: "",
+      email: "",
+      role: role,
+      department: "",
+      phone: "",
+    });
+    setModalVisible(true);
   };
 
   const handleEdit = (user) => {
@@ -85,7 +90,7 @@ const ManageUser = () => {
       email: user.email,
       role: user.role,
       department: user.department,
-      phone: user.phone || "", // Ensure phone is included
+      phone: user.phone || "",
     });
     setModalVisible(true);
   };
@@ -128,38 +133,45 @@ const ManageUser = () => {
     return isValid;
   };
 
-  const handleUpdateUser = async () => {
+  const handleSaveUser = async () => {
     if (!validateForm()) {
-      return; // Prevent update if form is invalid
+      return;
     }
 
     const db = getFirestore(app);
-    const userRef = doc(db, "users", currentUser.id);
-
     try {
-      const updatedUserData = {
-        name: userForm.name,
-        email: userForm.email,
-        phone: userForm.phone,
-      };
-
-      // Only add role if it's not empty
-      if (userForm.role) {
-        updatedUserData.role = userForm.role;
+      if (currentUser) {
+        // Update existing user
+        const userRef = doc(db, "users", currentUser.id);
+        await updateDoc(userRef, {
+          name: userForm.name,
+          email: userForm.email,
+          phone: userForm.phone,
+          department: userForm.department,
+        });
+        toast.success("User updated successfully!");
+      } else {
+        await addDoc(collection(db, "users"), {
+          name: userForm.name,
+          email: userForm.email,
+          role: userForm.role,
+          department: userForm.department,
+          phone: userForm.phone,
+          createdAt: Timestamp.fromDate(new Date()),
+        });
+        toast.success(
+          `${
+            userForm.role.charAt(0).toUpperCase() + userForm.role.slice(1)
+          } added successfully!`
+        );
       }
 
-      // Only add department if it's not empty
-      if (userForm.department) {
-        updatedUserData.department = userForm.department;
-      }
-
-      await updateDoc(userRef, updatedUserData);
-      toast.success("User updated successfully!");
+      // Close modal and reset form
       setModalVisible(false);
       setUserForm({ name: "", email: "", role: "", department: "", phone: "" });
       setCurrentUser(null);
 
-      // Refetch users after updating
+      // Refetch users after adding or updating
       const snapshot = await getDocs(collection(db, "users"));
       const updatedUsersList = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -167,8 +179,8 @@ const ManageUser = () => {
       }));
       setUsers(updatedUsersList);
     } catch (error) {
-      console.error("Failed to update user:", error);
-      toast.error("Failed to update user");
+      console.error("Failed to save user:", error);
+      toast.error("Failed to save user");
     }
   };
 
@@ -197,7 +209,7 @@ const ManageUser = () => {
               }}
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
-              onClick={() => handleAddUser("admin")}
+              onClick={() => handleAddUser("Admin")}
             >
               <FiPlus style={styles.addIcon} />
               Add Admin
@@ -209,7 +221,7 @@ const ManageUser = () => {
               }}
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
-              onClick={() => handleAddUser("patient")}
+              onClick={() => handleAddUser("Patient")}
             >
               <FiPlus style={styles.addIcon} />
               Add Patient
@@ -292,7 +304,7 @@ const ManageUser = () => {
       {modalVisible && (
         <div style={styles.modal}>
           <div style={styles.modalContent}>
-            <h2>Edit User</h2>
+            <h2>{currentUser ? "Edit User" : "Add User"}</h2>
             <div style={styles.formGroup}>
               <label>Name:</label>
               <input
@@ -327,6 +339,7 @@ const ManageUser = () => {
                 value={userForm.role}
                 onChange={handleFormChange}
                 style={styles.input}
+                disabled={true} // Prevent role from being changed
               />
               {formErrors.role && (
                 <p style={styles.errorMessage}>{formErrors.role}</p>
@@ -358,7 +371,7 @@ const ManageUser = () => {
                 <p style={styles.errorMessage}>{formErrors.phone}</p>
               )}
             </div>
-            <button onClick={handleUpdateUser} style={styles.saveButton}>
+            <button onClick={handleSaveUser} style={styles.saveButton}>
               Save Changes
             </button>
             <button
