@@ -25,14 +25,16 @@ const ManageUser = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [userForm, setUserForm] = useState({
-    name: "",
+    firstname: "",
+    lastname: "",
     email: "",
     role: "",
     department: "",
     phone: "",
   });
   const [formErrors, setFormErrors] = useState({
-    name: "",
+    firstname: "",
+    lastname: "",
     email: "",
     role: "",
     department: "",
@@ -64,7 +66,7 @@ const ManageUser = () => {
   const filterUsers = (user) => {
     const searchLower = search.toLowerCase();
     const fieldsToSearch = [
-      user.name || "Not Available",
+      (user.firstname || "Not Available") + " " + (user.lastname || ""),
       user.email || "Not Available",
       user.role || "Not Available",
       user.department || "Not Available",
@@ -77,7 +79,8 @@ const ManageUser = () => {
 
   const handleAddUser = (role) => {
     setUserForm({
-      name: "",
+      firstname: "",
+      lastname: "",
       email: "",
       role: role,
       department: "",
@@ -89,7 +92,8 @@ const ManageUser = () => {
   const handleEdit = (user) => {
     setCurrentUser(user);
     setUserForm({
-      name: user.name,
+      firstname: user.firstname,
+      lastname: user.lastname,
       email: user.email,
       role: user.role,
       department: user.department,
@@ -114,10 +118,10 @@ const ManageUser = () => {
     try {
       if (user.status === "Active") {
         await updateDoc(userRef, { status: "Suspended" });
-        toast.warn(`User ${user.name} is now Suspended.`);
+        toast.warn(`User ${user.firstname} ${user.lastname} is now Suspended.`);
       } else {
         await updateDoc(userRef, { status: "Active" });
-        toast.success(`User ${user.name} is now Active.`);
+        toast.success(`User ${user.firstname} ${user.lastname} is now Active.`);
       }
 
       const snapshot = await getDocs(collection(db, "users"));
@@ -145,7 +149,9 @@ const ManageUser = () => {
 
     try {
       await deleteDoc(userRef);
-      toast.success(`User ${user.name || "Unknown"} deleted successfully!`);
+      toast.success(
+        `User ${user.firstname} ${user.lastname} deleted successfully!`
+      );
       setUsers(users.filter((u) => u.id !== user.id));
     } catch (error) {
       console.error("Failed to delete user:", error);
@@ -162,8 +168,12 @@ const ManageUser = () => {
     const errors = {};
     let isValid = true;
 
-    if (!userForm.name) {
-      errors.name = "Name is required";
+    if (!userForm.firstname) {
+      errors.firstname = "First name is required";
+      isValid = false;
+    }
+    if (!userForm.lastname) {
+      errors.lastname = "Last name is required";
       isValid = false;
     }
     if (!userForm.email) {
@@ -194,7 +204,8 @@ const ManageUser = () => {
         // Update existing user
         const userRef = doc(db, "users", currentUser.id);
         await updateDoc(userRef, {
-          name: userForm.name,
+          firstname: userForm.firstname,
+          lastname: userForm.lastname,
           email: userForm.email,
           phone: userForm.phone,
           department: userForm.department,
@@ -202,7 +213,8 @@ const ManageUser = () => {
         toast.success("User updated successfully!");
       } else {
         await addDoc(collection(db, "users"), {
-          name: userForm.name,
+          firstname: userForm.firstname,
+          lastname: userForm.lastname,
           email: userForm.email,
           role: userForm.role,
           department: userForm.department,
@@ -217,7 +229,14 @@ const ManageUser = () => {
       }
 
       setModalVisible(false);
-      setUserForm({ name: "", email: "", role: "", department: "", phone: "" });
+      setUserForm({
+        firstname: "",
+        lastname: "",
+        email: "",
+        role: "",
+        department: "",
+        phone: "",
+      });
       setCurrentUser(null);
 
       const snapshot = await getDocs(collection(db, "users"));
@@ -310,7 +329,7 @@ const ManageUser = () => {
                     }}
                   >
                     <td style={styles.tableCell}>
-                      {user.name || "Not Available"}
+                      {user.firstname} {user.lastname || "Not Available"}
                     </td>
                     <td style={styles.tableCell}>
                       {user.email || "Not Available"}
@@ -367,16 +386,29 @@ const ManageUser = () => {
           <div style={styles.modalContent}>
             <h2>{currentUser ? "Edit User" : "Add User"}</h2>
             <div style={styles.formGroup}>
-              <label>Name:</label>
+              <label>First Name:</label>
               <input
                 type="text"
-                name="name"
-                value={userForm.name}
+                name="firstname"
+                value={userForm.firstname}
                 onChange={handleFormChange}
                 style={styles.input}
               />
-              {formErrors.name && (
-                <p style={styles.errorMessage}>{formErrors.name}</p>
+              {formErrors.firstname && (
+                <p style={styles.errorMessage}>{formErrors.firstname}</p>
+              )}
+            </div>
+            <div style={styles.formGroup}>
+              <label>Last Name:</label>
+              <input
+                type="text"
+                name="lastname"
+                value={userForm.lastname}
+                onChange={handleFormChange}
+                style={styles.input}
+              />
+              {formErrors.lastname && (
+                <p style={styles.errorMessage}>{formErrors.lastname}</p>
               )}
             </div>
             <div style={styles.formGroup}>
