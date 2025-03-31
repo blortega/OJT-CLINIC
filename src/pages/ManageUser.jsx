@@ -99,6 +99,15 @@ const ManageUser = () => {
   };
 
   const handleSuspend = async (user) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to ${
+          user.status === "Active" ? "suspend" : "activate"
+        } this user?`
+      )
+    ) {
+      return;
+    }
     const db = getFirestore(app);
     const userRef = doc(db, "users", user.id);
 
@@ -124,6 +133,13 @@ const ManageUser = () => {
   };
 
   const handleDelete = async (user) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete this user? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
     const db = getFirestore(app);
     const userRef = doc(db, "users", user.id);
 
