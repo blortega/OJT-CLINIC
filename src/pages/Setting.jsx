@@ -5,8 +5,8 @@ const Setting = () => {
   return (
     <Sidebar>
       <div style={styles.container}>
-        <h1>Settings Page</h1>
-        <p>This is a test page to check if navigation is working properly.</p>
+        <h1 style={styles.text}>Settings Page</h1>
+        <p style={styles.text}>This is a test page to check if navigation is working properly.</p>
       </div>
     </Sidebar>
   );
