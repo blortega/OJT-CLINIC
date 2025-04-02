@@ -41,6 +41,7 @@ const ManageUser = () => {
     role: "",
     department: "",
     phone: "",
+    gender: "",
   });
 
   useEffect(() => {
@@ -79,14 +80,15 @@ const ManageUser = () => {
     );
   };
 
-  const handleAddUser = (role) => {
+  const handleAddUser = () => {
     setUserForm({
       firstname: "",
       lastname: "",
       email: "",
-      role: role,
+      role: "Employee",
       department: "",
       phone: "",
+      gender: "",
     });
     setModalVisible(true);
   };
@@ -100,6 +102,7 @@ const ManageUser = () => {
       role: user.role,
       department: user.department,
       phone: user.phone || "",
+      gender: user.gender || "",
     });
     setModalVisible(true);
   };
@@ -190,6 +193,10 @@ const ManageUser = () => {
       errors.department = "Department is required";
       isValid = false;
     }
+    if (!userForm.gender) {
+      errors.gender = "Gender is required";
+      isValid = false;
+    }
 
     setFormErrors(errors);
     return isValid;
@@ -211,6 +218,7 @@ const ManageUser = () => {
           email: userForm.email,
           phone: userForm.phone,
           department: userForm.department,
+          gender: userForm.gender,
         });
         toast.success("User updated successfully!");
       } else {
@@ -222,8 +230,9 @@ const ManageUser = () => {
           role: userForm.role,
           department: userForm.department,
           phone: userForm.phone,
+          gender: userForm.gender,
           createdAt: Timestamp.fromDate(new Date()),
-          status: "Active", // Set default status for all users
+          status: "Active",
         };
 
         // Create new user document
@@ -243,6 +252,7 @@ const ManageUser = () => {
         role: "",
         department: "",
         phone: "",
+        gender: "",
       });
       setCurrentUser(null);
 
@@ -446,6 +456,36 @@ const ManageUser = () => {
               )}
             </div>
 
+            <div style={styles.row}>
+              <div style={styles.halfWidth}>
+                <div style={styles.formGroup}>
+                  <label>Phone:</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={userForm.phone}
+                    onChange={handleFormChange}
+                    style={styles.input}
+                  />
+                </div>
+              </div>
+              <div style={styles.halfWidth}>
+                <div style={styles.formGroup}>
+                  <label>Department:</label>
+                  <input
+                    type="text"
+                    name="department"
+                    value={userForm.department}
+                    onChange={handleFormChange}
+                    style={styles.input}
+                  />
+                  {formErrors.department && (
+                    <p style={styles.errorMessage}>{formErrors.department}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div style={styles.formGroup}>
               <label>Role:</label>
               <input
@@ -454,50 +494,28 @@ const ManageUser = () => {
                 value={userForm.role}
                 onChange={handleFormChange}
                 style={styles.input}
-                disabled={true} // Prevent role from being changed
+                disabled
               />
               {formErrors.role && (
                 <p style={styles.errorMessage}>{formErrors.role}</p>
               )}
             </div>
 
-            <div style={styles.formGroup}>
-              <label>Department:</label>
-              <input
-                type="text"
-                name="department"
-                value={userForm.department}
-                onChange={handleFormChange}
-                style={styles.input}
-              />
-              {formErrors.department && (
-                <p style={styles.errorMessage}>{formErrors.department}</p>
-              )}
+            <div style={styles.buttonContainer}>
+              <button
+                onClick={handleSaveUser}
+                style={styles.saveButton}
+                disabled={isSaving}
+              >
+                {isSaving ? "Saving..." : "Save"}
+              </button>
+              <button
+                onClick={() => setModalVisible(false)}
+                style={styles.cancelButton}
+              >
+                Cancel
+              </button>
             </div>
-
-            <div style={styles.formGroup}>
-              <label>Phone:</label>
-              <input
-                type="text"
-                name="phone"
-                value={userForm.phone}
-                onChange={handleFormChange}
-                style={styles.input}
-              />
-              {formErrors.phone && (
-                <p style={styles.errorMessage}>{formErrors.phone}</p>
-              )}
-            </div>
-
-            <button onClick={handleSaveUser} style={styles.saveButton}>
-              Save Changes
-            </button>
-            <button
-              onClick={() => setModalVisible(false)}
-              style={styles.cancelButton}
-            >
-              Cancel
-            </button>
           </div>
         </div>
       )}
@@ -542,7 +560,9 @@ const styles = {
   },
   buttonContainer: {
     display: "flex",
+    justifyContent: "center",
     gap: "10px",
+    marginTop: "20px",
   },
   addUserButton: {
     display: "flex",
@@ -624,11 +644,11 @@ const styles = {
     backgroundColor: "#fff",
     padding: "30px",
     borderRadius: "8px",
-    width: "600px", // Make it wider and more spacious
-    maxWidth: "90%", // Limit width on smaller screens
+    width: "600px",
+    maxWidth: "90%",
   },
   formGroup: {
-    marginBottom: "20px", // Increase space between groups
+    marginBottom: "20px",
     display: "flex",
     flexDirection: "column",
   },
@@ -637,16 +657,16 @@ const styles = {
     padding: "10px",
     borderRadius: "5px",
     border: "1px solid #ccc",
-    marginTop: "8px", // Add space between label and input
+    marginTop: "8px",
     fontSize: "16px",
   },
   row: {
     display: "flex",
-    justifyContent: "space-between", // Spacing between inputs
+    justifyContent: "space-between",
     gap: "15px",
   },
   halfWidth: {
-    width: "48%", // Half width for input fields like First Name, Last Name
+    width: "48%",
   },
   select: {
     width: "100%",
@@ -664,8 +684,7 @@ const styles = {
     cursor: "pointer",
     fontWeight: "bold",
     fontSize: "16px",
-    marginTop: "20px", // Add space above the button
-    width: "100%", // Full width for the Save button
+    width: "100%",
   },
   cancelButton: {
     backgroundColor: "#ccc",
@@ -674,8 +693,9 @@ const styles = {
     border: "none",
     borderRadius: "5px",
     cursor: "pointer",
-    marginTop: "20px", // Add space above the button
-    width: "100%", // Full width for the Cancel button
+    fontWeight: "bold",
+    fontSize: "16px",
+    width: "100%",
   },
 };
 
