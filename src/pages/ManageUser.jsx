@@ -15,6 +15,7 @@ import { FiPlus, FiEdit, FiTrash, FiUserX } from "react-icons/fi";
 import { FaUserCheck } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { BsGenderAmbiguous } from "react-icons/bs";
 
 const ManageUser = () => {
   const [users, setUsers] = useState([]);
@@ -31,6 +32,7 @@ const ManageUser = () => {
     role: "",
     department: "",
     phone: "",
+    gender: "",
   });
   const [formErrors, setFormErrors] = useState({
     firstname: "",
@@ -282,22 +284,10 @@ const ManageUser = () => {
               }}
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
-              onClick={() => handleAddUser("Admin")}
+              onClick={() => handleAddUser("Employee")}
             >
               <FiPlus style={styles.addIcon} />
-              Add Admin
-            </button>
-            <button
-              style={{
-                ...styles.addUserButton,
-                backgroundColor: isHovered ? "#162d5e" : "#1e3a8a",
-              }}
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-              onClick={() => handleAddUser("Patient")}
-            >
-              <FiPlus style={styles.addIcon} />
-              Add Patient
+              Add Employee
             </button>
           </div>
         </div>
@@ -417,6 +407,24 @@ const ManageUser = () => {
                 <p style={styles.errorMessage}>{formErrors.lastname}</p>
               )}
             </div>
+            <div style={styles.formGroup}>
+              <label>Gender:</label>
+              <select
+                name="gender"
+                value={userForm.gender}
+                onChange={handleFormChange}
+                style={styles.input}
+              >
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+              {formErrors.gender && (
+                <p style={styles.errorMessage}>{formErrors.gender}</p>
+              )}
+            </div>
+
             <div style={styles.formGroup}>
               <label>Email:</label>
               <input
