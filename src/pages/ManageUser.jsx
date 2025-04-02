@@ -315,6 +315,9 @@ const ManageUser = () => {
                   <th style={{ ...styles.tableHead, width: "150px" }}>
                     Department
                   </th>
+                  <th style={{ ...styles.tableHead, width: "100px" }}>
+                    Gender
+                  </th>
                   <th style={{ ...styles.tableHead, width: "120px" }}>
                     Actions
                   </th>
@@ -345,6 +348,22 @@ const ManageUser = () => {
                     </td>
                     <td style={styles.tableCell}>
                       {user.department || "Not Available"}
+                    </td>
+                    <td style={styles.tableCell}>
+                      {/* Gender Badge */}
+                      <span
+                        style={{
+                          ...styles.genderBadge,
+                          backgroundColor:
+                            user.gender === "Male"
+                              ? "#1e3a8a"
+                              : user.gender === "Female"
+                              ? "#d41c48"
+                              : "#6c757d",
+                        }}
+                      >
+                        {user.gender || "Not Available"}
+                      </span>
                     </td>
                     <td style={styles.actionCell}>
                       <button
@@ -696,6 +715,18 @@ const styles = {
     fontWeight: "bold",
     fontSize: "16px",
     width: "100%",
+  },
+  genderBadge: {
+    display: "inline-block",
+    padding: "4px 8px",
+    borderRadius: "12px",
+    color: "#fff",
+    fontWeight: "bold",
+    textTransform: "capitalize",
+    fontSize: "14px",
+    minWidth: "100px",
+    maxWidth: "100px",
+    textAlign: "center",
   },
 };
 
