@@ -26,7 +26,7 @@ const Inventory = () => {
     <Sidebar>
       <div style={styles.container}>
         <h1 style={styles.text}>Inventory Page</h1>
-        <p style={styles.text}>LEBRON LEBRON LEBRON JAMES - Glorious King</p>
+        <p style={styles.text}>DAPAT MAKA SCAN TA DIRI</p>
         <div style={styles.card}>
           <table style={styles.table}>
             <thead>
@@ -35,6 +35,7 @@ const Inventory = () => {
                 <th style={styles.thead}>Dosage</th>
                 <th style={styles.thead}>Stocks</th>
                 <th style={styles.thead}>Type</th>
+                <th style={styles.thead}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -44,6 +45,7 @@ const Inventory = () => {
                   <td style={styles.tdata}>{medicine.dosage}</td>
                   <td style={styles.tdata}>{medicine.stock}</td>
                   <td style={styles.tdata}>{medicine.type}</td>
+                  <td></td>
                 </tr>
               ))}
             </tbody>
@@ -66,7 +68,7 @@ const styles = {
     color: "black",
   },
   card: {
-    width: "67%",
+    width: "50.5%",
     margin: "auto",
     overflowX: "auto",
     border: "1px solid #ddd",
