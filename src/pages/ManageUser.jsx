@@ -380,40 +380,47 @@ const ManageUser = () => {
       {modalVisible && (
         <div style={styles.modal}>
           <div style={styles.modalContent}>
-            <h2>{currentUser ? "Edit User" : "Add User"}</h2>
-            <div style={styles.formGroup}>
-              <label>First Name:</label>
-              <input
-                type="text"
-                name="firstname"
-                value={userForm.firstname}
-                onChange={handleFormChange}
-                style={styles.input}
-              />
-              {formErrors.firstname && (
-                <p style={styles.errorMessage}>{formErrors.firstname}</p>
-              )}
+            <h2>{currentUser ? "Edit Employee" : "Add Employee"}</h2>
+            <div style={styles.row}>
+              <div style={styles.halfWidth}>
+                <div style={styles.formGroup}>
+                  <label>First Name:</label>
+                  <input
+                    type="text"
+                    name="firstname"
+                    value={userForm.firstname}
+                    onChange={handleFormChange}
+                    style={styles.input}
+                  />
+                  {formErrors.firstname && (
+                    <p style={styles.errorMessage}>{formErrors.firstname}</p>
+                  )}
+                </div>
+              </div>
+              <div style={styles.halfWidth}>
+                <div style={styles.formGroup}>
+                  <label>Last Name:</label>
+                  <input
+                    type="text"
+                    name="lastname"
+                    value={userForm.lastname}
+                    onChange={handleFormChange}
+                    style={styles.input}
+                  />
+                  {formErrors.lastname && (
+                    <p style={styles.errorMessage}>{formErrors.lastname}</p>
+                  )}
+                </div>
+              </div>
             </div>
-            <div style={styles.formGroup}>
-              <label>Last Name:</label>
-              <input
-                type="text"
-                name="lastname"
-                value={userForm.lastname}
-                onChange={handleFormChange}
-                style={styles.input}
-              />
-              {formErrors.lastname && (
-                <p style={styles.errorMessage}>{formErrors.lastname}</p>
-              )}
-            </div>
+
             <div style={styles.formGroup}>
               <label>Gender:</label>
               <select
                 name="gender"
                 value={userForm.gender}
                 onChange={handleFormChange}
-                style={styles.input}
+                style={styles.select}
               >
                 <option value="">Select Gender</option>
                 <option value="Male">Male</option>
@@ -438,6 +445,7 @@ const ManageUser = () => {
                 <p style={styles.errorMessage}>{formErrors.email}</p>
               )}
             </div>
+
             <div style={styles.formGroup}>
               <label>Role:</label>
               <input
@@ -452,6 +460,7 @@ const ManageUser = () => {
                 <p style={styles.errorMessage}>{formErrors.role}</p>
               )}
             </div>
+
             <div style={styles.formGroup}>
               <label>Department:</label>
               <input
@@ -465,6 +474,7 @@ const ManageUser = () => {
                 <p style={styles.errorMessage}>{formErrors.department}</p>
               )}
             </div>
+
             <div style={styles.formGroup}>
               <label>Phone:</label>
               <input
@@ -478,6 +488,7 @@ const ManageUser = () => {
                 <p style={styles.errorMessage}>{formErrors.phone}</p>
               )}
             </div>
+
             <button onClick={handleSaveUser} style={styles.saveButton}>
               Save Changes
             </button>
@@ -611,39 +622,60 @@ const styles = {
   },
   modalContent: {
     backgroundColor: "#fff",
-    padding: "20px",
+    padding: "30px",
     borderRadius: "8px",
-    width: "500px",
+    width: "600px", // Make it wider and more spacious
+    maxWidth: "90%", // Limit width on smaller screens
   },
   formGroup: {
-    marginBottom: "15px",
+    marginBottom: "20px", // Increase space between groups
+    display: "flex",
+    flexDirection: "column",
   },
   input: {
     width: "100%",
-    padding: "8px",
+    padding: "10px",
     borderRadius: "5px",
     border: "1px solid #ccc",
+    marginTop: "8px", // Add space between label and input
+    fontSize: "16px",
+  },
+  row: {
+    display: "flex",
+    justifyContent: "space-between", // Spacing between inputs
+    gap: "15px",
+  },
+  halfWidth: {
+    width: "48%", // Half width for input fields like First Name, Last Name
+  },
+  select: {
+    width: "100%",
+    padding: "10px",
+    borderRadius: "5px",
+    border: "1px solid #ccc",
+    marginTop: "8px",
   },
   saveButton: {
     backgroundColor: "#1e3a8a",
     color: "#fff",
-    padding: "10px 20px",
+    padding: "12px 20px",
     border: "none",
     borderRadius: "5px",
     cursor: "pointer",
     fontWeight: "bold",
     fontSize: "16px",
+    marginTop: "20px", // Add space above the button
+    width: "100%", // Full width for the Save button
   },
   cancelButton: {
     backgroundColor: "#ccc",
     color: "#000",
-    padding: "10px 20px",
+    padding: "12px 20px",
     border: "none",
     borderRadius: "5px",
     cursor: "pointer",
-    marginLeft: "10px",
-    fontWeight: "bold",
-    fontSize: "16px",
+    marginTop: "20px", // Add space above the button
+    width: "100%", // Full width for the Cancel button
   },
 };
 
