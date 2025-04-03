@@ -15,8 +15,6 @@ import { FiPlus, FiEdit, FiTrash, FiUserX } from "react-icons/fi";
 import { FaUserCheck } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { BsGenderAmbiguous } from "react-icons/bs";
-import { EmailAuthProvider } from "firebase/auth/web-extension";
 
 const ManageUser = () => {
   const [users, setUsers] = useState([]);
@@ -106,6 +104,7 @@ const ManageUser = () => {
       department: user.department,
       phone: user.phone || "",
       gender: user.gender || "",
+      employeeID: user.employeeID || "",
     });
     setModalVisible(true);
   };
