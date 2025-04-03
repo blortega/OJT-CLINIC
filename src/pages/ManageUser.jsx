@@ -16,6 +16,7 @@ import { FaUserCheck } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { BsGenderAmbiguous } from "react-icons/bs";
+import { EmailAuthProvider } from "firebase/auth/web-extension";
 
 const ManageUser = () => {
   const [users, setUsers] = useState([]);
@@ -42,6 +43,7 @@ const ManageUser = () => {
     department: "",
     phone: "",
     gender: "",
+    employeeID: "",
   });
 
   useEffect(() => {
@@ -73,6 +75,7 @@ const ManageUser = () => {
       user.email || "Not Available",
       user.role || "Not Available",
       user.department || "Not Available",
+      user.employeeID || "Not Available",
     ];
 
     return fieldsToSearch.some((field) =>
@@ -167,6 +170,15 @@ const ManageUser = () => {
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setUserForm((prevForm) => ({ ...prevForm, [name]: value }));
+
+    if (name === "employeeID") {
+      setUserForm((prevForm) => ({
+        ...prevForm,
+        [name]: value.toUpperCase(),
+      }));
+    } else {
+      setUserForm((prevForm) => ({ ...prevForm, [name]: value }));
+    }
   };
 
   const validateForm = () => {
@@ -197,6 +209,10 @@ const ManageUser = () => {
       errors.gender = "Gender is required";
       isValid = false;
     }
+    if (!userForm.employeeID) {
+      errors.employeeID = "Employee ID is required";
+      isValid = false;
+    }
 
     setFormErrors(errors);
     return isValid;
@@ -219,6 +235,7 @@ const ManageUser = () => {
           phone: userForm.phone,
           department: userForm.department,
           gender: userForm.gender,
+          employeeID: userForm.employeeID || "Not Available",
         });
         toast.success("User updated successfully!");
       } else {
@@ -231,6 +248,7 @@ const ManageUser = () => {
           department: userForm.department,
           phone: userForm.phone,
           gender: userForm.gender,
+          employeeID: userForm.employeeID || "Not Available",
           createdAt: Timestamp.fromDate(new Date()),
           status: "Active",
         };
@@ -253,6 +271,7 @@ const ManageUser = () => {
         department: "",
         phone: "",
         gender: "",
+        employeeID: "",
       });
       setCurrentUser(null);
 
@@ -282,7 +301,7 @@ const ManageUser = () => {
           <input
             style={styles.searchBar}
             type="text"
-            placeholder="Search by Name, Email, Role, or Department"
+            placeholder="Search..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -309,6 +328,9 @@ const ManageUser = () => {
             <table style={styles.table}>
               <thead>
                 <tr>
+                  <th style={{ ...styles.tableHead, width: "120px" }}>
+                    Employee ID
+                  </th>
                   <th style={{ ...styles.tableHead, width: "200px" }}>Name</th>
                   <th style={{ ...styles.tableHead, width: "180px" }}>Email</th>
                   <th style={{ ...styles.tableHead, width: "100px" }}>Role</th>
@@ -337,6 +359,9 @@ const ManageUser = () => {
                         : {}),
                     }}
                   >
+                    <td style={styles.tableCell}>
+                      {user.employeeID || "Not Available"}
+                    </td>
                     <td style={styles.tableCell}>
                       {user.firstname} {user.lastname || "Not Available"}
                     </td>
@@ -422,7 +447,7 @@ const ManageUser = () => {
                     style={styles.input}
                   />
                   {formErrors.firstname && (
-                    <p style={styles.errorMessage}>{formErrors.firstname}</p>
+                    <p style={styles.errorMessage}>{formErrors.employeeID}</p>
                   )}
                 </div>
               </div>
@@ -443,22 +468,42 @@ const ManageUser = () => {
               </div>
             </div>
 
-            <div style={styles.formGroup}>
-              <label>Gender:</label>
-              <select
-                name="gender"
-                value={userForm.gender}
-                onChange={handleFormChange}
-                style={styles.select}
-              >
-                <option value="">Select Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
-              {formErrors.gender && (
-                <p style={styles.errorMessage}>{formErrors.gender}</p>
-              )}
+            <div style={styles.row}>
+              <div style={styles.halfWidth}>
+                <div style={styles.formGroup}>
+                  <label>Gender:</label>
+                  <select
+                    name="gender"
+                    value={userForm.gender}
+                    onChange={handleFormChange}
+                    style={styles.select}
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  {formErrors.gender && (
+                    <p style={styles.errorMessage}>{formErrors.gender}</p>
+                  )}
+                </div>
+              </div>
+
+              <div style={styles.halfWidth}>
+                <div style={styles.formGroup}>
+                  <label>Employee ID:</label>
+                  <input
+                    type="text"
+                    name="employeeID"
+                    value={userForm.employeeID}
+                    onChange={handleFormChange}
+                    style={styles.input}
+                  />
+                  {formErrors.employeeID && (
+                    <p style={styles.errorMessage}>{formErrors.employeeID}</p>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div style={styles.formGroup}>
