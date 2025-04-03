@@ -87,6 +87,7 @@ const ManageUser = () => {
   };
 
   const handleAddUser = () => {
+    setCurrentUser(null);
     setUserForm({
       firstname: "",
       lastname: "",
@@ -95,6 +96,7 @@ const ManageUser = () => {
       department: "",
       phone: "",
       gender: "",
+      employeeID: "",
     });
     setModalVisible(true);
   };
