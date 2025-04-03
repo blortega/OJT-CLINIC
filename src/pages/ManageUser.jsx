@@ -74,7 +74,12 @@ const ManageUser = () => {
       user.role || "Not Available",
       user.department || "Not Available",
       user.employeeID || "Not Available",
+      user.gender || "Not Available",
     ];
+
+    if (searchLower === "male" || searchLower === "female") {
+      return user.gender.toLowerCase() === searchLower;
+    }
 
     return fieldsToSearch.some((field) =>
       field.toLowerCase().includes(searchLower)
