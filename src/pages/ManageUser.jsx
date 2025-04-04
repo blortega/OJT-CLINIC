@@ -105,8 +105,8 @@ const ManageUser = () => {
   const handleEdit = (user) => {
     setCurrentUser(user);
     setUserForm({
-      firstname: user.firstname,
-      lastname: user.lastname,
+      firstname: user.firstname.toUpperCase(),
+      lastname: user.lastname ? user.lastname.toUpperCase() : "",
       email: user.email,
       role: user.role,
       department: user.department,
@@ -176,9 +176,13 @@ const ManageUser = () => {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setUserForm((prevForm) => ({ ...prevForm, [name]: value }));
 
-    if (name === "employeeID") {
+    if (name === "firstname" || name === "lastname") {
+      setUserForm((prevForm) => ({
+        ...prevForm,
+        [name]: value.toUpperCase(),
+      }));
+    } else if (name === "employeeID") {
       setUserForm((prevForm) => ({
         ...prevForm,
         [name]: value.toUpperCase(),
@@ -195,29 +199,50 @@ const ManageUser = () => {
     if (!userForm.firstname) {
       errors.firstname = "First name is required";
       isValid = false;
+    } else if (/\d/.test(userForm.firstname)) {
+      errors.firstname = "First name cannot contain numbers";
+      isValid = false;
     }
+
     if (!userForm.lastname) {
       errors.lastname = "Last name is required";
       isValid = false;
+    } else if (/\d/.test(userForm.lastname)) {
+      errors.lastname = "Last name cannot contain numbers";
+      isValid = false;
     }
+
     if (!userForm.email) {
       errors.email = "Email is required";
       isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(userForm.email)) {
+      errors.email = "Email is not valid";
+      isValid = false;
     }
+
     if (!userForm.role) {
       errors.role = "Role is required";
       isValid = false;
     }
+
     if (!userForm.department) {
       errors.department = "Department is required";
       isValid = false;
     }
+
     if (!userForm.gender) {
       errors.gender = "Gender is required";
       isValid = false;
     }
+
     if (!userForm.employeeID) {
       errors.employeeID = "Employee ID is required";
+      isValid = false;
+    }
+
+    if (userForm.phone && !/^(\+?[\d-]+)$/.test(userForm.phone)) {
+      errors.phone =
+        "Phone number can only contain numbers, plus (+) or dash (-)";
       isValid = false;
     }
 
