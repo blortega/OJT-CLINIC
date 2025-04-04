@@ -21,6 +21,8 @@ const ManageUser = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [hoveredUser, setHoveredUser] = useState(null);
+  const [hoveredIcon, setHoveredIcon] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -419,16 +421,40 @@ const ManageUser = () => {
                       </span>
                     </td>
                     <td style={styles.actionCell}>
+                      {/* Edit Button */}
                       <button
-                        style={styles.iconButton}
+                        style={{
+                          ...styles.iconButton,
+                          ...(hoveredUser === user.id && hoveredIcon === "edit"
+                            ? styles.buttonHover
+                            : {}),
+                        }}
+                        onMouseEnter={() => {
+                          setHoveredUser(user.id);
+                          setHoveredIcon("edit");
+                        }}
+                        onMouseLeave={() => setHoveredIcon(null)}
                         onClick={() => handleEdit(user)}
                         title="Edit"
                       >
                         <FiEdit />
                       </button>
+
+                      {/* Suspend/Activate Button */}
                       {user.status === "Suspended" ? (
                         <button
-                          style={styles.iconButton}
+                          style={{
+                            ...styles.iconButton,
+                            ...(hoveredUser === user.id &&
+                            hoveredIcon === "suspend"
+                              ? styles.buttonHover
+                              : {}),
+                          }}
+                          onMouseEnter={() => {
+                            setHoveredUser(user.id);
+                            setHoveredIcon("suspend");
+                          }}
+                          onMouseLeave={() => setHoveredIcon(null)}
                           onClick={() => handleSuspend(user)}
                           title="Activate"
                         >
@@ -436,15 +462,39 @@ const ManageUser = () => {
                         </button>
                       ) : (
                         <button
-                          style={styles.iconButton}
+                          style={{
+                            ...styles.iconButton,
+                            ...(hoveredUser === user.id &&
+                            hoveredIcon === "suspend"
+                              ? styles.buttonHover
+                              : {}),
+                          }}
+                          onMouseEnter={() => {
+                            setHoveredUser(user.id);
+                            setHoveredIcon("suspend");
+                          }}
+                          onMouseLeave={() => setHoveredIcon(null)}
                           onClick={() => handleSuspend(user)}
                           title="Suspend"
                         >
                           <FiUserX />
                         </button>
                       )}
+
+                      {/* Delete Button */}
                       <button
-                        style={styles.iconButton}
+                        style={{
+                          ...styles.iconButton,
+                          ...(hoveredUser === user.id &&
+                          hoveredIcon === "delete"
+                            ? styles.buttonHover
+                            : {}),
+                        }}
+                        onMouseEnter={() => {
+                          setHoveredUser(user.id);
+                          setHoveredIcon("delete");
+                        }}
+                        onMouseLeave={() => setHoveredIcon(null)}
                         onClick={() => handleDelete(user)}
                         title="Delete"
                       >
@@ -468,7 +518,7 @@ const ManageUser = () => {
                 onClick={() => setIsEditable(!isEditable)}
                 style={{
                   ...styles.editButton,
-                  ...(isHovered ? styles.editButtonHover : {}),
+                  ...(isHovered ? styles.buttonHover : {}),
                 }}
                 title="Edit"
                 onMouseEnter={() => setIsHovered(true)}
@@ -833,7 +883,7 @@ const styles = {
     display: "inline-flex",
     alignItems: "center",
   },
-  editButtonHover: {
+  buttonHover: {
     color: "#d41c48",
     transform: "scale(1.1)",
   },
