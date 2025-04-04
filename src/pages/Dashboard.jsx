@@ -15,23 +15,38 @@ const CONDITION_COLORS = [
 
 const Dashboard = () => {
   const [genderData, setGenderData] = useState([
-    { name: "Male", value: 50 },
-    { name: "Female", value: 50 },
+    { name: "Male", value: 0 },
+    { name: "Female", value: 0 },
   ]);
 
   const [topConditions, setTopConditions] = useState([]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const malePercentage = Math.floor(Math.random() * 100);
-      const femalePercentage = 100 - malePercentage;
-      setGenderData([
-        { name: "Male", value: malePercentage },
-        { name: "Female", value: femalePercentage },
-      ]);
-    }, 5000);
+    const fetchGenderData = async () => {
+      try {
+        const usersSnapshot = await getDocs(collection(db, "users"));
+        let maleCount = 0;
+        let femaleCount = 0;
 
-    return () => clearInterval(interval);
+        usersSnapshot.forEach((doc) => {
+          const gender = doc.data().gender;
+          if (gender === "Male") {
+            maleCount += 1;
+          } else if (gender === "Female") {
+            femaleCount += 1;
+          }
+        });
+
+        setGenderData([
+          { name: "Male", value: maleCount },
+          { name: "Female", value: femaleCount },
+        ]);
+      } catch (error) {
+        console.error("Error fetching gender data:", error);
+      }
+    };
+
+    fetchGenderData();
   }, []);
 
   useEffect(() => {
