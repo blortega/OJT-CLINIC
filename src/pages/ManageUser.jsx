@@ -242,10 +242,15 @@ const ManageUser = () => {
       isValid = false;
     }
 
-    if (userForm.phone && !/^(\+?[\d-]+)$/.test(userForm.phone)) {
-      errors.phone =
-        "Phone number can only contain numbers, plus (+) or dash (-)";
-      isValid = false;
+    if (userForm.phone) {
+      if (!/^(\+?[\d-]+)$/.test(userForm.phone)) {
+        errors.phone =
+          "Phone number can only contain numbers, plus (+) or dash (-)";
+        isValid = false;
+      } else if (userForm.phone.length > 13) {
+        errors.phone = "Phone number cannot be longer than 13 characters";
+        isValid = false;
+      }
     }
 
     setFormErrors(errors);
@@ -629,8 +634,12 @@ const ManageUser = () => {
                     style={styles.input}
                     disabled={!isEditable}
                   />
+                  {formErrors.phone && (
+                    <p style={styles.errorMessage}>{formErrors.phone}</p>
+                  )}
                 </div>
               </div>
+
               <div style={styles.halfWidth}>
                 <div style={styles.formGroup}>
                   <label>Department:</label>
@@ -673,7 +682,10 @@ const ManageUser = () => {
                 {isSaving ? "Saving..." : "Save"}
               </button>
               <button
-                onClick={() => setModalVisible(false)}
+                onClick={() => {
+                  setModalVisible(false);
+                  setFormErrors({});
+                }}
                 style={styles.cancelButton}
               >
                 Cancel
