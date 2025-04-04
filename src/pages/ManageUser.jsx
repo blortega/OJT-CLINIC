@@ -12,7 +12,7 @@ import {
 } from "firebase/firestore";
 import { app } from "../firebase";
 import { FiPlus, FiEdit, FiTrash, FiUserX } from "react-icons/fi";
-import { FaUserCheck } from "react-icons/fa";
+import { FaUserCheck, FaEdit } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -24,6 +24,7 @@ const ManageUser = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditable, setIsEditable] = useState(false);
   const [userForm, setUserForm] = useState({
     firstname: "",
     lastname: "",
@@ -299,10 +300,6 @@ const ManageUser = () => {
       <ToastContainer position="top-right" autoClose={2000} />
       <div style={styles.container}>
         <h1 style={styles.heading}>Manage User Page</h1>
-        <p style={styles.subheading}>
-          This is a test page to check if navigation is working properly.
-        </p>
-
         <div style={styles.searchContainer}>
           <input
             style={styles.searchBar}
@@ -440,7 +437,21 @@ const ManageUser = () => {
       {modalVisible && (
         <div style={styles.modal}>
           <div style={styles.modalContent}>
-            <h2>{currentUser ? "Edit Employee" : "Add Employee"}</h2>
+            <h2>
+              {currentUser ? "Edit Employee" : "Add Employee"}
+              <button
+                onClick={() => setIsEditable(!isEditable)}
+                style={{
+                  ...styles.editButton,
+                  ...(isHovered ? styles.editButtonHover : {}),
+                }}
+                title="Edit"
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+              >
+                <FiEdit />
+              </button>
+            </h2>
             <div style={styles.row}>
               <div style={styles.halfWidth}>
                 <div style={styles.formGroup}>
@@ -451,9 +462,10 @@ const ManageUser = () => {
                     value={userForm.firstname}
                     onChange={handleFormChange}
                     style={styles.input}
+                    disabled={!isEditable}
                   />
                   {formErrors.firstname && (
-                    <p style={styles.errorMessage}>{formErrors.employeeID}</p>
+                    <p style={styles.errorMessage}>{formErrors.firstname}</p>
                   )}
                 </div>
               </div>
@@ -466,6 +478,7 @@ const ManageUser = () => {
                     value={userForm.lastname}
                     onChange={handleFormChange}
                     style={styles.input}
+                    disabled={!isEditable}
                   />
                   {formErrors.lastname && (
                     <p style={styles.errorMessage}>{formErrors.lastname}</p>
@@ -483,6 +496,7 @@ const ManageUser = () => {
                     value={userForm.gender}
                     onChange={handleFormChange}
                     style={styles.select}
+                    disabled={!isEditable}
                   >
                     <option value="">Select Gender</option>
                     <option value="Male">Male</option>
@@ -504,6 +518,7 @@ const ManageUser = () => {
                     value={userForm.employeeID}
                     onChange={handleFormChange}
                     style={styles.input}
+                    disabled={!isEditable}
                   />
                   {formErrors.employeeID && (
                     <p style={styles.errorMessage}>{formErrors.employeeID}</p>
@@ -520,6 +535,7 @@ const ManageUser = () => {
                 value={userForm.email}
                 onChange={handleFormChange}
                 style={styles.input}
+                disabled={!isEditable}
               />
               {formErrors.email && (
                 <p style={styles.errorMessage}>{formErrors.email}</p>
@@ -536,6 +552,7 @@ const ManageUser = () => {
                     value={userForm.phone}
                     onChange={handleFormChange}
                     style={styles.input}
+                    disabled={!isEditable}
                   />
                 </div>
               </div>
@@ -548,6 +565,7 @@ const ManageUser = () => {
                     value={userForm.department}
                     onChange={handleFormChange}
                     style={styles.input}
+                    disabled={!isEditable}
                   />
                   {formErrors.department && (
                     <p style={styles.errorMessage}>{formErrors.department}</p>
@@ -564,7 +582,7 @@ const ManageUser = () => {
                 value={userForm.role}
                 onChange={handleFormChange}
                 style={styles.input}
-                disabled
+                disabled={!isEditable}
               />
               {formErrors.role && (
                 <p style={styles.errorMessage}>{formErrors.role}</p>
@@ -575,7 +593,7 @@ const ManageUser = () => {
               <button
                 onClick={handleSaveUser}
                 style={styles.saveButton}
-                disabled={isSaving}
+                disabled={isSaving || !isEditable}
               >
                 {isSaving ? "Saving..." : "Save"}
               </button>
@@ -778,6 +796,21 @@ const styles = {
     minWidth: "100px",
     maxWidth: "100px",
     textAlign: "center",
+  },
+  editButton: {
+    background: "none",
+    border: "none",
+    padding: "5px",
+    cursor: "pointer",
+    transition: "transform 0.3s ease, color 0.3s ease",
+    color: "#1e3a8a",
+    fontSize: "20px",
+    display: "inline-flex",
+    alignItems: "center",
+  },
+  editButtonHover: {
+    color: "#d41c48",
+    transform: "scale(1.1)",
   },
 };
 
