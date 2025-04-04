@@ -12,19 +12,21 @@ import {
 } from "firebase/firestore";
 import { app } from "../firebase";
 import { FiPlus, FiEdit, FiTrash, FiUserX } from "react-icons/fi";
-import { FaUserCheck } from "react-icons/fa";
+import { FaUserCheck, FaEdit } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { BsGenderAmbiguous } from "react-icons/bs";
 
 const ManageUser = () => {
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [hoveredUser, setHoveredUser] = useState(null);
+  const [hoveredIcon, setHoveredIcon] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditable, setIsEditable] = useState(false);
   const [userForm, setUserForm] = useState({
     firstname: "",
     lastname: "",
@@ -42,6 +44,7 @@ const ManageUser = () => {
     department: "",
     phone: "",
     gender: "",
+    employeeID: "",
   });
 
   useEffect(() => {
@@ -73,7 +76,13 @@ const ManageUser = () => {
       user.email || "Not Available",
       user.role || "Not Available",
       user.department || "Not Available",
+      user.employeeID || "Not Available",
+      user.gender || "Not Available",
     ];
+
+    if (searchLower === "male" || searchLower === "female") {
+      return user.gender.toLowerCase() === searchLower;
+    }
 
     return fieldsToSearch.some((field) =>
       field.toLowerCase().includes(searchLower)
@@ -81,6 +90,7 @@ const ManageUser = () => {
   };
 
   const handleAddUser = () => {
+    setCurrentUser(null);
     setUserForm({
       firstname: "",
       lastname: "",
@@ -89,6 +99,7 @@ const ManageUser = () => {
       department: "",
       phone: "",
       gender: "",
+      employeeID: "",
     });
     setModalVisible(true);
   };
@@ -96,13 +107,14 @@ const ManageUser = () => {
   const handleEdit = (user) => {
     setCurrentUser(user);
     setUserForm({
-      firstname: user.firstname,
-      lastname: user.lastname,
+      firstname: user.firstname.toUpperCase(),
+      lastname: user.lastname ? user.lastname.toUpperCase() : "",
       email: user.email,
       role: user.role,
       department: user.department,
       phone: user.phone || "",
       gender: user.gender || "",
+      employeeID: user.employeeID || "",
     });
     setModalVisible(true);
   };
@@ -166,7 +178,20 @@ const ManageUser = () => {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setUserForm((prevForm) => ({ ...prevForm, [name]: value }));
+
+    if (name === "firstname" || name === "lastname") {
+      setUserForm((prevForm) => ({
+        ...prevForm,
+        [name]: value.toUpperCase(),
+      }));
+    } else if (name === "employeeID") {
+      setUserForm((prevForm) => ({
+        ...prevForm,
+        [name]: value.toUpperCase(),
+      }));
+    } else {
+      setUserForm((prevForm) => ({ ...prevForm, [name]: value }));
+    }
   };
 
   const validateForm = () => {
@@ -176,26 +201,56 @@ const ManageUser = () => {
     if (!userForm.firstname) {
       errors.firstname = "First name is required";
       isValid = false;
+    } else if (/\d/.test(userForm.firstname)) {
+      errors.firstname = "First name cannot contain numbers";
+      isValid = false;
     }
+
     if (!userForm.lastname) {
       errors.lastname = "Last name is required";
       isValid = false;
+    } else if (/\d/.test(userForm.lastname)) {
+      errors.lastname = "Last name cannot contain numbers";
+      isValid = false;
     }
+
     if (!userForm.email) {
       errors.email = "Email is required";
       isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(userForm.email)) {
+      errors.email = "Email is not valid";
+      isValid = false;
     }
+
     if (!userForm.role) {
       errors.role = "Role is required";
       isValid = false;
     }
+
     if (!userForm.department) {
       errors.department = "Department is required";
       isValid = false;
     }
+
     if (!userForm.gender) {
       errors.gender = "Gender is required";
       isValid = false;
+    }
+
+    if (!userForm.employeeID) {
+      errors.employeeID = "Employee ID is required";
+      isValid = false;
+    }
+
+    if (userForm.phone) {
+      if (!/^(\+?[\d-]+)$/.test(userForm.phone)) {
+        errors.phone =
+          "Phone number can only contain numbers, plus (+) or dash (-)";
+        isValid = false;
+      } else if (userForm.phone.length > 13) {
+        errors.phone = "Phone number cannot be longer than 13 characters";
+        isValid = false;
+      }
     }
 
     setFormErrors(errors);
@@ -219,6 +274,7 @@ const ManageUser = () => {
           phone: userForm.phone,
           department: userForm.department,
           gender: userForm.gender,
+          employeeID: userForm.employeeID || "Not Available",
         });
         toast.success("User updated successfully!");
       } else {
@@ -231,6 +287,7 @@ const ManageUser = () => {
           department: userForm.department,
           phone: userForm.phone,
           gender: userForm.gender,
+          employeeID: userForm.employeeID || "Not Available",
           createdAt: Timestamp.fromDate(new Date()),
           status: "Active",
         };
@@ -253,6 +310,7 @@ const ManageUser = () => {
         department: "",
         phone: "",
         gender: "",
+        employeeID: "",
       });
       setCurrentUser(null);
 
@@ -274,15 +332,11 @@ const ManageUser = () => {
       <ToastContainer position="top-right" autoClose={2000} />
       <div style={styles.container}>
         <h1 style={styles.heading}>Manage User Page</h1>
-        <p style={styles.subheading}>
-          This is a test page to check if navigation is working properly.
-        </p>
-
         <div style={styles.searchContainer}>
           <input
             style={styles.searchBar}
             type="text"
-            placeholder="Search by Name, Email, Role, or Department"
+            placeholder="Search..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -309,6 +363,9 @@ const ManageUser = () => {
             <table style={styles.table}>
               <thead>
                 <tr>
+                  <th style={{ ...styles.tableHead, width: "120px" }}>
+                    Employee ID
+                  </th>
                   <th style={{ ...styles.tableHead, width: "200px" }}>Name</th>
                   <th style={{ ...styles.tableHead, width: "180px" }}>Email</th>
                   <th style={{ ...styles.tableHead, width: "100px" }}>Role</th>
@@ -338,6 +395,9 @@ const ManageUser = () => {
                     }}
                   >
                     <td style={styles.tableCell}>
+                      {user.employeeID || "Not Available"}
+                    </td>
+                    <td style={styles.tableCell}>
                       {user.firstname} {user.lastname || "Not Available"}
                     </td>
                     <td style={styles.tableCell}>
@@ -366,16 +426,40 @@ const ManageUser = () => {
                       </span>
                     </td>
                     <td style={styles.actionCell}>
+                      {/* Edit Button */}
                       <button
-                        style={styles.iconButton}
+                        style={{
+                          ...styles.iconButton,
+                          ...(hoveredUser === user.id && hoveredIcon === "edit"
+                            ? styles.buttonHover
+                            : {}),
+                        }}
+                        onMouseEnter={() => {
+                          setHoveredUser(user.id);
+                          setHoveredIcon("edit");
+                        }}
+                        onMouseLeave={() => setHoveredIcon(null)}
                         onClick={() => handleEdit(user)}
                         title="Edit"
                       >
                         <FiEdit />
                       </button>
+
+                      {/* Suspend/Activate Button */}
                       {user.status === "Suspended" ? (
                         <button
-                          style={styles.iconButton}
+                          style={{
+                            ...styles.iconButton,
+                            ...(hoveredUser === user.id &&
+                            hoveredIcon === "suspend"
+                              ? styles.buttonHover
+                              : {}),
+                          }}
+                          onMouseEnter={() => {
+                            setHoveredUser(user.id);
+                            setHoveredIcon("suspend");
+                          }}
+                          onMouseLeave={() => setHoveredIcon(null)}
                           onClick={() => handleSuspend(user)}
                           title="Activate"
                         >
@@ -383,15 +467,39 @@ const ManageUser = () => {
                         </button>
                       ) : (
                         <button
-                          style={styles.iconButton}
+                          style={{
+                            ...styles.iconButton,
+                            ...(hoveredUser === user.id &&
+                            hoveredIcon === "suspend"
+                              ? styles.buttonHover
+                              : {}),
+                          }}
+                          onMouseEnter={() => {
+                            setHoveredUser(user.id);
+                            setHoveredIcon("suspend");
+                          }}
+                          onMouseLeave={() => setHoveredIcon(null)}
                           onClick={() => handleSuspend(user)}
                           title="Suspend"
                         >
                           <FiUserX />
                         </button>
                       )}
+
+                      {/* Delete Button */}
                       <button
-                        style={styles.iconButton}
+                        style={{
+                          ...styles.iconButton,
+                          ...(hoveredUser === user.id &&
+                          hoveredIcon === "delete"
+                            ? styles.buttonHover
+                            : {}),
+                        }}
+                        onMouseEnter={() => {
+                          setHoveredUser(user.id);
+                          setHoveredIcon("delete");
+                        }}
+                        onMouseLeave={() => setHoveredIcon(null)}
                         onClick={() => handleDelete(user)}
                         title="Delete"
                       >
@@ -409,7 +517,21 @@ const ManageUser = () => {
       {modalVisible && (
         <div style={styles.modal}>
           <div style={styles.modalContent}>
-            <h2>{currentUser ? "Edit Employee" : "Add Employee"}</h2>
+            <h2>
+              {currentUser ? "Edit Employee" : "Add Employee"}
+              <button
+                onClick={() => setIsEditable(!isEditable)}
+                style={{
+                  ...styles.editButton,
+                  ...(isHovered ? styles.buttonHover : {}),
+                }}
+                title="Edit"
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+              >
+                <FiEdit />
+              </button>
+            </h2>
             <div style={styles.row}>
               <div style={styles.halfWidth}>
                 <div style={styles.formGroup}>
@@ -420,6 +542,7 @@ const ManageUser = () => {
                     value={userForm.firstname}
                     onChange={handleFormChange}
                     style={styles.input}
+                    disabled={!isEditable}
                   />
                   {formErrors.firstname && (
                     <p style={styles.errorMessage}>{formErrors.firstname}</p>
@@ -435,6 +558,7 @@ const ManageUser = () => {
                     value={userForm.lastname}
                     onChange={handleFormChange}
                     style={styles.input}
+                    disabled={!isEditable}
                   />
                   {formErrors.lastname && (
                     <p style={styles.errorMessage}>{formErrors.lastname}</p>
@@ -443,22 +567,44 @@ const ManageUser = () => {
               </div>
             </div>
 
-            <div style={styles.formGroup}>
-              <label>Gender:</label>
-              <select
-                name="gender"
-                value={userForm.gender}
-                onChange={handleFormChange}
-                style={styles.select}
-              >
-                <option value="">Select Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
-              {formErrors.gender && (
-                <p style={styles.errorMessage}>{formErrors.gender}</p>
-              )}
+            <div style={styles.row}>
+              <div style={styles.halfWidth}>
+                <div style={styles.formGroup}>
+                  <label>Gender:</label>
+                  <select
+                    name="gender"
+                    value={userForm.gender}
+                    onChange={handleFormChange}
+                    style={styles.select}
+                    disabled={!isEditable}
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  {formErrors.gender && (
+                    <p style={styles.errorMessage}>{formErrors.gender}</p>
+                  )}
+                </div>
+              </div>
+
+              <div style={styles.halfWidth}>
+                <div style={styles.formGroup}>
+                  <label>Employee ID:</label>
+                  <input
+                    type="text"
+                    name="employeeID"
+                    value={userForm.employeeID}
+                    onChange={handleFormChange}
+                    style={styles.input}
+                    disabled={!isEditable}
+                  />
+                  {formErrors.employeeID && (
+                    <p style={styles.errorMessage}>{formErrors.employeeID}</p>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div style={styles.formGroup}>
@@ -469,6 +615,7 @@ const ManageUser = () => {
                 value={userForm.email}
                 onChange={handleFormChange}
                 style={styles.input}
+                disabled={!isEditable}
               />
               {formErrors.email && (
                 <p style={styles.errorMessage}>{formErrors.email}</p>
@@ -485,9 +632,14 @@ const ManageUser = () => {
                     value={userForm.phone}
                     onChange={handleFormChange}
                     style={styles.input}
+                    disabled={!isEditable}
                   />
+                  {formErrors.phone && (
+                    <p style={styles.errorMessage}>{formErrors.phone}</p>
+                  )}
                 </div>
               </div>
+
               <div style={styles.halfWidth}>
                 <div style={styles.formGroup}>
                   <label>Department:</label>
@@ -497,6 +649,7 @@ const ManageUser = () => {
                     value={userForm.department}
                     onChange={handleFormChange}
                     style={styles.input}
+                    disabled={!isEditable}
                   />
                   {formErrors.department && (
                     <p style={styles.errorMessage}>{formErrors.department}</p>
@@ -513,7 +666,7 @@ const ManageUser = () => {
                 value={userForm.role}
                 onChange={handleFormChange}
                 style={styles.input}
-                disabled
+                disabled={!isEditable}
               />
               {formErrors.role && (
                 <p style={styles.errorMessage}>{formErrors.role}</p>
@@ -524,12 +677,15 @@ const ManageUser = () => {
               <button
                 onClick={handleSaveUser}
                 style={styles.saveButton}
-                disabled={isSaving}
+                disabled={isSaving || !isEditable}
               >
                 {isSaving ? "Saving..." : "Save"}
               </button>
               <button
-                onClick={() => setModalVisible(false)}
+                onClick={() => {
+                  setModalVisible(false);
+                  setFormErrors({});
+                }}
                 style={styles.cancelButton}
               >
                 Cancel
@@ -727,6 +883,21 @@ const styles = {
     minWidth: "100px",
     maxWidth: "100px",
     textAlign: "center",
+  },
+  editButton: {
+    background: "none",
+    border: "none",
+    padding: "5px",
+    cursor: "pointer",
+    transition: "transform 0.3s ease, color 0.3s ease",
+    color: "#1e3a8a",
+    fontSize: "20px",
+    display: "inline-flex",
+    alignItems: "center",
+  },
+  buttonHover: {
+    color: "#d41c48",
+    transform: "scale(1.1)",
   },
 };
 
