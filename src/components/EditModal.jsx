@@ -36,31 +36,38 @@ const EditModal = ({ isOpen, onClose, medicine, onUpdate }) => {
     }));
   };
 
-  const handleSubmit = async () => {
-    if (!editedMedicine.name || !editedMedicine.dosage || !editedMedicine.type || editedMedicine.stock < 0) {
-      toast.error("Please fill in all fields correctly.");
-      return;
-    }
+    const handleSubmit = async () => {
 
-    try {
-      const db = getFirestore(app);
-      const medicineRef = doc(db, "medicine", medicine.id);
+      const confirmUpdate = window.confirm("Are you sure you want to update the medicine details?");
 
-      await updateDoc(medicineRef, {
-        name: editedMedicine.name,
-        dosage: editedMedicine.dosage,
-        type: editedMedicine.type,
-        stock: parseInt(editedMedicine.stock),
-      });
+      if (!confirmUpdate) {
+        return;
+      }
 
-      onUpdate({ ...medicine, ...editedMedicine }); // Update the UI
-      toast.success("Medicine details updated successfully!");
-      onClose(); // Close the modal after submitting
-    } catch (error) {
-      toast.error("Failed to update medicine.");
-      console.error("Error updating medicine:", error);
-    }
-  };
+      if (!editedMedicine.name || !editedMedicine.dosage || !editedMedicine.type || editedMedicine.stock < 0) {
+        toast.error("Please fill in all fields correctly.");
+        return;
+      }
+
+      try {
+        const db = getFirestore(app);
+        const medicineRef = doc(db, "medicine", medicine.id);
+
+        await updateDoc(medicineRef, {
+          name: editedMedicine.name,
+          dosage: editedMedicine.dosage,
+          type: editedMedicine.type,
+          stock: parseInt(editedMedicine.stock),
+        });
+
+        onUpdate({ ...medicine, ...editedMedicine }); // Update the UI
+        toast.success("Medicine details updated successfully!");
+        onClose(); // Close the modal after submitting
+      } catch (error) {
+        toast.error("Failed to update medicine.");
+        console.error("Error updating medicine:", error);
+      }
+    };
 
   const handleClose = () => {
     setEditedMedicine({
