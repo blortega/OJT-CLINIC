@@ -1,0 +1,130 @@
+/* Login.css */
+
+.container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    background-color: #f0f4f8;
+  }
+  
+  .leftSection {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-image: url('../assets/loginbg.png');
+    background-size: cover;
+    background-position: center;
+    border-top-right-radius: 40px;
+    border-bottom-right-radius: 40px;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .logo {
+    width: 750px;
+  }
+  
+  .rightSection {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background-color: #fff;
+  }
+  
+  .loginImage {
+    width: 350px;
+  }
+  
+  .heading {
+    margin-bottom: 0.5rem;
+    color: #333;
+    font-size: 24px;
+  }
+  
+  .subText {
+    color: #6c757d;
+    margin-bottom: 1rem;
+    font-size: 16px;
+    text-align: left;
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  .inputGroup {
+    margin-bottom: 1.5rem;
+    text-align: left;
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  .input {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #d9d9d9;
+    border-radius: 1px;
+    font-size: 16px;
+    outline: none;
+    background-color: #f7f7f7;
+    box-sizing: border-box;
+    color: #000;
+  }
+  
+  .passwordContainer {
+    display: flex;
+    align-items: center;
+    position: relative;
+    width: 100%;
+  }
+  
+  .togglePassword {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+  }
+  
+  .forgotPassword {
+    display: block;
+    margin-top: 0.5rem;
+    color: #007bff;
+    text-decoration: none;
+    text-align: right;
+    font-size: 14px;
+  }
+  
+  .loginBtn {
+    background-color: #2e588f;
+    color: #fff;
+    border: none;
+    padding: 15px;
+    width: 100%;
+    max-width: 350px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 10px;
+    transition: background 0.3s ease-in-out;
+  }
+  
+  .dashboardBtn {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 10px;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 10px;
+  }
+  
