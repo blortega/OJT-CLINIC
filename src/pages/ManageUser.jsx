@@ -187,7 +187,7 @@ const ManageUser = () => {
     } else if (name === "employeeID") {
       setUserForm((prevForm) => ({
         ...prevForm,
-        [name]: value.toUpperCase(),
+        [name]: value.toUpperCase().trim(),
       }));
     } else {
       setUserForm((prevForm) => ({ ...prevForm, [name]: value }));
@@ -268,20 +268,27 @@ const ManageUser = () => {
         // Update existing user
         const userRef = doc(db, "users", currentUser.id);
         await updateDoc(userRef, {
-          firstname: userForm.firstname,
-          lastname: userForm.lastname,
+          firstname: userForm.firstname
+            .toUpperCase()
+            .trim()
+            .replace(/\s+/g, " "),
+          lastname: userForm.lastname.toUpperCase().trim().replace(/\s+/g, " "),
           email: userForm.email,
           phone: userForm.phone,
           department: userForm.department,
           gender: userForm.gender,
           employeeID: userForm.employeeID || "Not Available",
         });
+
         toast.success("User updated successfully!");
       } else {
         // Add new user
         const newUserData = {
-          firstname: userForm.firstname,
-          lastname: userForm.lastname,
+          firstname: userForm.firstname
+            .toUpperCase()
+            .trim()
+            .replace(/\s+/g, " "),
+          lastname: userForm.lastname.toUpperCase().trim().replace(/\s+/g, " "),
           email: userForm.email,
           role: userForm.role,
           department: userForm.department,
@@ -666,7 +673,7 @@ const ManageUser = () => {
                 value={userForm.role}
                 onChange={handleFormChange}
                 style={styles.input}
-                disabled={!isEditable}
+                disabled={true}
               />
               {formErrors.role && (
                 <p style={styles.errorMessage}>{formErrors.role}</p>
