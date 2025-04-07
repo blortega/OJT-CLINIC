@@ -13,7 +13,10 @@ import {
 } from "react-icons/fi";
 import { NavLink, useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
-import { signOut } from "firebase/auth";
+import { signOut, onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
+import { RingLoader } from "react-spinners"; // Import a spinner component
 
 const sidebarLinks = [
   { to: "/dashboard", icon: <FiBarChart2 />, label: "Dashboard" },
@@ -26,30 +29,54 @@ const sidebarLinks = [
 const Sidebar = ({ children }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const [temporaryUser, setTemporaryUser] = useState(null); // Temporary user data
+  const [loading, setLoading] = useState(false); // Loading state for sign-out
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowDropdown(false);
-      }
-    };
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setTemporaryUser({
+          firstname: user.displayName || "Guest",
+          email: user.email || "guest@example.com",
+        });
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+        try {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            setUserData(userDoc.data());
+          } else {
+            console.error("User document not found.");
+            setUserData(null);
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+          setUserData(null);
+        }
+      } else {
+        setUserData(null);
+        setTemporaryUser(null);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleLogout = async () => {
+    setLoading(true); // Set loading to true when sign-out starts
     try {
-      await signOut(auth);
-      navigate("/");
+      await signOut(auth); // Wait for sign-out to complete
+      navigate("/"); // Only navigate to login page after sign-out is complete
     } catch (error) {
       console.error("Logout error:", error);
+    } finally {
+      setLoading(false); // Set loading to false when sign-out process ends
     }
   };
+
+  const displayUserData = userData || temporaryUser;
 
   return (
     <div style={styles.container}>
@@ -90,13 +117,19 @@ const Sidebar = ({ children }) => {
             <FiUser style={styles.userIcon} />
             {!isCollapsed && (
               <div>
-                <span style={styles.userName}>James</span>
-                <p style={styles.userEmail}>james@example.com</p>
+                <span style={styles.userName}>
+                  {displayUserData ? displayUserData.firstname : "Guest"}
+                </span>
+                <p style={styles.userEmail}>
+                  {displayUserData
+                    ? displayUserData.email
+                    : "guest@example.com"}
+                </p>
               </div>
             )}
             {!isCollapsed &&
               (showDropdown ? (
-                <FiChevronUp style={{ color: "#333" }} /> // Change color to visible one
+                <FiChevronUp style={{ color: "#333" }} />
               ) : (
                 <FiChevronDown style={{ color: "#333" }} />
               ))}
@@ -116,8 +149,18 @@ const Sidebar = ({ children }) => {
             >
               <FiUser /> Account Settings
             </button>
-            <button style={styles.dropdownItem} onClick={handleLogout}>
-              <FiLogOut /> Sign Out
+            <button
+              style={styles.dropdownItem}
+              onClick={handleLogout}
+              disabled={loading} // Disable Sign Out button while loading
+            >
+              {loading ? (
+                <RingLoader size={24} color="#ffffff" /> // Show spinner when loading
+              ) : (
+                <>
+                  <FiLogOut /> Sign Out
+                </>
+              )}
             </button>
           </div>
         </div>
