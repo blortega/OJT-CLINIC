@@ -30,36 +30,61 @@ const Sidebar = ({ children }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [userData, setUserData] = useState(null);
-  const [temporaryUser, setTemporaryUser] = useState(null); // Temporary user data
-  const [loading, setLoading] = useState(false); // Loading state for sign-out
-  const [hoveredItem, setHoveredItem] = useState(""); // Hover state for dropdown items
-  const [hoveredLink, setHoveredLink] = useState(""); // Hover state for nav links
+  const [loading, setLoading] = useState(false);
+  const [userLoading, setUserLoading] = useState(true);
+  const [hoveredItem, setHoveredItem] = useState("");
+  const [hoveredLink, setHoveredLink] = useState("");
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
+    const storedUserData = localStorage.getItem("userData");
+    if (storedUserData) {
+      try {
+        setUserData(JSON.parse(storedUserData));
+      } catch (error) {
+        console.error("Error parsing stored user data:", error);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        setTemporaryUser({
-          firstname: user.displayName || "Guest",
-          email: user.email || "guest@example.com",
-        });
-
+        setUserLoading(true);
         try {
           const userDoc = await getDoc(doc(db, "users", user.uid));
           if (userDoc.exists()) {
-            setUserData(userDoc.data());
+            const userDataFromFirestore = userDoc.data();
+            setUserData(userDataFromFirestore);
+            localStorage.setItem(
+              "userData",
+              JSON.stringify(userDataFromFirestore)
+            );
           } else {
             console.error("User document not found.");
-            setUserData(null);
+            const basicUserData = {
+              firstname: user.displayName || "User",
+              email: user.email,
+            };
+            setUserData(basicUserData);
+            localStorage.setItem("userData", JSON.stringify(basicUserData));
           }
         } catch (error) {
           console.error("Error fetching user data:", error);
-          setUserData(null);
+          const basicUserData = {
+            firstname: user.displayName || "User",
+            email: user.email,
+          };
+          setUserData(basicUserData);
+          localStorage.setItem("userData", JSON.stringify(basicUserData));
+        } finally {
+          setUserLoading(false);
         }
       } else {
         setUserData(null);
-        setTemporaryUser(null);
+        localStorage.removeItem("userData");
+        setUserLoading(false);
       }
     });
 
@@ -67,18 +92,17 @@ const Sidebar = ({ children }) => {
   }, []);
 
   const handleLogout = async () => {
-    setLoading(true); // Set loading to true when sign-out starts
+    setLoading(true);
     try {
-      await signOut(auth); // Wait for sign-out to complete
-      navigate("/"); // Only navigate to login page after sign-out is complete
+      localStorage.removeItem("userData");
+      await signOut(auth);
+      navigate("/");
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      setLoading(false); // Set loading to false when sign-out process ends
+      setLoading(false);
     }
   };
-
-  const displayUserData = userData || temporaryUser;
 
   return (
     <div style={styles.container}>
@@ -133,14 +157,20 @@ const Sidebar = ({ children }) => {
             <FiUser style={styles.userIcon} />
             {!isCollapsed && (
               <div>
-                <span style={styles.userName}>
-                  {displayUserData ? displayUserData.firstname : "Guest"}
-                </span>
-                <p style={styles.userEmail}>
-                  {displayUserData
-                    ? displayUserData.email
-                    : "guest@example.com"}
-                </p>
+                {userLoading ? (
+                  <div style={styles.userLoading}>
+                    <RingLoader size={15} color="#2d97e9" />
+                  </div>
+                ) : (
+                  <>
+                    <span style={styles.userName}>
+                      {userData ? userData.firstname : "Guest"}
+                    </span>
+                    <p style={styles.userEmail}>
+                      {userData ? userData.email : "guest@example.com"}
+                    </p>
+                  </>
+                )}
               </div>
             )}
             {!isCollapsed &&
@@ -162,31 +192,39 @@ const Sidebar = ({ children }) => {
             <button
               style={{
                 ...styles.dropdownItem,
-                background: hoveredItem === "account" ? "#1a4d6f" : "none",
-                transform: hoveredItem === "account" ? "scale(1.05)" : "none",
+                ...(hoveredItem === "account" ? styles.dropdownItemHover : {}),
               }}
               onClick={() => navigate("/account")}
               onMouseEnter={() => setHoveredItem("account")}
               onMouseLeave={() => setHoveredItem("")}
             >
-              <FiUser /> Account Settings
+              {hoveredItem === "account" ? (
+                <FiUser style={styles.dropdownItemIconHover} />
+              ) : (
+                <FiUser />
+              )}
+              Account Settings
             </button>
             <button
               style={{
                 ...styles.dropdownItem,
-                background: hoveredItem === "signOut" ? "#1a4d6f" : "none",
-                transform: hoveredItem === "signOut" ? "scale(1.05)" : "none",
+                ...(hoveredItem === "signOut" ? styles.dropdownItemHover : {}),
               }}
               onClick={handleLogout}
-              disabled={loading} // Disable Sign Out button while loading
+              disabled={loading}
               onMouseEnter={() => setHoveredItem("signOut")}
               onMouseLeave={() => setHoveredItem("")}
             >
               {loading ? (
-                <RingLoader size={24} color="#ffffff" /> // Show spinner when loading
+                <RingLoader size={24} color="#ffffff" />
               ) : (
                 <>
-                  <FiLogOut /> Sign Out
+                  {hoveredItem === "signOut" ? (
+                    <FiLogOut style={styles.dropdownItemIconHover} />
+                  ) : (
+                    <FiLogOut />
+                  )}
+                  Sign Out
                 </>
               )}
             </button>
@@ -318,6 +356,12 @@ const styles = {
     color: "#666",
     margin: "0",
   },
+  userLoading: {
+    display: "flex",
+    alignItems: "center",
+    height: "35px",
+    justifyContent: "center",
+  },
   dropdown: {
     position: "absolute",
     bottom: "100%",
@@ -343,7 +387,22 @@ const styles = {
     cursor: "pointer",
     textAlign: "left",
     fontSize: "1rem",
-    transition: "background 0.3s ease, transform 0.2s ease-in-out",
+    transition: "all 0.25s ease-in-out",
+    position: "relative",
+    overflow: "hidden",
+  },
+  dropdownItemHover: {
+    background: "linear-gradient(90deg, #2d97e9, #1a4d6f)",
+    transform: "translateX(5px)",
+    boxShadow: "inset 0 0 10px rgba(255, 255, 255, 0.1)",
+    paddingLeft: "17px",
+    color: "#ffffff",
+    letterSpacing: "0.5px",
+  },
+  dropdownItemIconHover: {
+    transform: "scale(1.2)",
+    color: "#ffffff",
+    transition: "all 0.25s ease-in-out",
   },
 };
 
