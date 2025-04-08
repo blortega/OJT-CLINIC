@@ -321,11 +321,11 @@ const styles = {
     transition: "background 0.3s ease",
   },
   sidebarLinkHover: {
-    backgroundColor: "#e6f0fc", // Light blue hover
+    backgroundColor: "#e6f0fc",
     color: "#2d97e9",
   },
   dropdownItemHover: {
-    backgroundColor: "#1b3d5d", // Darker blue on hover
+    backgroundColor: "#1b3d5d",
   },
 };
 
