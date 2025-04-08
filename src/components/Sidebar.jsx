@@ -13,7 +13,10 @@ import {
 } from "react-icons/fi";
 import { NavLink, useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
-import { signOut } from "firebase/auth";
+import { signOut, onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
+import { RingLoader } from "react-spinners"; // Import a spinner component
 
 const sidebarLinks = [
   { to: "/dashboard", icon: <FiBarChart2 />, label: "Dashboard" },
@@ -26,28 +29,78 @@ const sidebarLinks = [
 const Sidebar = ({ children }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [userLoading, setUserLoading] = useState(true);
+  const [hoveredItem, setHoveredItem] = useState("");
+  const [hoveredLink, setHoveredLink] = useState("");
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowDropdown(false);
+    const storedUserData = localStorage.getItem("userData");
+    if (storedUserData) {
+      try {
+        setUserData(JSON.parse(storedUserData));
+      } catch (error) {
+        console.error("Error parsing stored user data:", error);
       }
-    };
+    }
+  }, []);
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setUserLoading(true);
+        try {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const userDataFromFirestore = userDoc.data();
+            setUserData(userDataFromFirestore);
+            localStorage.setItem(
+              "userData",
+              JSON.stringify(userDataFromFirestore)
+            );
+          } else {
+            console.error("User document not found.");
+            const basicUserData = {
+              firstname: user.displayName || "User",
+              email: user.email,
+            };
+            setUserData(basicUserData);
+            localStorage.setItem("userData", JSON.stringify(basicUserData));
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+          const basicUserData = {
+            firstname: user.displayName || "User",
+            email: user.email,
+          };
+          setUserData(basicUserData);
+          localStorage.setItem("userData", JSON.stringify(basicUserData));
+        } finally {
+          setUserLoading(false);
+        }
+      } else {
+        setUserData(null);
+        localStorage.removeItem("userData");
+        setUserLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleLogout = async () => {
+    setLoading(true);
     try {
+      localStorage.removeItem("userData");
       await signOut(auth);
       navigate("/");
     } catch (error) {
       console.error("Logout error:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -59,8 +112,13 @@ const Sidebar = ({ children }) => {
       >
         {/* Toggle Button */}
         <button
-          style={styles.toggleButton}
+          style={{
+            ...styles.toggleButton,
+            ...(hoveredLink === "toggle" ? styles.toggleButtonHover : {}),
+          }}
           onClick={() => setIsCollapsed(!isCollapsed)}
+          onMouseEnter={() => setHoveredLink("toggle")}
+          onMouseLeave={() => setHoveredLink("")}
         >
           <FiMenu size={24} style={{ color: "#000" }} />
         </button>
@@ -70,11 +128,15 @@ const Sidebar = ({ children }) => {
             <NavLink
               key={to}
               to={to}
-              style={({ isActive }) =>
-                isActive
-                  ? { ...styles.sidebarLink, ...styles.activeLink }
-                  : styles.sidebarLink
-              }
+              style={({ isActive }) => ({
+                ...styles.sidebarLink,
+                ...(isActive ? styles.activeLink : {}),
+                ...(hoveredLink === to && !isActive
+                  ? styles.sidebarLinkHover
+                  : {}),
+              })}
+              onMouseEnter={() => setHoveredLink(to)}
+              onMouseLeave={() => setHoveredLink("")}
             >
               {icon} {!isCollapsed && label}
             </NavLink>
@@ -84,19 +146,36 @@ const Sidebar = ({ children }) => {
         {/* User Dropdown */}
         <div style={styles.userContainer} ref={dropdownRef}>
           <div
-            style={styles.userButton}
+            style={{
+              ...styles.userButton,
+              ...(hoveredLink === "userProfile" ? styles.userButtonHover : {}),
+            }}
             onClick={() => setShowDropdown(!showDropdown)}
+            onMouseEnter={() => setHoveredLink("userProfile")}
+            onMouseLeave={() => setHoveredLink("")}
           >
             <FiUser style={styles.userIcon} />
             {!isCollapsed && (
               <div>
-                <span style={styles.userName}>James</span>
-                <p style={styles.userEmail}>james@example.com</p>
+                {userLoading ? (
+                  <div style={styles.userLoading}>
+                    <RingLoader size={15} color="#2d97e9" />
+                  </div>
+                ) : (
+                  <>
+                    <span style={styles.userName}>
+                      {userData ? userData.firstname : "Guest"}
+                    </span>
+                    <p style={styles.userEmail}>
+                      {userData ? userData.email : "guest@example.com"}
+                    </p>
+                  </>
+                )}
               </div>
             )}
             {!isCollapsed &&
               (showDropdown ? (
-                <FiChevronUp style={{ color: "#333" }} /> // Change color to visible one
+                <FiChevronUp style={{ color: "#333" }} />
               ) : (
                 <FiChevronDown style={{ color: "#333" }} />
               ))}
@@ -111,13 +190,43 @@ const Sidebar = ({ children }) => {
             }}
           >
             <button
-              style={styles.dropdownItem}
+              style={{
+                ...styles.dropdownItem,
+                ...(hoveredItem === "account" ? styles.dropdownItemHover : {}),
+              }}
               onClick={() => navigate("/account")}
+              onMouseEnter={() => setHoveredItem("account")}
+              onMouseLeave={() => setHoveredItem("")}
             >
-              <FiUser /> Account Settings
+              {hoveredItem === "account" ? (
+                <FiUser style={styles.dropdownItemIconHover} />
+              ) : (
+                <FiUser />
+              )}
+              Account Settings
             </button>
-            <button style={styles.dropdownItem} onClick={handleLogout}>
-              <FiLogOut /> Sign Out
+            <button
+              style={{
+                ...styles.dropdownItem,
+                ...(hoveredItem === "signOut" ? styles.dropdownItemHover : {}),
+              }}
+              onClick={handleLogout}
+              disabled={loading}
+              onMouseEnter={() => setHoveredItem("signOut")}
+              onMouseLeave={() => setHoveredItem("")}
+            >
+              {loading ? (
+                <RingLoader size={24} color="#ffffff" />
+              ) : (
+                <>
+                  {hoveredItem === "signOut" ? (
+                    <FiLogOut style={styles.dropdownItemIconHover} />
+                  ) : (
+                    <FiLogOut />
+                  )}
+                  Sign Out
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -167,6 +276,12 @@ const styles = {
     cursor: "pointer",
     padding: "10px",
     alignSelf: "flex-start",
+    borderRadius: "5px",
+    transition: "all 0.2s ease-in-out",
+  },
+  toggleButtonHover: {
+    background: "#f0f0f0",
+    transform: "scale(1.05)",
   },
   logoText: {
     fontSize: "1.2rem",
@@ -187,9 +302,15 @@ const styles = {
     textDecoration: "none",
     color: "#333",
     borderRadius: "5px",
-    transition: "background 0.3s ease",
+    transition: "all 0.3s ease",
     gap: "10px",
     fontSize: "1rem",
+  },
+  sidebarLinkHover: {
+    backgroundColor: "#f0f7ff",
+    color: "#2d97e9",
+    transform: "translateX(5px)",
+    boxShadow: "0 2px 5px rgba(45, 151, 233, 0.1)",
   },
   activeLink: {
     backgroundColor: "#2d97e9",
@@ -213,8 +334,13 @@ const styles = {
     cursor: "pointer",
     fontSize: "1rem",
     color: "#333",
-    transition: "background 0.3s ease",
+    transition: "all 0.3s ease",
     gap: "10px",
+    borderRadius: "5px",
+  },
+  userButtonHover: {
+    backgroundColor: "#f0f7ff",
+    transform: "translateY(-2px)",
   },
   userIcon: {
     fontSize: "1.5rem",
@@ -229,6 +355,12 @@ const styles = {
     fontSize: "0.8rem",
     color: "#666",
     margin: "0",
+  },
+  userLoading: {
+    display: "flex",
+    alignItems: "center",
+    height: "35px",
+    justifyContent: "center",
   },
   dropdown: {
     position: "absolute",
@@ -255,7 +387,22 @@ const styles = {
     cursor: "pointer",
     textAlign: "left",
     fontSize: "1rem",
-    transition: "background 0.3s ease",
+    transition: "all 0.25s ease-in-out",
+    position: "relative",
+    overflow: "hidden",
+  },
+  dropdownItemHover: {
+    background: "linear-gradient(90deg, #2d97e9, #1a4d6f)",
+    transform: "translateX(5px)",
+    boxShadow: "inset 0 0 10px rgba(255, 255, 255, 0.1)",
+    paddingLeft: "17px",
+    color: "#ffffff",
+    letterSpacing: "0.5px",
+  },
+  dropdownItemIconHover: {
+    transform: "scale(1.2)",
+    color: "#ffffff",
+    transition: "all 0.25s ease-in-out",
   },
 };
 

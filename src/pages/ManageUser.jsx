@@ -16,6 +16,7 @@ import { FaUserCheck, FaEdit } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "../styles/ManageUser.css"; // Import the CSS file
+import { ClipLoader } from "react-spinners";
 
 const ManageUser = () => {
   const [users, setUsers] = useState([]);
