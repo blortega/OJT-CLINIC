@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
-import { getFirestore, collection, getDocs, updateDoc, doc, deleteDoc, getDoc } from "firebase/firestore";
+import { getFirestore, collection, getDocs, updateDoc, doc, deleteDoc, getDoc, addDoc } from "firebase/firestore";
 import { app } from "../firebase";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 import { FiPlus } from "react-icons/fi";
 import EditModal from "../components/EditMedicine";
+import AddMedicineForm from "../components/AddMedicineForm";
 
 const Inventory = () => {
   const [medicines, setMedicines] = useState([]);
@@ -15,6 +16,9 @@ const Inventory = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedMedicine, setSelectedMedicine] = useState(null);
   const [restockAmount, setRestockAmount] = useState(0);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+
 
   useEffect(() => {
     const fetchMedicines = async () => {
@@ -35,6 +39,28 @@ const Inventory = () => {
 
     fetchMedicines();
   }, []);
+
+  const handleAddMedicine = async (newMedicine) => {
+    try {
+      console.log("adding medicine:", newMedicine);
+      // Adding the new medicine to Firestore
+      const db = getFirestore(app);
+      const docRef = await addDoc(collection(db, "medicine"), newMedicine);
+
+      console.log("Document added with ID:", docRef.id);
+
+      // Update the local state with the new medicine
+      setMedicines((prevMedicines) => [
+        ...prevMedicines,
+        { id: docRef.id, ...newMedicine },
+      ]);
+
+      toast.success("Medicine added successfully!");
+    } catch (error) {
+      toast.error("Failed to add medicine!");
+      console.error("Error adding medicine:", error);
+    }
+  };
 
   const getStockStatus = (stock) => {
     console.log("Stock value:", stock);  // Add this line to check the value of stock
@@ -109,10 +135,6 @@ const Inventory = () => {
     setMedicines(medicines.map(medicine => (medicine.id === updatedMedicine.id ? updatedMedicine : medicine)));
   };
 
-  const handleAddUser = (role) => {
-    toast.success(`${role} added successfully!`);
-  };
-
   const handleModalOpen = (medicine) => {
     setSelectedMedicine(medicine);
     setIsModalOpen(true);
@@ -129,22 +151,27 @@ const Inventory = () => {
         <ToastContainer position="top-right" autoClose={2000} />
         <h1 style={styles.text}>Inventory Page</h1>
 
-        {/* Add Admin Button */}
+        {/* Add Medicine Button */}
         <div style={styles.buttonContainer}>
           <button
-            style={{
-              ...styles.addUserButton,
-              backgroundColor: isHovered ? "#162d5e" : "#1e3a8a",
-            }}
+            onClick={() => setIsAddModalOpen(true)}
+            style={ isHovered ? {...styles.addUserButton, ... styles.buttonHover } : styles.addUserButton}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
-            onClick={() => handleAddUser("Admin")}
           >
-            <FiPlus style={styles.addIcon} /> Add Medicine
+            <FiPlus /> Add Medicine
           </button>
         </div>
 
-        {/* Table */}
+        {/* Add Medicine Form Modal */}
+        {isAddModalOpen && (
+          <AddMedicineForm
+            onClose={() => setIsAddModalOpen(false)}
+            onAddMedicine={handleAddMedicine}
+          />
+        )}
+
+        {/* Medicine List */}
         <div style={styles.card}>
           <table style={styles.table}>
             <thead>
@@ -264,7 +291,7 @@ const RestockModal = ({ isOpen, onClose, medicine, onRestock, restockAmount, set
 
         {/* Display Current Stock */}
         <p style={styles.currentStockText}>
-          <strong>Current Stock:</strong> {medicine.stock} units
+          <strong>Current Stock:</strong> {medicine.stock} unit/s
         </p>
 
         <div style={styles.inputGroup}>
@@ -273,7 +300,9 @@ const RestockModal = ({ isOpen, onClose, medicine, onRestock, restockAmount, set
             <div style={styles.inputWrapper}>
               <button 
                 type="button" 
-                onClick={handleDecrease} 
+                onClick={handleDecrease}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
                 style={styles.decreaseButton}>-</button>
               <input
                 type="number"
@@ -326,6 +355,9 @@ const styles = {
     marginBottom: "15px",
     marginLeft: "795px",
   },
+  buttonHover:{
+    backgroundColor: "#162d5e",
+  },
   addUserButton: {
     display: "flex",
     alignItems: "center",
@@ -336,6 +368,7 @@ const styles = {
     color: "white",
     fontSize: "16px",
     cursor: "pointer",
+    backgroundColor: "#1e3a8a",
     transition: "background-color 0.3s",
   },
   addIcon: {
