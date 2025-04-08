@@ -33,6 +33,7 @@ const Sidebar = ({ children }) => {
   const [temporaryUser, setTemporaryUser] = useState(null); // Temporary user data
   const [loading, setLoading] = useState(false); // Loading state for sign-out
   const [hoveredItem, setHoveredItem] = useState(""); // Hover state for dropdown items
+  const [hoveredLink, setHoveredLink] = useState(""); // Hover state for nav links
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
@@ -87,8 +88,13 @@ const Sidebar = ({ children }) => {
       >
         {/* Toggle Button */}
         <button
-          style={styles.toggleButton}
+          style={{
+            ...styles.toggleButton,
+            ...(hoveredLink === "toggle" ? styles.toggleButtonHover : {}),
+          }}
           onClick={() => setIsCollapsed(!isCollapsed)}
+          onMouseEnter={() => setHoveredLink("toggle")}
+          onMouseLeave={() => setHoveredLink("")}
         >
           <FiMenu size={24} style={{ color: "#000" }} />
         </button>
@@ -98,11 +104,15 @@ const Sidebar = ({ children }) => {
             <NavLink
               key={to}
               to={to}
-              style={({ isActive }) =>
-                isActive
-                  ? { ...styles.sidebarLink, ...styles.activeLink }
-                  : styles.sidebarLink
-              }
+              style={({ isActive }) => ({
+                ...styles.sidebarLink,
+                ...(isActive ? styles.activeLink : {}),
+                ...(hoveredLink === to && !isActive
+                  ? styles.sidebarLinkHover
+                  : {}),
+              })}
+              onMouseEnter={() => setHoveredLink(to)}
+              onMouseLeave={() => setHoveredLink("")}
             >
               {icon} {!isCollapsed && label}
             </NavLink>
@@ -112,8 +122,13 @@ const Sidebar = ({ children }) => {
         {/* User Dropdown */}
         <div style={styles.userContainer} ref={dropdownRef}>
           <div
-            style={styles.userButton}
+            style={{
+              ...styles.userButton,
+              ...(hoveredLink === "userProfile" ? styles.userButtonHover : {}),
+            }}
             onClick={() => setShowDropdown(!showDropdown)}
+            onMouseEnter={() => setHoveredLink("userProfile")}
+            onMouseLeave={() => setHoveredLink("")}
           >
             <FiUser style={styles.userIcon} />
             {!isCollapsed && (
@@ -223,6 +238,12 @@ const styles = {
     cursor: "pointer",
     padding: "10px",
     alignSelf: "flex-start",
+    borderRadius: "5px",
+    transition: "all 0.2s ease-in-out",
+  },
+  toggleButtonHover: {
+    background: "#f0f0f0",
+    transform: "scale(1.05)",
   },
   logoText: {
     fontSize: "1.2rem",
@@ -243,9 +264,15 @@ const styles = {
     textDecoration: "none",
     color: "#333",
     borderRadius: "5px",
-    transition: "background 0.3s ease",
+    transition: "all 0.3s ease",
     gap: "10px",
     fontSize: "1rem",
+  },
+  sidebarLinkHover: {
+    backgroundColor: "#f0f7ff",
+    color: "#2d97e9",
+    transform: "translateX(5px)",
+    boxShadow: "0 2px 5px rgba(45, 151, 233, 0.1)",
   },
   activeLink: {
     backgroundColor: "#2d97e9",
@@ -269,8 +296,13 @@ const styles = {
     cursor: "pointer",
     fontSize: "1rem",
     color: "#333",
-    transition: "background 0.3s ease",
+    transition: "all 0.3s ease",
     gap: "10px",
+    borderRadius: "5px",
+  },
+  userButtonHover: {
+    backgroundColor: "#f0f7ff",
+    transform: "translateY(-2px)",
   },
   userIcon: {
     fontSize: "1.5rem",
