@@ -6,7 +6,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 import { FiPlus } from "react-icons/fi";
-import EditModal from "../components/EditModal";
+import EditModal from "../components/EditMedicine";
 
 const Inventory = () => {
   const [medicines, setMedicines] = useState([]);
@@ -223,8 +223,19 @@ const RestockModal = ({ isOpen, onClose, medicine, onRestock, restockAmount, set
     setRestockAmount(e.target.value);
   };
 
+  const handleIncrease = () => {
+    setRestockAmount((prevAmount) => parseInt(prevAmount) + 1);
+  };
+
+  const handleDecrease = () => {
+    setRestockAmount((prevAmount) => {
+      const newAmount = parseInt(prevAmount) - 1;
+      return newAmount >= 0 ? newAmount : 0; // Prevent going below 0
+    });
+  };
+
   const handleSubmit = async () => {
-    const confirmStock = window.confirm(`Proceed to restock ${medicine.name}?`);
+    const confirmStock = window.confirm(`Proceed to add stock for ${medicine.name}?`);
     if (!confirmStock) {
       return;
     }
@@ -243,32 +254,49 @@ const RestockModal = ({ isOpen, onClose, medicine, onRestock, restockAmount, set
   return (
     <div style={styles.modalOverlay}>
       <div style={styles.modalContent}>
-        <h2 style={styles.modalTitle}>Restock Medicine</h2>
+        <h2 style={styles.modalTitle}>Add Stock</h2>
         <p style={styles.modalDescription}>
-          You are about to restock <strong>{medicine.name}</strong>.
+          You are about to add stock for <strong>{medicine.name}</strong>.
         </p>
         <p style={styles.modalDescription}>
           Please enter the amount you want to add to the stock.
         </p>
 
-        <label style={styles.label}>
-          Restock Amount:
-          <input
-            type="number"
-            value={restockAmount}
-            onChange={handleRestockChange}
-            style={styles.inputField}
-            min="1"
-            placeholder="Enter number of items"
-          />
-        </label>
+        {/* Display Current Stock */}
+        <p style={styles.currentStockText}>
+          <strong>Current Stock:</strong> {medicine.stock} units
+        </p>
+
+        <div style={styles.inputGroup}>
+          <label style={styles.label}>
+            Stock Amount:
+            <div style={styles.inputWrapper}>
+              <button 
+                type="button" 
+                onClick={handleDecrease} 
+                style={styles.decreaseButton}>-</button>
+              <input
+                type="number"
+                value={restockAmount}
+                onChange={handleRestockChange}
+                style={styles.inputField}
+                min="0"
+                placeholder="Enter number of items"
+              />
+              <button 
+                type="button" 
+                onClick={handleIncrease} 
+                style={styles.increaseButton}>+</button>
+            </div>
+          </label>
+        </div>
 
         <div style={styles.modalButtonContainer}>
           <button
             onClick={handleSubmit}
             style={styles.modalButton}
           >
-            Restock
+            Add
           </button>
           <button
             onClick={onClose}
@@ -281,6 +309,8 @@ const RestockModal = ({ isOpen, onClose, medicine, onRestock, restockAmount, set
     </div>
   );
 };
+
+
 
 const styles = {
   container: {
@@ -368,6 +398,49 @@ const styles = {
     color: "#fff",
     fontWeight: "bold",
   },
+  currentStockText: {
+    fontSize: "16px",
+    color: "#333",
+    marginBottom: "15px",
+    fontWeight: "bold",
+  },
+  inputGroup: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    marginBottom: "20px",
+  },
+  inputWrapper: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  decreaseButton: {
+    backgroundColor: "#dc3545", // Red for Decrease
+    color: "white",
+    border: "none",
+    padding: "10px 15px",
+    fontSize: "18px",
+    cursor: "pointer",
+    borderRadius: "8px",
+    margin: "0 10px",
+    transition: "background-color 0.3s",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  increaseButton: {
+    backgroundColor: "#28a745", // Green for Increase
+    color: "white",
+    border: "none",
+    padding: "10px 15px",
+    fontSize: "18px",
+    cursor: "pointer",
+    borderRadius: "8px",
+    margin: "0 10px",
+    transition: "background-color 0.3s",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   modalOverlay: {
     position: "fixed",
     top: 0,
@@ -411,7 +484,7 @@ const styles = {
     width: "100%",
     borderRadius: "8px",
     border: "1px solid #ccc",
-    marginBottom: "20px",
+    marginBottom: "0.5px",
     textAlign: "center",
   },
   modalButtonContainer: {
