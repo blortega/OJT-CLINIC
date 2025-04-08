@@ -32,8 +32,7 @@ const Sidebar = ({ children }) => {
   const [userData, setUserData] = useState(null);
   const [temporaryUser, setTemporaryUser] = useState(null); // Temporary user data
   const [loading, setLoading] = useState(false); // Loading state for sign-out
-  const [hoveredLink, setHoveredLink] = useState(null);
-  const [hoveredDropdownItem, setHoveredDropdownItem] = useState(null);
+  const [hoveredItem, setHoveredItem] = useState(""); // Hover state for dropdown items
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
@@ -99,17 +98,11 @@ const Sidebar = ({ children }) => {
             <NavLink
               key={to}
               to={to}
-              style={({ isActive }) => {
-                const baseStyle = isActive
+              style={({ isActive }) =>
+                isActive
                   ? { ...styles.sidebarLink, ...styles.activeLink }
-                  : styles.sidebarLink;
-
-                return hoveredLink === to
-                  ? { ...baseStyle, ...styles.sidebarLinkHover }
-                  : baseStyle;
-              }}
-              onMouseEnter={() => setHoveredLink(to)}
-              onMouseLeave={() => setHoveredLink(null)}
+                  : styles.sidebarLink
+              }
             >
               {icon} {!isCollapsed && label}
             </NavLink>
@@ -152,30 +145,30 @@ const Sidebar = ({ children }) => {
             }}
           >
             <button
-              style={
-                hoveredDropdownItem === "account"
-                  ? { ...styles.dropdownItem, ...styles.dropdownItemHover }
-                  : styles.dropdownItem
-              }
-              onMouseEnter={() => setHoveredDropdownItem("account")}
-              onMouseLeave={() => setHoveredDropdownItem(null)}
+              style={{
+                ...styles.dropdownItem,
+                background: hoveredItem === "account" ? "#1a4d6f" : "none",
+                transform: hoveredItem === "account" ? "scale(1.05)" : "none",
+              }}
               onClick={() => navigate("/account")}
+              onMouseEnter={() => setHoveredItem("account")}
+              onMouseLeave={() => setHoveredItem("")}
             >
               <FiUser /> Account Settings
             </button>
             <button
-              style={
-                hoveredDropdownItem === "logout"
-                  ? { ...styles.dropdownItem, ...styles.dropdownItemHover }
-                  : styles.dropdownItem
-              }
-              onMouseEnter={() => setHoveredDropdownItem("logout")}
-              onMouseLeave={() => setHoveredDropdownItem(null)}
+              style={{
+                ...styles.dropdownItem,
+                background: hoveredItem === "signOut" ? "#1a4d6f" : "none",
+                transform: hoveredItem === "signOut" ? "scale(1.05)" : "none",
+              }}
               onClick={handleLogout}
-              disabled={loading}
+              disabled={loading} // Disable Sign Out button while loading
+              onMouseEnter={() => setHoveredItem("signOut")}
+              onMouseLeave={() => setHoveredItem("")}
             >
               {loading ? (
-                <RingLoader size={24} color="#ffffff" />
+                <RingLoader size={24} color="#ffffff" /> // Show spinner when loading
               ) : (
                 <>
                   <FiLogOut /> Sign Out
@@ -318,14 +311,7 @@ const styles = {
     cursor: "pointer",
     textAlign: "left",
     fontSize: "1rem",
-    transition: "background 0.3s ease",
-  },
-  sidebarLinkHover: {
-    backgroundColor: "#e6f0fc",
-    color: "#2d97e9",
-  },
-  dropdownItemHover: {
-    backgroundColor: "#1b3d5d",
+    transition: "background 0.3s ease, transform 0.2s ease-in-out",
   },
 };
 
