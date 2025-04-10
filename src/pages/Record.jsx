@@ -2,9 +2,15 @@ import React, { useState } from "react";
 import Sidebar from "../components/Sidebar";
 
 const Record = () => {
-  const [search, setSearch] = useState(""); // For tracking selected filters
+  const [search, setSearch] = useState([]); // Array to hold selected genders
+  const [modalVisible, setModalVisible] = useState(false); // Track modal visibility
+  const [genderOptions, setGenderOptions] = useState([
+    "Male",
+    "Female",
+    "Other",
+  ]); // Gender options
 
-  // Handle checkbox changes for multiple filters
+  // Handle checkbox changes inside the modal
   const handleCheckboxChange = (e, gender) => {
     if (e.target.checked) {
       setSearch((prev) => [...prev, gender]);
@@ -13,9 +19,14 @@ const Record = () => {
     }
   };
 
-  // Handle dropdown change
-  const handleDropdownChange = (e) => {
-    setSearch([e.target.value]); // Only one gender can be selected in the dropdown
+  // Close the modal and clear the search
+  const handleCloseModal = () => {
+    setModalVisible(false);
+  };
+
+  // Handle chip click to remove a selected gender
+  const handleChipRemove = (gender) => {
+    setSearch((prev) => prev.filter((item) => item !== gender));
   };
 
   return (
@@ -26,88 +37,62 @@ const Record = () => {
           This is a test page to check if navigation is working properly.
         </p>
 
-        {/* Dropdown Select Filter */}
-        <div style={styles.filterSection}>
-          <h3>Dropdown Select:</h3>
-          <select
-            value={search}
-            onChange={handleDropdownChange}
-            style={styles.select}
+        {/* Search bar with chips for selected filters */}
+        <div style={styles.searchContainer}>
+          <input type="text" placeholder="Search..." style={styles.searchBar} />
+          <div style={styles.chipContainer}>
+            {search.map((gender) => (
+              <span
+                key={gender}
+                style={styles.chip}
+                onClick={() => handleChipRemove(gender)}
+              >
+                {gender} <span style={styles.chipClose}>x</span>
+              </span>
+            ))}
+          </div>
+          {/* Button to open the modal */}
+          <button
+            style={styles.filterButton}
+            onClick={() => setModalVisible(true)}
           >
-            <option value="">All</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-            <option value="Other">Other</option>
-          </select>
+            Filter by Gender
+          </button>
         </div>
 
-        {/* Checkbox Filter */}
-        <div style={styles.filterSection}>
-          <h3>Checkbox Filter:</h3>
-          <label>
-            <input
-              type="checkbox"
-              checked={search.includes("Male")}
-              onChange={(e) => handleCheckboxChange(e, "Male")}
-            />
-            Male
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={search.includes("Female")}
-              onChange={(e) => handleCheckboxChange(e, "Female")}
-            />
-            Female
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={search.includes("Other")}
-              onChange={(e) => handleCheckboxChange(e, "Other")}
-            />
-            Other
-          </label>
-        </div>
-
-        {/* Chips Filter */}
-        <div style={styles.filterSection}>
-          <h3>Chips Filter:</h3>
-          {search && (
-            <div style={styles.chipContainer}>
-              {search.map((gender) => (
-                <span key={gender} style={styles.chip}>
-                  {gender}{" "}
-                  <span
-                    style={styles.chipClose}
-                    onClick={() =>
-                      setSearch(search.filter((item) => item !== gender))
-                    }
-                  >
-                    x
-                  </span>
-                </span>
+        {/* Modal for checkbox filter */}
+        {modalVisible && (
+          <div style={styles.modal}>
+            <div style={styles.modalContent}>
+              <h3>Select Genders</h3>
+              {genderOptions.map((gender) => (
+                <label key={gender} style={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={search.includes(gender)}
+                    onChange={(e) => handleCheckboxChange(e, gender)}
+                    style={styles.checkbox}
+                  />
+                  {gender}
+                </label>
               ))}
+              <div style={styles.modalButtons}>
+                <button
+                  style={styles.modalCloseButton}
+                  onClick={handleCloseModal}
+                >
+                  Close
+                </button>
+                <button
+                  style={styles.modalClearButton}
+                  onClick={() => setSearch([])}
+                >
+                  Clear Selections
+                </button>
+              </div>
             </div>
-          )}
-        </div>
-
-        {/* Tab Filter */}
-        <div style={styles.filterSection}>
-          <h3>Tab Filter:</h3>
-          {["Male", "Female", "Other"].map((gender) => (
-            <div
-              key={gender}
-              onClick={() => setSearch(gender)}
-              style={{
-                ...styles.tab,
-                backgroundColor: search === gender ? "#1e3a8a" : "#ccc",
-              }}
-            >
-              {gender}
-            </div>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
     </Sidebar>
   );
@@ -121,14 +106,13 @@ const styles = {
   text: {
     color: "black",
   },
-  filterSection: {
+  searchContainer: {
     marginTop: "20px",
-    textAlign: "left",
   },
-  select: {
+  searchBar: {
     padding: "8px",
-    margin: "10px 0",
-    width: "200px",
+    width: "300px",
+    marginBottom: "20px",
   },
   chipContainer: {
     display: "flex",
@@ -148,12 +132,60 @@ const styles = {
     marginLeft: "8px",
     cursor: "pointer",
   },
-  tab: {
-    display: "inline-block",
-    padding: "10px 20px",
-    margin: "5px",
+  filterButton: {
+    padding: "8px 15px",
+    backgroundColor: "#162d5e",
+    color: "white",
+    border: "none",
+    borderRadius: "4px",
     cursor: "pointer",
-    borderRadius: "5px",
+    marginTop: "10px",
+  },
+  modal: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    padding: "20px",
+    borderRadius: "8px",
+    width: "300px",
+    textAlign: "center",
+  },
+  checkboxLabel: {
+    display: "block",
+    margin: "10px 0",
+    fontSize: "16px",
+  },
+  checkbox: {
+    marginRight: "10px",
+  },
+  modalButtons: {
+    marginTop: "20px",
+  },
+  modalCloseButton: {
+    backgroundColor: "#1e3a8a",
+    color: "white",
+    padding: "8px 15px",
+    border: "none",
+    borderRadius: "4px",
+    cursor: "pointer",
+    marginRight: "10px",
+  },
+  modalClearButton: {
+    backgroundColor: "#d41c48",
+    color: "white",
+    padding: "8px 15px",
+    border: "none",
+    borderRadius: "4px",
+    cursor: "pointer",
   },
 };
 
