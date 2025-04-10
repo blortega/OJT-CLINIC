@@ -11,6 +11,7 @@ import AddMedicineForm from "../components/AddMedicineForm";
 
 const Inventory = () => {
   const [medicines, setMedicines] = useState([]);
+  const [search, setSearch] = useState("");
   const [isHovered, setIsHovered] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -39,6 +40,25 @@ const Inventory = () => {
 
     fetchMedicines();
   }, []);
+
+  const filterMedicines = (medicine) => {
+    const searchLower = search.toLowerCase();
+
+    if (searchLower === "out of stock" || searchLower === "in stock" || searchLower === "low stock") {
+      return medicine.status && medicine.status.toLowerCase() === searchLower;
+    }
+
+    const fieldToSearch = [
+      medicine.name,
+      medicine.dosage,
+      medicine.type,
+      medicine.status,
+    ];
+
+    return fieldToSearch.some((field) =>
+      field && field.toLowerCase().includes(searchLower)
+    );
+  };
 
   const handleAddMedicine = async (newMedicine) => {
     try {
@@ -156,17 +176,24 @@ const Inventory = () => {
       <div style={styles.container}>
         <ToastContainer position="top-right" autoClose={2000} />
         <h1 style={styles.text}>Inventory Page</h1>
-
         {/* Add Medicine Button */}
-        <div style={styles.buttonContainer}>
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            style={ isHovered ? {...styles.addUserButton, ... styles.buttonHover } : styles.addUserButton}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-          >
-            <FiPlus /> Add Medicine
-          </button>
+        <div>
+          <input
+            type = "text"
+            placeholder = "Search..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <div style={styles.buttonContainer}>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              style={ isHovered ? {...styles.addUserButton, ... styles.buttonHover } : styles.addUserButton}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+            >
+              <FiPlus /> Add Medicine
+            </button>
+          </div>
         </div>
 
         {/* Add Medicine Form Modal */}
@@ -191,7 +218,7 @@ const Inventory = () => {
               </tr>
             </thead>
             <tbody>
-              {medicines.map((medicine, index) => (
+              {medicines.filter(filterMedicines).map((medicine, index)=> (
                 <tr key={index}>
                   <td style={styles.tdata}>{medicine.name}</td>
                   <td style={styles.tdata}>{medicine.dosage}</td>
