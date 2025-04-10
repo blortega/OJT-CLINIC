@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
-import { getFirestore, collection, getDocs, updateDoc, doc, deleteDoc, getDoc, addDoc } from "firebase/firestore";
+import { getFirestore, collection, getDocs, updateDoc, doc, deleteDoc, getDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { app } from "../firebase";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -45,7 +45,11 @@ const Inventory = () => {
       console.log("adding medicine:", newMedicine);
       // Adding the new medicine to Firestore
       const db = getFirestore(app);
-      const docRef = await addDoc(collection(db, "medicine"), newMedicine);
+      const docRef = await addDoc(collection(db, "medicine"), {
+        ...newMedicine,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
 
       console.log("Document added with ID:", docRef.id);
 
@@ -97,6 +101,8 @@ const Inventory = () => {
       // Update the stock by adding the restock amount
       await updateDoc(medicineRef, {
         stock: newStock,
+        restockAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
 
       // Update the UI with the new stock
