@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getFirestore, updateDoc, doc } from "firebase/firestore";
+import { getFirestore, updateDoc, doc, serverTimestamp } from "firebase/firestore";
 import { app } from "../firebase";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -87,6 +87,7 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
         dosage: editedMedicine.dosage,
         type: editedMedicine.type,
         stock: editedMedicine.stock,
+        updatedAt: serverTimestamp(),
       });
 
       onUpdate({ ...medicine, ...editedMedicine });
