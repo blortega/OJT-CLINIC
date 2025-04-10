@@ -9,6 +9,7 @@ import {
   updateDoc,
   deleteDoc,
   Timestamp,
+  FieldValue,
 } from "firebase/firestore";
 import { app } from "../firebase";
 import { FiPlus, FiEdit, FiTrash, FiUserX } from "react-icons/fi";
@@ -298,7 +299,7 @@ const ManageUser = () => {
           phone: userForm.phone,
           gender: userForm.gender,
           employeeID: userForm.employeeID || "Not Available",
-          createdAt: Timestamp.fromDate(new Date()),
+          createdAt: FieldValue.serverTimestamp(),
           status: "Active",
         };
 
