@@ -120,16 +120,25 @@ const Inventory = () => {
       const currentStock = medicineSnapshot.data().stock;
       const newStock = currentStock + amount; // Calculate the new stock
 
+      let newStatus = "";
+      if (newStock > 20) {
+        newStatus = "In Stock";
+      } else if (newStock > 5) {
+        newStatus = "Low Stock";
+      } else {
+        newStatus = "Out of Stock";
+      }
       // Update the stock by adding the restock amount
       await updateDoc(medicineRef, {
         stock: newStock,
+        status: newStatus,
         restockAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
 
       // Update the UI with the new stock
       setMedicines(medicines.map(item => 
-        item.id === medicine.id ? { ...item, stock: newStock } : item
+        item.id === medicine.id ? { ...item, stock: newStock, status: newStatus} : item
       ));
 
       toast.success(`${medicine.name} added ${restockAmount} unit/s`);

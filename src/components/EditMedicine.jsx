@@ -78,6 +78,8 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
       return;
     }
 
+    const stockStatus = getStockStatus(editedMedicine.stock);
+
     try {
       const db = getFirestore(app);
       const medicineRef = doc(db, "medicine", medicine.id);
@@ -87,6 +89,7 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
         dosage: editedMedicine.dosage,
         type: editedMedicine.type,
         stock: editedMedicine.stock,
+        status: stockStatus,
         updatedAt: serverTimestamp(),
       });
 
@@ -107,6 +110,18 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
       stock: medicine?.stock || 0,
     });
     onClose();
+  };
+
+  const getStockStatus = (stock) => {
+    stock = Number(stock);
+  
+    if (stock === 0) {
+      return "Out of Stock";
+    } else if (stock <= 20 && stock > 0) {
+      return "Low Stock";
+    } else {
+      return "In Stock";
+    }
   };
 
   return (
