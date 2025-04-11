@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
-import { db } from "../firebase"; // Adjust import based on your Firebase setup
+import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
 import Sidebar from "../components/Sidebar";
+import "../styles/Dashboard.css"; // ✅ Importing the new CSS file
 
-const GENDER_COLORS = ["#0088FE", "#FF69B4"]; // Blue for Male, Pink for Female
+const GENDER_COLORS = ["#0088FE", "#FF69B4"];
 const CONDITION_COLORS = [
   "#0088FE",
   "#FF69B4",
   "#FFBB28",
   "#00C49F",
   "#FF8042",
-]; // Top 5 condition colors
+];
 
 const Dashboard = () => {
   const [genderData, setGenderData] = useState([
@@ -78,15 +79,15 @@ const Dashboard = () => {
 
   return (
     <Sidebar>
-      <div style={styles.container}>
-        <h1 style={styles.text}>Dashboard</h1>
-        <p style={styles.text}>
+      <div className="dashboard-container">
+        <h1 className="dashboard-text">Dashboard</h1>
+        <p className="dashboard-text">
           This is a test page to check if navigation is working properly.
         </p>
 
-        <div style={styles.chartWrapper}>
-          <div style={styles.chartContainer}>
-            <h2 style={styles.text}>Gender Distribution</h2>
+        <div className="chart-wrapper">
+          <div className="chart-container">
+            <h2 className="dashboard-text">Gender Distribution</h2>
             <PieChart width={300} height={300}>
               <Pie
                 data={genderData}
@@ -108,8 +109,8 @@ const Dashboard = () => {
             </PieChart>
           </div>
 
-          <div style={styles.chartContainer}>
-            <h2 style={styles.text}>Top 5 Conditions</h2>
+          <div className="chart-container">
+            <h2 className="dashboard-text">Top 5 Conditions</h2>
             <PieChart width={300} height={300}>
               <Pie
                 data={topConditions}
@@ -134,30 +135,6 @@ const Dashboard = () => {
       </div>
     </Sidebar>
   );
-};
-
-const styles = {
-  container: {
-    padding: "20px",
-    textAlign: "center",
-    maxWidth: "100%",
-    overflowX: "hidden",
-  },
-  chartWrapper: {
-    display: "flex",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: "20px",
-    width: "100%",
-  },
-  chartContainer: {
-    maxWidth: "100%",
-    minWidth: "320px",
-  },
-  text: {
-    color: "black",
-  },
 };
 
 export default Dashboard;
