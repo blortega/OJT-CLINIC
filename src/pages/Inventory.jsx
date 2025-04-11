@@ -5,7 +5,7 @@ import { app } from "../firebase";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
-import { FiPlus } from "react-icons/fi";
+import { FiPlus, FiEdit, FiTrash } from "react-icons/fi";
 import EditModal from "../components/EditMedicine";
 import AddMedicineForm from "../components/AddMedicineForm";
 
@@ -13,6 +13,8 @@ const Inventory = () => {
   const [medicines, setMedicines] = useState([]);
   const [search, setSearch] = useState("");
   const [isHovered, setIsHovered] = useState(false);
+  const [hoveredUser, setHoveredUser] = useState(null);
+  const [hoveredIcon, setHoveredIcon] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedMedicine, setSelectedMedicine] = useState(null);
@@ -177,8 +179,9 @@ const Inventory = () => {
         <ToastContainer position="top-right" autoClose={2000} />
         <h1 style={styles.text}>Inventory Page</h1>
         {/* Add Medicine Button */}
-        <div>
-          <input
+        <div style={styles.searchContainer}>
+          <input 
+            style={styles.searchBar}
             type = "text"
             placeholder = "Search..."
             value={search}
@@ -227,22 +230,49 @@ const Inventory = () => {
                   <td style={styles.tdata}>{getStockStatus(medicine.stock)}</td>
                   <td style={styles.tdata}>
                     <button
-                      style={styles.iconButton}
+                      style={hoveredUser === medicine.id && hoveredIcon === "add" 
+                        ? {...styles.iconButton, ... styles.iconButtonHover} 
+                        : styles.iconButton
+                      }
+                      onMouseEnter={() => {
+                        setHoveredUser(medicine.id);
+                        setHoveredIcon("add");
+                      }}
+                      onMouseLeave={() => setHoveredIcon(null)}
                       onClick={() => handleModalOpen(medicine)}
+                      title="Add"
                     >
-                      <FaPlus color="green" />
+                      <FiPlus/>
                     </button>
                     <button
-                      style={styles.iconButton}
+                      style={hoveredUser === medicine.id && hoveredIcon === "edit" 
+                        ? {...styles.iconButton, ... styles.iconButtonHover} 
+                        : styles.iconButton
+                      }
+                      onMouseEnter={() => {
+                        setHoveredUser(medicine.id);
+                        setHoveredIcon("edit");
+                      }}
+                      onMouseLeave={() => setHoveredIcon(null)}
                       onClick={() => handleEdit(medicine)}
+                      title="Edit"
                     >
-                      <FaEdit color="blue" />
+                      <FiEdit/>
                     </button>
                     <button
-                      style={styles.iconButton}
+                      style={hoveredUser === medicine.id && hoveredIcon === "delete" 
+                        ? {...styles.iconButton, ... styles.iconButtonHover} 
+                        : styles.iconButton
+                      }
+                      onMouseEnter={() => {
+                        setHoveredUser(medicine.id);
+                        setHoveredIcon("delete");
+                      }}
+                      onMouseLeave={() => setHoveredIcon(null)}
                       onClick={() => handleDelete(medicine)}
+                      title="Delete"
                     >
-                      <FaTrash color="red" />
+                      <FiTrash/>
                     </button>
                   </td>
                 </tr>
@@ -382,11 +412,28 @@ const styles = {
   text: {
     color: "black",
   },
+  searchContainer: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "80%",
+    margin: "0 auto 18px auto",
+  },
+
+  searchBar: {
+    width: "22%",
+    padding: "8px",
+    borderRadius: "6px",
+    border: "1px solid #ccc",
+    backgroundColor: "#fff",
+    color: "#000",
+  },
+
   buttonContainer: {
     display: "flex",
     justifyContent: "center",
-    marginBottom: "15px",
-    marginLeft: "795px",
+    gap: "10px",
+    marginTop: "0px",
   },
   buttonHover:{
     backgroundColor: "#162d5e",
@@ -394,21 +441,22 @@ const styles = {
   addUserButton: {
     display: "flex",
     alignItems: "center",
-    gap: "5px",
-    padding: "10px 20px",
-    borderRadius: "8px",
+    gap: "8px",
+    padding: "10px 16px",
+    borderRadius: "6px",
     border: "none",
-    color: "white",
+    color: "#fff",
     fontSize: "16px",
+    fontWeight: "bold",
     cursor: "pointer",
     backgroundColor: "#1e3a8a",
     transition: "background-color 0.3s",
   },
   addIcon: {
-    fontSize: "18px",
+    fontSize: "20px",
   },
   card: {
-    width: "60%",
+    width: "80%",
     margin: "auto",
     overflowX: "auto",
     border: "1px solid #ddd",
@@ -434,11 +482,16 @@ const styles = {
     textAlign: "center",
   },
   iconButton: {
+    color: "#1e3a8a",
     background: "none",
     border: "none",
     cursor: "pointer",
-    fontSize: "1.2rem",
+    fontSize: "18px",
     margin: "0 5px",
+  },
+  iconButtonHover: {
+    color: "#d41c48",
+    transform: "scale(1.1)",
   },
   lowStockBadge: {
     display: "inline-block",
