@@ -18,11 +18,23 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
       return;
     }
 
+    const numericStock = parseInt(stock, 10);
+
+    let stockStatus = "";
+    if (numericStock === 0) {
+      stockStatus = "Out of Stock";
+    } else if (numericStock > 0 && numericStock <= 20) {
+      stockStatus = "Low Stock";
+    } else {
+      stockStatus = "In Stock";
+    }
+
     const newMedicine = {
         name,
         dosage,
         type,
-        stock,
+        stock: numericStock,
+        status: stockStatus,
     };
     
     console.log("Submitting new medicine:", newMedicine);
@@ -69,7 +81,7 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
             <input
               type="number"
               value={stock}
-              onChange={(e) => setStock(e.target.value)}
+              onChange={(e) => setStock(Number(e.target.value))}
               style={styles.inputField}
             />
           </div>
