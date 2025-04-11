@@ -9,7 +9,7 @@ import {
   updateDoc,
   deleteDoc,
   Timestamp,
-  FieldValue,
+  serverTimestamp,
 } from "firebase/firestore";
 import { app } from "../firebase";
 import { FiPlus, FiEdit, FiTrash, FiUserX } from "react-icons/fi";
@@ -57,10 +57,12 @@ const ManageUser = () => {
         const db = getFirestore(app);
         const usersCollection = collection(db, "users");
         const snapshot = await getDocs(usersCollection);
-        const usersList = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const usersList = snapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .sort((a, b) => a.lastname?.localeCompare(b.lastname));
         setUsers(usersList);
       } catch (error) {
         console.error("Failed to fetch users:", error);
@@ -146,10 +148,12 @@ const ManageUser = () => {
       }
 
       const snapshot = await getDocs(collection(db, "users"));
-      const updatedUsersList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const updatedUsersList = snapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .sort((a, b) => a.lastname?.localeCompare(b.lastname));
       setUsers(updatedUsersList);
     } catch (error) {
       console.error("Failed to update status:", error);
@@ -299,7 +303,7 @@ const ManageUser = () => {
           phone: userForm.phone,
           gender: userForm.gender,
           employeeID: userForm.employeeID || "Not Available",
-          createdAt: FieldValue.serverTimestamp(),
+          createdAt: serverTimestamp(),
           status: "Active",
         };
 
@@ -327,10 +331,12 @@ const ManageUser = () => {
 
       // Refresh the user list
       const snapshot = await getDocs(collection(db, "users"));
-      const updatedUsersList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const updatedUsersList = snapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .sort((a, b) => a.lastname?.localeCompare(b.lastname));
       setUsers(updatedUsersList);
     } catch (error) {
       console.error("Failed to save user:", error);
