@@ -8,6 +8,7 @@ import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 import { FiPlus, FiEdit, FiTrash } from "react-icons/fi";
 import EditModal from "../components/EditMedicine";
 import AddMedicineForm from "../components/AddMedicineForm";
+import InventoryAlert from "../components/InventoryAlert";
 
 const formatDate = (date) => {
   // Return "N/A" if no date is provided
@@ -80,7 +81,8 @@ const Inventory = () => {
       medicine.type,
       medicine.status,
       medicine.expiryDate ? medicine.expiryDate.toString() : "",
-      medicine.createdAt ? medicine.createdAt.toString() : ""
+      medicine.createdAt ? medicine.createdAt.toDate().toLocaleDateString('en-US', { month: 'long', year: 'numeric', day: 'numeric' })
+      : "",
       
     ];
 
@@ -294,6 +296,8 @@ const Inventory = () => {
             </button>
           </div>
         </div>
+
+        <InventoryAlert medicines={medicines} />
 
         {/* Add Medicine Form Modal */}
         {isAddModalOpen && (

@@ -12,10 +12,11 @@ import {
   CartesianGrid,
   ResponsiveContainer,
 } from "recharts";
-import { db } from "../firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { db, app } from "../firebase";
+import { collection, getDocs,  getFirestore } from "firebase/firestore";
 import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css"; // ✅ Importing the new CSS file
+import InventoryAlert from "../components/InventoryAlert";
 
 const GENDER_COLORS = ["#0088FE", "#FF69B4"];
 const CONDITION_COLORS = [
@@ -31,6 +32,8 @@ const Dashboard = () => {
     { name: "Male", value: 0 },
     { name: "Female", value: 0 },
   ]);
+
+  const [medicines, setMedicines] = useState([]);
 
   const [topConditions, setTopConditions] = useState([]);
 
@@ -89,6 +92,26 @@ const Dashboard = () => {
     fetchConditions();
   }, []);
 
+  useEffect(() => {
+    const fetchMedicines = async () => {
+      try {
+        const db = getFirestore(app);
+        const medicineCollection = collection(db, "medicine");
+        const snapshot = await getDocs(medicineCollection);
+        const medicineLists = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setMedicines(medicineLists);
+      } catch (error) {
+        toast.error("Failed to fetch Medicines!");
+        console.error("Failed to fetch Medicines: ", error);
+      }
+    };
+
+    fetchMedicines();
+  }, []);
+
   const areValuesEqual = (data) => {
     if (data.length === 0) return false;
     const firstValue = data[0].value;
@@ -126,6 +149,8 @@ const Dashboard = () => {
               <Legend />
             </PieChart>
           </div>
+
+          <InventoryAlert medicines={medicines} />
 
           <div className="chart-container">
             <h2 className="dashboard-text">Top 5 Conditions</h2>
