@@ -7,15 +7,17 @@
 }
 
 .user-heading {
-  font-size: 32px;
+  font-size: 36px;
+  font-weight: 600;
   color: #333;
   margin-bottom: 20px;
 }
 
 .user-subheading {
-  font-size: 18px;
+  font-size: 20px;
   color: #555;
   margin-bottom: 30px;
+  font-weight: 500;
 }
 
 /* Search Bar */
@@ -55,13 +57,14 @@
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: background 0.3s;
+  transition: background 0.3s, transform 0.2s;
   font-size: 16px;
   font-weight: bold;
 }
 
 .add-user-button:hover {
   background-color: #162d5e;
+  transform: translateY(-2px);
 }
 
 .add-icon {
@@ -79,12 +82,12 @@
 }
 
 .card::-webkit-scrollbar {
-  height: 6px;
+  height: 8px;
 }
 
 .card::-webkit-scrollbar-thumb {
   background-color: rgba(0, 0, 0, 0.2);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 /* Table */
@@ -213,6 +216,7 @@
   border: 1px solid #ccc;
   margin-top: 8px;
   box-sizing: border-box;
+  font-size: 14px;
 }
 
 .user-input:focus,
@@ -232,6 +236,7 @@
   font-weight: bold;
   font-size: 16px;
   width: 100%;
+  transition: transform 0.3s ease;
 }
 
 .save-button {
@@ -290,8 +295,12 @@
 /* Error Message */
 .error-message {
   color: red;
-  font-size: 12px;
+  font-size: 14px;
   margin-top: 8px;
+  padding: 8px;
+  background-color: #f8d7da;
+  border-radius: 4px;
+  text-align: center;
 }
 
 /* Media Queries */
