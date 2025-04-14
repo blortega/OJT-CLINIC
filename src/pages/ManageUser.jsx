@@ -79,13 +79,20 @@ const ManageUser = () => {
 
   const filterUsers = (user) => {
     const searchLower = search.toLowerCase();
+
+    const fullName = `${user.firstname || ""} ${
+      user.middleInitial ? user.middleInitial + "." : ""
+    } ${user.lastname || ""}`.trim();
+
     const fieldsToSearch = [
-      (user.firstname || "Not Available") + " " + (user.lastname || ""),
+      fullName,
       user.email || "Not Available",
       user.role || "Not Available",
       user.department || "Not Available",
       user.employeeID || "Not Available",
       user.gender || "Not Available",
+      user.designation || "Not Available",
+      user.dob || "Not Available",
     ];
 
     if (searchLower === "male" || searchLower === "female") {
@@ -99,6 +106,7 @@ const ManageUser = () => {
 
   const handleAddUser = () => {
     setCurrentUser(null);
+    setIsEditable(true);
     setUserForm({
       firstname: "",
       middleInitial: "",
@@ -115,6 +123,7 @@ const ManageUser = () => {
 
   const handleEdit = (user) => {
     setCurrentUser(user);
+    setIsEditable(false);
     setUserForm({
       firstname: user.firstname.toUpperCase(),
       middleInitial: user.middleInitial ? user.middleInitial.toUpperCase() : "",
@@ -229,8 +238,8 @@ const ManageUser = () => {
       errors.firstname = "First name cannot contain numbers";
       isValid = false;
     }
-    if (userForm.middleInitial && /\d/.test(userForm.middleInitial)) {
-      errors.middleInitial = "Middle initial cannot contain numbers";
+    if (!userForm.middleInitial) {
+      errors.middleInitial = "Middle initial name is required";
       isValid = false;
     }
     if (!userForm.lastname) {
@@ -270,6 +279,17 @@ const ManageUser = () => {
     if (!userForm.employeeID) {
       errors.employeeID = "Employee ID is required";
       isValid = false;
+    } else {
+      const idExists = users.some(
+        (u) =>
+          u.employeeID?.toUpperCase() === userForm.employeeID.toUpperCase() &&
+          u.id !== currentUser?.id
+      );
+
+      if (idExists) {
+        errors.employeeID = "Employee ID already exists";
+        isValid = false;
+      }
     }
 
     if (!userForm.designation) {
@@ -349,6 +369,7 @@ const ManageUser = () => {
         dob: "",
       });
       setCurrentUser(null);
+      setIsEditable(false);
 
       // Refresh the user list
       const snapshot = await getDocs(collection(db, "users"));
@@ -737,6 +758,7 @@ const ManageUser = () => {
                 onClick={() => {
                   setModalVisible(false);
                   setFormErrors({});
+                  setIsEditable(false);
                 }}
                 className="cancel-button"
               >
