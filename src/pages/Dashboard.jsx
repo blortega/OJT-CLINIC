@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
+import {
+  PieChart,
+  Pie,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Cell,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
 import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
 import Sidebar from "../components/Sidebar";
@@ -77,6 +89,12 @@ const Dashboard = () => {
     fetchConditions();
   }, []);
 
+  const areValuesEqual = (data) => {
+    if (data.length === 0) return false;
+    const firstValue = data[0].value;
+    return data.every((item) => item.value === firstValue);
+  };
+
   return (
     <Sidebar>
       <div className="dashboard-container">
@@ -111,25 +129,39 @@ const Dashboard = () => {
 
           <div className="chart-container">
             <h2 className="dashboard-text">Top 5 Conditions</h2>
-            <PieChart width={300} height={300}>
-              <Pie
+            <ResponsiveContainer width="100%" minWidth={400} height={300}>
+              <BarChart
                 data={topConditions}
-                cx="50%"
-                cy="50%"
-                outerRadius={100}
-                dataKey="value"
-                label
+                margin={{ top: 20, right: 30, left: 20, bottom: 50 }}
               >
-                {topConditions.map((entry, index) => (
-                  <Cell
-                    key={`cell-condition-${index}`}
-                    fill={CONDITION_COLORS[index % CONDITION_COLORS.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="name"
+                  interval={0}
+                  angle={-30}
+                  textAnchor="end"
+                  tickFormatter={(value) =>
+                    value.length > 10 ? `${value.slice(0, 10)}...` : value
+                  }
+                />
+                <YAxis allowDecimals={false} />
+                <Tooltip
+                  formatter={(value, name, props) => [
+                    value,
+                    props.payload.name,
+                  ]}
+                />
+                {/* <Legend /> <-- removed to prevent "value" label under chart */}
+                <Bar dataKey="value" fill="#8884d8">
+                  {topConditions.map((entry, index) => (
+                    <Cell
+                      key={`cell-bar-${index}`}
+                      fill={CONDITION_COLORS[index % CONDITION_COLORS.length]}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>
