@@ -9,6 +9,29 @@ import { FiPlus, FiEdit, FiTrash } from "react-icons/fi";
 import EditModal from "../components/EditMedicine";
 import AddMedicineForm from "../components/AddMedicineForm";
 
+const formatDate = (date) => {
+  // Return "N/A" if no date is provided
+  if (!date) return "N/A";
+
+  // If it's a Firestore Timestamp (has a .toDate function), convert it to a JavaScript Date
+  if (typeof date.toDate === "function") {
+    date = date.toDate();
+  }
+
+  // If it's a string, attempt to parse it into a valid date object
+  if (typeof date === "string") {
+    date = new Date(date);
+  }
+
+  // Ensure the date is valid
+  const validDate = new Date(date);
+  if (isNaN(validDate)) return "N/A"; // Invalid date handling
+
+  // Format the date to "Month Day, Year" format
+  const options = { year: "numeric", month: "long", day: "numeric" };
+  return validDate.toLocaleDateString("en-US", options);
+};
+
 const Inventory = () => {
   const [medicines, setMedicines] = useState([]);
   const [search, setSearch] = useState("");
@@ -71,20 +94,27 @@ const Inventory = () => {
         ...newMedicine,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        expiryDate: newMedicine.expiryDate || "",
       });
 
       console.log("Document added with ID:", docRef.id);
 
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const addedMedicine = { id: docRef.id, ...docSnap.data() };
+
+
       // Update the local state with the new medicine
-      setMedicines((prevMedicines) => [
-        ...prevMedicines,
-        { id: docRef.id, ...newMedicine },
-      ]);
+      setMedicines((prevMedicines) => [...prevMedicines, addedMedicine]);
 
       toast.success("Medicine added successfully!");
-    } catch (error) {
-      toast.error("Failed to add medicine!");
-      console.error("Error adding medicine:", error);
+    } else {
+      toast.error("Failed to retrieve added medicines")
+    }
+   } catch (error) {
+     toast.error("Failed to add medicine!");
+     console.error("Error adding medicine:", error);
     }
   };
 
@@ -226,17 +256,29 @@ const Inventory = () => {
                 <th style={styles.thead}>Type</th>
                 <th style={styles.thead}>Stocks</th>
                 <th style={styles.thead}>Status</th>
+                <th style={styles.thead}>Expiry Date</th>
+                <th style={styles.thead}>Date Created</th>
                 <th style={styles.thead}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {medicines.filter(filterMedicines).map((medicine, index)=> (
+              {medicines.filter(filterMedicines).map((medicine, index)=> {
+                console.log(`Medicine ${medicine.name} - expiryDate:`, medicine.expiryDate);
+                console.log(`Medicine ${medicine.name} - createdAt:`, medicine.createdAt);
+
+                return (
                 <tr key={index}>
                   <td style={styles.tdata}>{medicine.name}</td>
                   <td style={styles.tdata}>{medicine.dosage}</td>
                   <td style={styles.tdata}>{medicine.type}</td>
                   <td style={styles.tdata}>{medicine.stock}</td>
                   <td style={styles.tdata}>{getStockStatus(medicine.stock)}</td>
+                  <td style={styles.tdata}>
+                    {formatDate(medicine.expiryDate)}
+                  </td>
+                  <td style={styles.tdata}>
+                    {formatDate(medicine.createdAt)}
+                  </td>
                   <td style={styles.tdata}>
                     <button
                       style={hoveredUser === medicine.id && hoveredIcon === "add" 
@@ -285,7 +327,8 @@ const Inventory = () => {
                     </button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -319,7 +362,10 @@ const Inventory = () => {
 
 const RestockModal = ({ isOpen, onClose, medicine, onRestock, restockAmount, setRestockAmount }) => {
   const handleRestockChange = (e) => {
-    setRestockAmount(e.target.value);
+    const value = e.target.value;
+    if (value === "" || (/^\d+$/.test(value) && Number(value) >= 0)){
+      setRestockAmount(value);
+    }
   };
 
   const handleIncrease = () => {
@@ -380,6 +426,11 @@ const RestockModal = ({ isOpen, onClose, medicine, onRestock, restockAmount, set
                 type="number"
                 value={restockAmount}
                 onChange={handleRestockChange}
+                onKeyDown={(e) => {
+                  if (e.key === "-" || e.key === "e" || e.key === "+" || e.key === ".") {
+                    e.preventDefault(); // Block minus sign and other unwanted chars
+                  }
+                }}
                 style={styles.inputField}
                 min="0"
                 placeholder="Enter number of items"
