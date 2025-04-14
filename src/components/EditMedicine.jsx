@@ -102,7 +102,7 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
         expiryDate: editedMedicine.expiryDate || "",
       });
 
-      onUpdate({ ...medicine, ...editedMedicine, expiryDate: formattedExpiryDate });
+      onUpdate({ ...medicine, ...editedMedicine, expiryDate: formattedExpiryDate, status: stockStatus, });
       toast.success("Medicine details updated successfully!");
       onClose();
     } catch (error) {

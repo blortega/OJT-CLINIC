@@ -81,8 +81,13 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
     today.setHours(0,0,0,0);
 
     const selectedDate = new Date(newMedicine.expiryDate);
+    selectedDate.setHours(0, 0, 0, 0); 
+    
 
-    if (selectedDate <= today) {
+    if (selectedDate.getTime() === today.getTime()) {
+      toast.error("Expiry date must not be today.");
+      return;
+    } else if (selectedDate.getTime() < today.getTime()) {
       toast.error("Expiry date must be in the future.");
       return;
     }

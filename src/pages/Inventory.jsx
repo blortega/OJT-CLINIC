@@ -43,6 +43,7 @@ const Inventory = () => {
   const [selectedMedicine, setSelectedMedicine] = useState(null);
   const [restockAmount, setRestockAmount] = useState(0);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [filterOption, setFilterOption] = useState("default");
 
 
 
@@ -78,6 +79,9 @@ const Inventory = () => {
       medicine.dosage,
       medicine.type,
       medicine.status,
+      medicine.expiryDate ? medicine.expiryDate.toString() : "",
+      medicine.createdAt ? medicine.createdAt.toString() : ""
+      
     ];
 
     return fieldToSearch.some((field) =>
@@ -199,7 +203,11 @@ const Inventory = () => {
   };
 
   const handleUpdate = (updatedMedicine) => {
-    setMedicines(medicines.map(medicine => (medicine.id === updatedMedicine.id ? updatedMedicine : medicine)));
+    setMedicines(prevMedicines =>
+      prevMedicines.map(medicine =>
+        medicine.id === updatedMedicine.id ? updatedMedicine : medicine
+      )
+    );
   };
 
   const handleModalOpen = (medicine) => {
@@ -210,6 +218,41 @@ const Inventory = () => {
   const handleModalClose = () => {
     setIsModalOpen(false);
     setRestockAmount(0); // Clear the input when closing the modal
+  };
+
+  const FilterBy = () => {
+    let filtered = medicines.filter(filterMedicines);
+
+
+    switch (filterOption) {
+      case "az":
+        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "za":
+        filtered.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case "expiryDate":
+        filtered.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+        break;  
+      case "createdAt":
+        filtered.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+        break; 
+      case "lowStock":
+        filtered = filtered.filter((item) => item.status?.toLowerCase() === "low stock");
+        break;
+      case "outOfStock":
+        filtered = filtered.filter((item) => item.status?.toLowerCase() === "out of stock");
+        break;
+      case "inStock":
+        filtered = filtered.filter((item) => item.status?.toLowerCase() === "in stock");
+        break;
+      default:
+        break;  
+
+
+    }
+
+    return filtered;
   };
 
   return (
@@ -226,6 +269,20 @@ const Inventory = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          <select
+            style={styles.filterDropdown}
+            value={filterOption}
+            onChange={(e) => setFilterOption(e.target.value)}
+          >
+            <option value="default">Filter By</option>
+            <option value="az">A - Z</option>
+            <option value="za">Z - A</option>
+            <option value="expiryDate">By Expiry Date</option>
+            <option value="createdAt">By Created Date</option>
+            <option value="lowStock">Low Stocks</option>
+            <option value="outOfStock">Out of Stock</option>
+            <option value="inStock">In Stock</option>
+          </select>
           <div style={styles.buttonContainer}>
             <button
               onClick={() => setIsAddModalOpen(true)}
@@ -262,7 +319,7 @@ const Inventory = () => {
               </tr>
             </thead>
             <tbody>
-              {medicines.filter(filterMedicines).map((medicine, index)=> {
+              {FilterBy().map((medicine, index)=> {
                 console.log(`Medicine ${medicine.name} - expiryDate:`, medicine.expiryDate);
                 console.log(`Medicine ${medicine.name} - createdAt:`, medicine.createdAt);
 
@@ -488,6 +545,16 @@ const styles = {
     backgroundColor: "#fff",
     color: "#000",
   },
+
+  filterDropdown: {
+    padding: "8px",
+    borderRadius: "6px",
+    border: "1px solid #ccc",
+    backgroundColor: "#fff",
+    color: "#000",
+    marginLeft: "10px",
+  },
+  
 
   buttonContainer: {
     display: "flex",
