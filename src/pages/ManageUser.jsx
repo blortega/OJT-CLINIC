@@ -8,7 +8,6 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  Timestamp,
   serverTimestamp,
 } from "firebase/firestore";
 import { app } from "../firebase";
@@ -17,7 +16,7 @@ import { FaUserCheck, FaEdit } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "../styles/ManageUser.css"; // Import the CSS file
-import { ClipLoader } from "react-spinners";
+import { FiAlertCircle } from "react-icons/fi";
 
 const ManageUser = () => {
   const [users, setUsers] = useState([]);
@@ -32,22 +31,27 @@ const ManageUser = () => {
   const [isEditable, setIsEditable] = useState(false);
   const [userForm, setUserForm] = useState({
     firstname: "",
+    middleInitial: "",
     lastname: "",
     email: "",
     role: "",
     department: "",
-    phone: "",
+    designation: "",
     gender: "",
+    employeeID: "",
+    dob: "",
   });
   const [formErrors, setFormErrors] = useState({
     firstname: "",
+    middleInitial: "",
     lastname: "",
     email: "",
     role: "",
     department: "",
-    phone: "",
+    designation: "",
     gender: "",
     employeeID: "",
+    dob: "",
   });
 
   useEffect(() => {
@@ -76,13 +80,20 @@ const ManageUser = () => {
 
   const filterUsers = (user) => {
     const searchLower = search.toLowerCase();
+
+    const fullName = `${user.firstname || ""} ${
+      user.middleInitial ? user.middleInitial + "." : ""
+    } ${user.lastname || ""}`.trim();
+
     const fieldsToSearch = [
-      (user.firstname || "Not Available") + " " + (user.lastname || ""),
+      fullName,
       user.email || "Not Available",
       user.role || "Not Available",
       user.department || "Not Available",
       user.employeeID || "Not Available",
       user.gender || "Not Available",
+      user.designation || "Not Available",
+      user.dob || "Not Available",
     ];
 
     if (searchLower === "male" || searchLower === "female") {
@@ -96,13 +107,15 @@ const ManageUser = () => {
 
   const handleAddUser = () => {
     setCurrentUser(null);
+    setIsEditable(true);
     setUserForm({
       firstname: "",
+      middleInitial: "",
       lastname: "",
       email: "",
       role: "Employee",
       department: "",
-      phone: "",
+      designation: "",
       gender: "",
       employeeID: "",
     });
@@ -111,15 +124,18 @@ const ManageUser = () => {
 
   const handleEdit = (user) => {
     setCurrentUser(user);
+    setIsEditable(false);
     setUserForm({
       firstname: user.firstname.toUpperCase(),
+      middleInitial: user.middleInitial ? user.middleInitial.toUpperCase() : "",
       lastname: user.lastname ? user.lastname.toUpperCase() : "",
       email: user.email,
       role: user.role,
       department: user.department,
-      phone: user.phone || "",
+      designation: user.designation || "",
       gender: user.gender || "",
       employeeID: user.employeeID || "",
+      dob: user.dob || "",
     });
     setIsEditable(false);
     setModalVisible(true);
@@ -187,7 +203,17 @@ const ManageUser = () => {
   const handleFormChange = (e) => {
     const { name, value } = e.target;
 
-    if (name === "firstname" || name === "lastname") {
+    if (name === "dob") {
+      setUserForm((prevForm) => ({
+        ...prevForm,
+        [name]: value,
+      }));
+    } else if (
+      name === "firstname" ||
+      name === "middleInitial" ||
+      name === "lastname" ||
+      name === "designation"
+    ) {
       setUserForm((prevForm) => ({
         ...prevForm,
         [name]: value.toUpperCase(),
@@ -213,7 +239,10 @@ const ManageUser = () => {
       errors.firstname = "First name cannot contain numbers";
       isValid = false;
     }
-
+    if (!userForm.middleInitial) {
+      errors.middleInitial = "Middle initial name is required";
+      isValid = false;
+    }
     if (!userForm.lastname) {
       errors.lastname = "Last name is required";
       isValid = false;
@@ -221,7 +250,10 @@ const ManageUser = () => {
       errors.lastname = "Last name cannot contain numbers";
       isValid = false;
     }
-
+    if (!userForm.dob) {
+      errors.dob = "Date of Birth is required";
+      isValid = false;
+    }
     if (!userForm.email) {
       errors.email = "Email is required";
       isValid = false;
@@ -248,17 +280,22 @@ const ManageUser = () => {
     if (!userForm.employeeID) {
       errors.employeeID = "Employee ID is required";
       isValid = false;
-    }
+    } else {
+      const idExists = users.some(
+        (u) =>
+          u.employeeID?.toUpperCase() === userForm.employeeID.toUpperCase() &&
+          u.id !== currentUser?.id
+      );
 
-    if (userForm.phone) {
-      if (!/^(\+?[\d-]+)$/.test(userForm.phone)) {
-        errors.phone =
-          "Phone number can only contain numbers, plus (+) or dash (-)";
-        isValid = false;
-      } else if (userForm.phone.length > 13) {
-        errors.phone = "Phone number cannot be longer than 13 characters";
+      if (idExists) {
+        errors.employeeID = "Employee ID already exists";
         isValid = false;
       }
+    }
+
+    if (!userForm.designation) {
+      errors.designation = "Designation is required";
+      isValid = false;
     }
 
     setFormErrors(errors);
@@ -280,12 +317,14 @@ const ManageUser = () => {
             .toUpperCase()
             .trim()
             .replace(/\s+/g, " "),
+          middleInitial: userForm.middleInitial.toUpperCase().trim(),
           lastname: userForm.lastname.toUpperCase().trim().replace(/\s+/g, " "),
           email: userForm.email,
-          phone: userForm.phone,
+          designation: userForm.designation,
           department: userForm.department,
           gender: userForm.gender,
           employeeID: userForm.employeeID || "Not Available",
+          dob: userForm.dob,
         });
 
         toast.success("User updated successfully!");
@@ -296,13 +335,15 @@ const ManageUser = () => {
             .toUpperCase()
             .trim()
             .replace(/\s+/g, " "),
+          middleInitial: userForm.middleInitial.toUpperCase().trim(),
           lastname: userForm.lastname.toUpperCase().trim().replace(/\s+/g, " "),
           email: userForm.email,
           role: userForm.role,
           department: userForm.department,
-          phone: userForm.phone,
+          designation: userForm.designation,
           gender: userForm.gender,
           employeeID: userForm.employeeID || "Not Available",
+          dob: userForm.dob,
           createdAt: serverTimestamp(),
           status: "Active",
         };
@@ -323,11 +364,13 @@ const ManageUser = () => {
         email: "",
         role: "",
         department: "",
-        phone: "",
+        designation: "",
         gender: "",
         employeeID: "",
+        dob: "",
       });
       setCurrentUser(null);
+      setIsEditable(false);
 
       // Refresh the user list
       const snapshot = await getDocs(collection(db, "users"));
@@ -378,11 +421,11 @@ const ManageUser = () => {
                   <th className="table-head" style={{ width: "200px" }}>
                     Name
                   </th>
-                  <th className="table-head" style={{ width: "180px" }}>
-                    Email
-                  </th>
+                  <th className="table-head" style={{ width: "150px" }}>
+                    Date of Birth
+                  </th>{" "}
                   <th className="table-head" style={{ width: "100px" }}>
-                    Role
+                    Designation
                   </th>
                   <th className="table-head" style={{ width: "150px" }}>
                     Department
@@ -412,13 +455,18 @@ const ManageUser = () => {
                       {user.employeeID || "Not Available"}
                     </td>
                     <td className="table-cell">
-                      {user.firstname} {user.lastname || "Not Available"}
+                      {user.firstname}{" "}
+                      {user.middleInitial ? user.middleInitial + ". " : ""}{" "}
+                      {user.lastname || "Not Available"}
                     </td>
                     <td className="table-cell">
-                      {user.email || "Not Available"}
+                      {/* Format the DOB if it exists */}
+                      {user.dob
+                        ? new Date(user.dob).toLocaleDateString()
+                        : "Not Available"}
                     </td>
                     <td className="table-cell">
-                      {user.role || "Not Available"}
+                      {user.designation || "Not Available"}
                     </td>
                     <td className="table-cell">
                       {user.department || "Not Available"}
@@ -522,8 +570,15 @@ const ManageUser = () => {
       </div>
 
       {modalVisible && (
-        <div className="user-modal">
-          <div className="modal-content">
+        <div
+          className="user-modal"
+          onClick={() => {
+            setModalVisible(false);
+            setFormErrors({});
+            setIsEditable(false);
+          }}
+        >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h2>
               {currentUser ? "Edit Employee" : "Add Employee"}
               <button
@@ -549,7 +604,29 @@ const ManageUser = () => {
                     disabled={!isEditable}
                   />
                   {formErrors.firstname && (
-                    <p className="error-message">{formErrors.firstname}</p>
+                    <p className="error-message">
+                      <FiAlertCircle />
+                      {formErrors.firstname}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Middle Initial:</label>
+                  <input
+                    type="text"
+                    name="middleInitial"
+                    value={userForm.middleInitial}
+                    onChange={handleFormChange}
+                    className="user-input"
+                    disabled={!isEditable}
+                  />
+                  {formErrors.middleInitial && (
+                    <p className="error-message">
+                      <FiAlertCircle />
+                      {formErrors.middleInitial}
+                    </p>
                   )}
                 </div>
               </div>
@@ -565,7 +642,10 @@ const ManageUser = () => {
                     disabled={!isEditable}
                   />
                   {formErrors.lastname && (
-                    <p className="error-message">{formErrors.lastname}</p>
+                    <p className="error-message">
+                      <FiAlertCircle />
+                      {formErrors.lastname}
+                    </p>
                   )}
                 </div>
               </div>
@@ -588,7 +668,10 @@ const ManageUser = () => {
                     <option value="Other">Other</option>
                   </select>
                   {formErrors.gender && (
-                    <p className="error-message">{formErrors.gender}</p>
+                    <p className="error-message">
+                      <FiAlertCircle />
+                      {formErrors.gender}
+                    </p>
                   )}
                 </div>
               </div>
@@ -605,41 +688,32 @@ const ManageUser = () => {
                     disabled={!isEditable}
                   />
                   {formErrors.employeeID && (
-                    <p className="error-message">{formErrors.employeeID}</p>
+                    <p className="error-message">
+                      <FiAlertCircle />
+                      {formErrors.employeeID}
+                    </p>
                   )}
                 </div>
               </div>
             </div>
 
-            <div className="form-group">
-              <label>Email:</label>
-              <input
-                type="email"
-                name="email"
-                value={userForm.email}
-                onChange={handleFormChange}
-                className="user-input"
-                disabled={!isEditable}
-              />
-              {formErrors.email && (
-                <p className="error-message">{formErrors.email}</p>
-              )}
-            </div>
-
             <div className="form-row">
               <div className="half-width">
                 <div className="form-group">
-                  <label>Phone:</label>
+                  <label>Date of Birth:</label>
                   <input
-                    type="tel"
-                    name="phone"
-                    value={userForm.phone}
+                    type="date"
+                    name="dob"
+                    value={userForm.dob}
                     onChange={handleFormChange}
                     className="user-input"
                     disabled={!isEditable}
                   />
-                  {formErrors.phone && (
-                    <p className="error-message">{formErrors.phone}</p>
+                  {formErrors.dob && (
+                    <p className="error-message">
+                      <FiAlertCircle />
+                      {formErrors.dob}
+                    </p>
                   )}
                 </div>
               </div>
@@ -656,25 +730,52 @@ const ManageUser = () => {
                     disabled={!isEditable}
                   />
                   {formErrors.department && (
-                    <p className="error-message">{formErrors.department}</p>
+                    <p className="error-message">
+                      <FiAlertCircle />
+                      {formErrors.department}
+                    </p>
                   )}
                 </div>
               </div>
             </div>
 
-            <div className="form-group">
-              <label>Role:</label>
-              <input
-                type="text"
-                name="role"
-                value={userForm.role}
-                onChange={handleFormChange}
-                className="user-input"
-                disabled={true}
-              />
-              {formErrors.role && (
-                <p className="error-message">{formErrors.role}</p>
-              )}
+            <div className="form-row">
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Designation:</label>
+                  <input
+                    type="text"
+                    name="designation"
+                    value={userForm.designation}
+                    onChange={handleFormChange}
+                    className="user-input"
+                    disabled={!isEditable}
+                  />
+                  {formErrors.designation && (
+                    <p className="error-message">
+                      <FiAlertCircle />
+                      {formErrors.designation}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Role:</label>
+                  <input
+                    type="text"
+                    name="role"
+                    value={userForm.role}
+                    onChange={handleFormChange}
+                    className="user-input"
+                    disabled={true}
+                  />
+                  {formErrors.role && (
+                    <p className="error-message">{formErrors.role}</p>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="button-container">
@@ -689,6 +790,7 @@ const ManageUser = () => {
                 onClick={() => {
                   setModalVisible(false);
                   setFormErrors({});
+                  setIsEditable(false);
                 }}
                 className="cancel-button"
               >

@@ -8,6 +8,30 @@ import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 import { FiPlus, FiEdit, FiTrash } from "react-icons/fi";
 import EditModal from "../components/EditMedicine";
 import AddMedicineForm from "../components/AddMedicineForm";
+import InventoryAlert from "../components/InventoryAlert";
+
+const formatDate = (date) => {
+  // Return "N/A" if no date is provided
+  if (!date) return "N/A";
+
+  // If it's a Firestore Timestamp (has a .toDate function), convert it to a JavaScript Date
+  if (typeof date.toDate === "function") {
+    date = date.toDate();
+  }
+
+  // If it's a string, attempt to parse it into a valid date object
+  if (typeof date === "string") {
+    date = new Date(date);
+  }
+
+  // Ensure the date is valid
+  const validDate = new Date(date);
+  if (isNaN(validDate)) return "N/A"; // Invalid date handling
+
+  // Format the date to "Month Day, Year" format
+  const options = { year: "numeric", month: "long", day: "numeric" };
+  return validDate.toLocaleDateString("en-US", options);
+};
 
 const Inventory = () => {
   const [medicines, setMedicines] = useState([]);
@@ -20,6 +44,7 @@ const Inventory = () => {
   const [selectedMedicine, setSelectedMedicine] = useState(null);
   const [restockAmount, setRestockAmount] = useState(0);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [filterOption, setFilterOption] = useState("default");
 
 
 
@@ -55,6 +80,10 @@ const Inventory = () => {
       medicine.dosage,
       medicine.type,
       medicine.status,
+      medicine.expiryDate ? medicine.expiryDate.toString() : "",
+      medicine.createdAt ? medicine.createdAt.toDate().toLocaleDateString('en-US', { month: 'long', year: 'numeric', day: 'numeric' })
+      : "",
+      
     ];
 
     return fieldToSearch.some((field) =>
@@ -71,20 +100,27 @@ const Inventory = () => {
         ...newMedicine,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        expiryDate: newMedicine.expiryDate || "",
       });
 
       console.log("Document added with ID:", docRef.id);
 
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const addedMedicine = { id: docRef.id, ...docSnap.data() };
+
+
       // Update the local state with the new medicine
-      setMedicines((prevMedicines) => [
-        ...prevMedicines,
-        { id: docRef.id, ...newMedicine },
-      ]);
+      setMedicines((prevMedicines) => [...prevMedicines, addedMedicine]);
 
       toast.success("Medicine added successfully!");
-    } catch (error) {
-      toast.error("Failed to add medicine!");
-      console.error("Error adding medicine:", error);
+    } else {
+      toast.error("Failed to retrieve added medicines")
+    }
+   } catch (error) {
+     toast.error("Failed to add medicine!");
+     console.error("Error adding medicine:", error);
     }
   };
 
@@ -169,7 +205,11 @@ const Inventory = () => {
   };
 
   const handleUpdate = (updatedMedicine) => {
-    setMedicines(medicines.map(medicine => (medicine.id === updatedMedicine.id ? updatedMedicine : medicine)));
+    setMedicines(prevMedicines =>
+      prevMedicines.map(medicine =>
+        medicine.id === updatedMedicine.id ? updatedMedicine : medicine
+      )
+    );
   };
 
   const handleModalOpen = (medicine) => {
@@ -180,6 +220,41 @@ const Inventory = () => {
   const handleModalClose = () => {
     setIsModalOpen(false);
     setRestockAmount(0); // Clear the input when closing the modal
+  };
+
+  const FilterBy = () => {
+    let filtered = medicines.filter(filterMedicines);
+
+
+    switch (filterOption) {
+      case "az":
+        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "za":
+        filtered.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case "expiryDate":
+        filtered.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+        break;  
+      case "createdAt":
+        filtered.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+        break; 
+      case "lowStock":
+        filtered = filtered.filter((item) => item.status?.toLowerCase() === "low stock");
+        break;
+      case "outOfStock":
+        filtered = filtered.filter((item) => item.status?.toLowerCase() === "out of stock");
+        break;
+      case "inStock":
+        filtered = filtered.filter((item) => item.status?.toLowerCase() === "in stock");
+        break;
+      default:
+        break;  
+
+
+    }
+
+    return filtered;
   };
 
   return (
@@ -196,6 +271,20 @@ const Inventory = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          <select
+            style={styles.filterDropdown}
+            value={filterOption}
+            onChange={(e) => setFilterOption(e.target.value)}
+          >
+            <option value="default">Filter By</option>
+            <option value="az">A - Z</option>
+            <option value="za">Z - A</option>
+            <option value="expiryDate">By Expiry Date</option>
+            <option value="createdAt">By Created Date</option>
+            <option value="lowStock">Low Stocks</option>
+            <option value="outOfStock">Out of Stock</option>
+            <option value="inStock">In Stock</option>
+          </select>
           <div style={styles.buttonContainer}>
             <button
               onClick={() => setIsAddModalOpen(true)}
@@ -207,6 +296,8 @@ const Inventory = () => {
             </button>
           </div>
         </div>
+
+        <InventoryAlert medicines={medicines} />
 
         {/* Add Medicine Form Modal */}
         {isAddModalOpen && (
@@ -226,17 +317,29 @@ const Inventory = () => {
                 <th style={styles.thead}>Type</th>
                 <th style={styles.thead}>Stocks</th>
                 <th style={styles.thead}>Status</th>
+                <th style={styles.thead}>Expiry Date</th>
+                <th style={styles.thead}>Date Created</th>
                 <th style={styles.thead}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {medicines.filter(filterMedicines).map((medicine, index)=> (
+              {FilterBy().map((medicine, index)=> {
+                console.log(`Medicine ${medicine.name} - expiryDate:`, medicine.expiryDate);
+                console.log(`Medicine ${medicine.name} - createdAt:`, medicine.createdAt);
+
+                return (
                 <tr key={index}>
                   <td style={styles.tdata}>{medicine.name}</td>
                   <td style={styles.tdata}>{medicine.dosage}</td>
                   <td style={styles.tdata}>{medicine.type}</td>
                   <td style={styles.tdata}>{medicine.stock}</td>
                   <td style={styles.tdata}>{getStockStatus(medicine.stock)}</td>
+                  <td style={styles.tdata}>
+                    {formatDate(medicine.expiryDate)}
+                  </td>
+                  <td style={styles.tdata}>
+                    {formatDate(medicine.createdAt)}
+                  </td>
                   <td style={styles.tdata}>
                     <button
                       style={hoveredUser === medicine.id && hoveredIcon === "add" 
@@ -285,7 +388,8 @@ const Inventory = () => {
                     </button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -319,7 +423,10 @@ const Inventory = () => {
 
 const RestockModal = ({ isOpen, onClose, medicine, onRestock, restockAmount, setRestockAmount }) => {
   const handleRestockChange = (e) => {
-    setRestockAmount(e.target.value);
+    const value = e.target.value;
+    if (value === "" || (/^\d+$/.test(value) && Number(value) >= 0)){
+      setRestockAmount(value);
+    }
   };
 
   const handleIncrease = () => {
@@ -380,6 +487,11 @@ const RestockModal = ({ isOpen, onClose, medicine, onRestock, restockAmount, set
                 type="number"
                 value={restockAmount}
                 onChange={handleRestockChange}
+                onKeyDown={(e) => {
+                  if (e.key === "-" || e.key === "e" || e.key === "+" || e.key === ".") {
+                    e.preventDefault(); // Block minus sign and other unwanted chars
+                  }
+                }}
                 style={styles.inputField}
                 min="0"
                 placeholder="Enter number of items"
@@ -437,6 +549,16 @@ const styles = {
     backgroundColor: "#fff",
     color: "#000",
   },
+
+  filterDropdown: {
+    padding: "8px",
+    borderRadius: "6px",
+    border: "1px solid #ccc",
+    backgroundColor: "#fff",
+    color: "#000",
+    marginLeft: "10px",
+  },
+  
 
   buttonContainer: {
     display: "flex",

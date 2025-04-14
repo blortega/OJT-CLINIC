@@ -4,6 +4,10 @@ import { app } from "../firebase";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+const formatDate = (date) => {
+  const options = { year: 'numeric', month: 'long', day: 'numeric' };
+  return new Date(date).toLocaleDateString('en-US', options);
+};
 const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
   if (!isOpen) return null;
 
@@ -12,6 +16,7 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
     dosage: medicine?.dosage || "",
     type: medicine?.type || "",
     stock: medicine?.stock || 0,
+    expiryDate: medicine?.expiryDate || "",
   });
 
   useEffect(() => {
@@ -21,6 +26,7 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
         dosage: medicine.dosage,
         type: medicine.type,
         stock: medicine.stock,
+        expiryDate: medicine.expiryDate || "",
       });
     }
   }, [medicine]);
@@ -73,12 +79,14 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
       return;
     }
 
-    if (!editedMedicine.name || !editedMedicine.dosage || !editedMedicine.type || editedMedicine.stock < 0) {
+    if (!editedMedicine.name || !editedMedicine.dosage || !editedMedicine.type || editedMedicine.stock < 0 || !editedMedicine.expiryDate){
       toast.error("Please fill in all fields correctly.");
       return;
     }
 
     const stockStatus = getStockStatus(editedMedicine.stock);
+
+    const formattedExpiryDate = formatDate(editedMedicine.expiryDate);
 
     try {
       const db = getFirestore(app);
@@ -91,9 +99,10 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
         stock: editedMedicine.stock,
         status: stockStatus,
         updatedAt: serverTimestamp(),
+        expiryDate: editedMedicine.expiryDate || "",
       });
 
-      onUpdate({ ...medicine, ...editedMedicine });
+      onUpdate({ ...medicine, ...editedMedicine, expiryDate: formattedExpiryDate, status: stockStatus, });
       toast.success("Medicine details updated successfully!");
       onClose();
     } catch (error) {
@@ -164,6 +173,18 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
               style={styles.inputField}
               placeholder="Enter Type"
             />
+          </label>
+
+          <label style={styles.label}>
+            Expiry Date:
+          <input
+            type="date"
+            name="expiryDate"
+            onChange={handleInputChange}
+            value={editedMedicine.expiryDate}
+            placeholder="Enter Expiry Date"
+            style={styles.inputField}
+          />
           </label>
 
           <label style={styles.label}>
