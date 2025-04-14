@@ -120,6 +120,9 @@
 .table-row {
   transition: background-color 0.3s ease;
 }
+.table-row:hover {
+  background-color: #f0f8ff;
+}
 
 .icon-button {
   background: none;
@@ -147,7 +150,7 @@
   border-radius: 8px;
   width: 750px;
   max-width: 95vw;
-  max-height: 90vh;
+  max-height: 85vh;
   overflow-y: auto;
 }
 
@@ -155,11 +158,6 @@
   margin-bottom: 20px;
   display: flex;
   flex-direction: column;
-}
-
-.user-input {
-  width: 100%;
-  box-sizing: border-box; /* ensures padding doesn't add to width */
 }
 
 .form-row {
@@ -173,14 +171,26 @@
   min-width: 0;
 }
 
-.user-select {
-  width: 100%;
+.user-input {
   padding: 10px;
-  border-radius: 5px;
+  border-radius: 6px;
   border: 1px solid #ccc;
   margin-top: 8px;
+  box-sizing: border-box;
 }
-
+.user-select {
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  margin-top: 8px;
+  box-sizing: border-box;
+}
+.user-input:focus,
+.user-select:focus {
+  border-color: #1e3a8a;
+  background-color: #f1f5f9;
+  outline: none;
+}
 .save-button {
   background-color: #1e3a8a;
   color: #fff;
@@ -192,7 +202,6 @@
   font-size: 16px;
   width: 100%;
 }
-
 .cancel-button {
   background-color: #ccc;
   color: #000;
@@ -204,7 +213,12 @@
   font-size: 16px;
   width: 100%;
 }
-
+.save-button:hover,
+.cancel-button:hover,
+.icon-button:hover {
+  transform: scale(1.05);
+  transition: transform 0.3s ease;
+}
 .gender-badge {
   display: inline-block;
   padding: 4px 8px;
@@ -213,9 +227,12 @@
   font-weight: bold;
   text-transform: capitalize;
   font-size: 14px;
-  min-width: 100px;
-  max-width: 100px;
+  min-width: 60px;
+  max-width: 120px;
   text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .edit-button {
@@ -238,7 +255,7 @@
 .error-message {
   color: red;
   font-size: 12px;
-  margin-top: 5px;
+  margin-top: 8px;
 }
 
 @media (max-width: 768px) {
