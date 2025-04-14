@@ -37,7 +37,7 @@ const ManageUser = () => {
     email: "",
     role: "",
     department: "",
-    phone: "",
+    designation: "",
     gender: "",
   });
   const [formErrors, setFormErrors] = useState({
@@ -47,7 +47,7 @@ const ManageUser = () => {
     email: "",
     role: "",
     department: "",
-    phone: "",
+    designation: "",
     gender: "",
     employeeID: "",
   });
@@ -105,7 +105,7 @@ const ManageUser = () => {
       email: "",
       role: "Employee",
       department: "",
-      phone: "",
+      designation: "",
       gender: "",
       employeeID: "",
     });
@@ -121,7 +121,7 @@ const ManageUser = () => {
       email: user.email,
       role: user.role,
       department: user.department,
-      phone: user.phone || "",
+      designation: user.designation || "",
       gender: user.gender || "",
       employeeID: user.employeeID || "",
     });
@@ -194,7 +194,8 @@ const ManageUser = () => {
     if (
       name === "firstname" ||
       name === "middleInitial" ||
-      name === "lastname"
+      name === "lastname" ||
+      name === "designation"
     ) {
       setUserForm((prevForm) => ({
         ...prevForm,
@@ -261,15 +262,9 @@ const ManageUser = () => {
       isValid = false;
     }
 
-    if (userForm.phone) {
-      if (!/^(\+?[\d-]+)$/.test(userForm.phone)) {
-        errors.phone =
-          "Phone number can only contain numbers, plus (+) or dash (-)";
-        isValid = false;
-      } else if (userForm.phone.length > 13) {
-        errors.phone = "Phone number cannot be longer than 13 characters";
-        isValid = false;
-      }
+    if (!userForm.designation) {
+      errors.designation = "Designation is required";
+      isValid = false;
     }
 
     setFormErrors(errors);
@@ -294,7 +289,7 @@ const ManageUser = () => {
           middleInitial: userForm.middleInitial.toUpperCase().trim(),
           lastname: userForm.lastname.toUpperCase().trim().replace(/\s+/g, " "),
           email: userForm.email,
-          phone: userForm.phone,
+          designation: userForm.designation,
           department: userForm.department,
           gender: userForm.gender,
           employeeID: userForm.employeeID || "Not Available",
@@ -313,7 +308,7 @@ const ManageUser = () => {
           email: userForm.email,
           role: userForm.role,
           department: userForm.department,
-          phone: userForm.phone,
+          designation: userForm.designation,
           gender: userForm.gender,
           employeeID: userForm.employeeID || "Not Available",
           createdAt: serverTimestamp(),
@@ -336,7 +331,7 @@ const ManageUser = () => {
         email: "",
         role: "",
         department: "",
-        phone: "",
+        designation: "",
         gender: "",
         employeeID: "",
       });
@@ -395,7 +390,7 @@ const ManageUser = () => {
                     Email
                   </th>
                   <th className="table-head" style={{ width: "100px" }}>
-                    Role
+                    Designation
                   </th>
                   <th className="table-head" style={{ width: "150px" }}>
                     Department
@@ -433,7 +428,7 @@ const ManageUser = () => {
                       {user.email || "Not Available"}
                     </td>
                     <td className="table-cell">
-                      {user.role || "Not Available"}
+                      {user.designation || "Not Available"}
                     </td>
                     <td className="table-cell">
                       {user.department || "Not Available"}
@@ -660,17 +655,17 @@ const ManageUser = () => {
             <div className="form-row">
               <div className="half-width">
                 <div className="form-group">
-                  <label>Phone:</label>
+                  <label>Designation:</label>
                   <input
-                    type="tel"
-                    name="phone"
-                    value={userForm.phone}
+                    type="text"
+                    name="designation"
+                    value={userForm.designation}
                     onChange={handleFormChange}
                     className="user-input"
                     disabled={!isEditable}
                   />
-                  {formErrors.phone && (
-                    <p className="error-message">{formErrors.phone}</p>
+                  {formErrors.designation && (
+                    <p className="error-message">{formErrors.designation}</p>
                   )}
                 </div>
               </div>
