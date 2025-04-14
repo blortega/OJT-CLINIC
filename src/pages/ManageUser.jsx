@@ -570,8 +570,15 @@ const ManageUser = () => {
       </div>
 
       {modalVisible && (
-        <div className="user-modal">
-          <div className="modal-content">
+        <div
+          className="user-modal"
+          onClick={() => {
+            setModalVisible(false);
+            setFormErrors({});
+            setIsEditable(false);
+          }}
+        >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h2>
               {currentUser ? "Edit Employee" : "Add Employee"}
               <button
