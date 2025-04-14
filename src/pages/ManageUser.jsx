@@ -16,6 +16,7 @@ import { FaUserCheck, FaEdit } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "../styles/ManageUser.css"; // Import the CSS file
+import { FiAlertCircle } from "react-icons/fi";
 
 const ManageUser = () => {
   const [users, setUsers] = useState([]);
@@ -596,13 +597,16 @@ const ManageUser = () => {
                     disabled={!isEditable}
                   />
                   {formErrors.firstname && (
-                    <p className="error-message">{formErrors.firstname}</p>
+                    <p className="error-message">
+                      <FiAlertCircle />
+                      {formErrors.firstname}
+                    </p>
                   )}
                 </div>
               </div>
               <div className="half-width">
                 <div className="form-group">
-                  <label>Middle Initial:</label> {/* Add this line */}
+                  <label>Middle Initial:</label>
                   <input
                     type="text"
                     name="middleInitial"
@@ -612,7 +616,10 @@ const ManageUser = () => {
                     disabled={!isEditable}
                   />
                   {formErrors.middleInitial && (
-                    <p className="error-message">{formErrors.middleInitial}</p>
+                    <p className="error-message">
+                      <FiAlertCircle />
+                      {formErrors.middleInitial}
+                    </p>
                   )}
                 </div>
               </div>
@@ -628,7 +635,10 @@ const ManageUser = () => {
                     disabled={!isEditable}
                   />
                   {formErrors.lastname && (
-                    <p className="error-message">{formErrors.lastname}</p>
+                    <p className="error-message">
+                      <FiAlertCircle />
+                      {formErrors.lastname}
+                    </p>
                   )}
                 </div>
               </div>
@@ -651,7 +661,10 @@ const ManageUser = () => {
                     <option value="Other">Other</option>
                   </select>
                   {formErrors.gender && (
-                    <p className="error-message">{formErrors.gender}</p>
+                    <p className="error-message">
+                      <FiAlertCircle />
+                      {formErrors.gender}
+                    </p>
                   )}
                 </div>
               </div>
@@ -668,7 +681,10 @@ const ManageUser = () => {
                     disabled={!isEditable}
                   />
                   {formErrors.employeeID && (
-                    <p className="error-message">{formErrors.employeeID}</p>
+                    <p className="error-message">
+                      <FiAlertCircle />
+                      {formErrors.employeeID}
+                    </p>
                   )}
                 </div>
               </div>
@@ -687,7 +703,10 @@ const ManageUser = () => {
                     disabled={!isEditable}
                   />
                   {formErrors.dob && (
-                    <p className="error-message">{formErrors.dob}</p>
+                    <p className="error-message">
+                      <FiAlertCircle />
+                      {formErrors.dob}
+                    </p>
                   )}
                 </div>
               </div>
@@ -704,7 +723,10 @@ const ManageUser = () => {
                     disabled={!isEditable}
                   />
                   {formErrors.department && (
-                    <p className="error-message">{formErrors.department}</p>
+                    <p className="error-message">
+                      <FiAlertCircle />
+                      {formErrors.department}
+                    </p>
                   )}
                 </div>
               </div>
@@ -723,7 +745,10 @@ const ManageUser = () => {
                     disabled={!isEditable}
                   />
                   {formErrors.designation && (
-                    <p className="error-message">{formErrors.designation}</p>
+                    <p className="error-message">
+                      <FiAlertCircle />
+                      {formErrors.designation}
+                    </p>
                   )}
                 </div>
               </div>
