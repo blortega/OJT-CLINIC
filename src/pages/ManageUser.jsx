@@ -127,6 +127,7 @@ const ManageUser = () => {
       designation: user.designation || "",
       gender: user.gender || "",
       employeeID: user.employeeID || "",
+      dob: user.dob || "",
     });
     setIsEditable(false);
     setModalVisible(true);
@@ -400,9 +401,9 @@ const ManageUser = () => {
                   <th className="table-head" style={{ width: "200px" }}>
                     Name
                   </th>
-                  <th className="table-head" style={{ width: "180px" }}>
-                    Email
-                  </th>
+                  <th className="table-head" style={{ width: "150px" }}>
+                    Date of Birth
+                  </th>{" "}
                   <th className="table-head" style={{ width: "100px" }}>
                     Designation
                   </th>
@@ -439,7 +440,10 @@ const ManageUser = () => {
                       {user.lastname || "Not Available"}
                     </td>
                     <td className="table-cell">
-                      {user.email || "Not Available"}
+                      {/* Format the DOB if it exists */}
+                      {user.dob
+                        ? new Date(user.dob).toLocaleDateString()
+                        : "Not Available"}
                     </td>
                     <td className="table-cell">
                       {user.designation || "Not Available"}
