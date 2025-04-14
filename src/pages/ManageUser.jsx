@@ -8,7 +8,6 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  Timestamp,
   serverTimestamp,
 } from "firebase/firestore";
 import { app } from "../firebase";
@@ -17,7 +16,6 @@ import { FaUserCheck, FaEdit } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "../styles/ManageUser.css"; // Import the CSS file
-import { ClipLoader } from "react-spinners";
 
 const ManageUser = () => {
   const [users, setUsers] = useState([]);
@@ -81,13 +79,20 @@ const ManageUser = () => {
 
   const filterUsers = (user) => {
     const searchLower = search.toLowerCase();
+
+    const fullName = `${user.firstname || ""} ${
+      user.middleInitial ? user.middleInitial + "." : ""
+    } ${user.lastname || ""}`.trim();
+
     const fieldsToSearch = [
-      (user.firstname || "Not Available") + " " + (user.lastname || ""),
+      fullName,
       user.email || "Not Available",
       user.role || "Not Available",
       user.department || "Not Available",
       user.employeeID || "Not Available",
       user.gender || "Not Available",
+      user.designation || "Not Available",
+      user.dob || "Not Available",
     ];
 
     if (searchLower === "male" || searchLower === "female") {
@@ -101,6 +106,7 @@ const ManageUser = () => {
 
   const handleAddUser = () => {
     setCurrentUser(null);
+    setIsEditable(true);
     setUserForm({
       firstname: "",
       middleInitial: "",
@@ -117,6 +123,7 @@ const ManageUser = () => {
 
   const handleEdit = (user) => {
     setCurrentUser(user);
+    setIsEditable(false);
     setUserForm({
       firstname: user.firstname.toUpperCase(),
       middleInitial: user.middleInitial ? user.middleInitial.toUpperCase() : "",
@@ -231,8 +238,8 @@ const ManageUser = () => {
       errors.firstname = "First name cannot contain numbers";
       isValid = false;
     }
-    if (userForm.middleInitial && /\d/.test(userForm.middleInitial)) {
-      errors.middleInitial = "Middle initial cannot contain numbers";
+    if (!userForm.middleInitial) {
+      errors.middleInitial = "Middle initial name is required";
       isValid = false;
     }
     if (!userForm.lastname) {
@@ -272,6 +279,17 @@ const ManageUser = () => {
     if (!userForm.employeeID) {
       errors.employeeID = "Employee ID is required";
       isValid = false;
+    } else {
+      const idExists = users.some(
+        (u) =>
+          u.employeeID?.toUpperCase() === userForm.employeeID.toUpperCase() &&
+          u.id !== currentUser?.id
+      );
+
+      if (idExists) {
+        errors.employeeID = "Employee ID already exists";
+        isValid = false;
+      }
     }
 
     if (!userForm.designation) {
@@ -351,6 +369,7 @@ const ManageUser = () => {
         dob: "",
       });
       setCurrentUser(null);
+      setIsEditable(false);
 
       // Refresh the user list
       const snapshot = await getDocs(collection(db, "users"));
@@ -655,35 +674,39 @@ const ManageUser = () => {
               </div>
             </div>
 
-            <div className="form-group">
-              <label>Email:</label>
-              <input
-                type="email"
-                name="email"
-                value={userForm.email}
-                onChange={handleFormChange}
-                className="user-input"
-                disabled={!isEditable}
-              />
-              {formErrors.email && (
-                <p className="error-message">{formErrors.email}</p>
-              )}
-            </div>
+            <div className="form-row">
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Date of Birth:</label>
+                  <input
+                    type="date"
+                    name="dob"
+                    value={userForm.dob}
+                    onChange={handleFormChange}
+                    className="user-input"
+                    disabled={!isEditable}
+                  />
+                  {formErrors.dob && (
+                    <p className="error-message">{formErrors.dob}</p>
+                  )}
+                </div>
+              </div>
 
-            <div className="half-width">
-              <div className="form-group">
-                <label>Date of Birth:</label>
-                <input
-                  type="date"
-                  name="dob"
-                  value={userForm.dob}
-                  onChange={handleFormChange}
-                  className="user-input"
-                  disabled={!isEditable}
-                />
-                {formErrors.dob && (
-                  <p className="error-message">{formErrors.dob}</p>
-                )}
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Department:</label>
+                  <input
+                    type="text"
+                    name="department"
+                    value={userForm.department}
+                    onChange={handleFormChange}
+                    className="user-input"
+                    disabled={!isEditable}
+                  />
+                  {formErrors.department && (
+                    <p className="error-message">{formErrors.department}</p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -707,35 +730,20 @@ const ManageUser = () => {
 
               <div className="half-width">
                 <div className="form-group">
-                  <label>Department:</label>
+                  <label>Role:</label>
                   <input
                     type="text"
-                    name="department"
-                    value={userForm.department}
+                    name="role"
+                    value={userForm.role}
                     onChange={handleFormChange}
                     className="user-input"
-                    disabled={!isEditable}
+                    disabled={true}
                   />
-                  {formErrors.department && (
-                    <p className="error-message">{formErrors.department}</p>
+                  {formErrors.role && (
+                    <p className="error-message">{formErrors.role}</p>
                   )}
                 </div>
               </div>
-            </div>
-
-            <div className="form-group">
-              <label>Role:</label>
-              <input
-                type="text"
-                name="role"
-                value={userForm.role}
-                onChange={handleFormChange}
-                className="user-input"
-                disabled={true}
-              />
-              {formErrors.role && (
-                <p className="error-message">{formErrors.role}</p>
-              )}
             </div>
 
             <div className="button-container">
@@ -750,6 +758,7 @@ const ManageUser = () => {
                 onClick={() => {
                   setModalVisible(false);
                   setFormErrors({});
+                  setIsEditable(false);
                 }}
                 className="cancel-button"
               >
