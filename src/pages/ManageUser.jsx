@@ -32,6 +32,7 @@ const ManageUser = () => {
   const [isEditable, setIsEditable] = useState(false);
   const [userForm, setUserForm] = useState({
     firstname: "",
+    middleInitial: "",
     lastname: "",
     email: "",
     role: "",
@@ -41,6 +42,7 @@ const ManageUser = () => {
   });
   const [formErrors, setFormErrors] = useState({
     firstname: "",
+    middleInitial: "",
     lastname: "",
     email: "",
     role: "",
@@ -98,6 +100,7 @@ const ManageUser = () => {
     setCurrentUser(null);
     setUserForm({
       firstname: "",
+      middleInitial: "",
       lastname: "",
       email: "",
       role: "Employee",
@@ -113,6 +116,7 @@ const ManageUser = () => {
     setCurrentUser(user);
     setUserForm({
       firstname: user.firstname.toUpperCase(),
+      middleInitial: user.middleInitial ? user.middleInitial.toUpperCase() : "",
       lastname: user.lastname ? user.lastname.toUpperCase() : "",
       email: user.email,
       role: user.role,
@@ -187,7 +191,11 @@ const ManageUser = () => {
   const handleFormChange = (e) => {
     const { name, value } = e.target;
 
-    if (name === "firstname" || name === "lastname") {
+    if (
+      name === "firstname" ||
+      name === "middleInitial" ||
+      name === "lastname"
+    ) {
       setUserForm((prevForm) => ({
         ...prevForm,
         [name]: value.toUpperCase(),
@@ -213,7 +221,10 @@ const ManageUser = () => {
       errors.firstname = "First name cannot contain numbers";
       isValid = false;
     }
-
+    if (userForm.middleInitial && /\d/.test(userForm.middleInitial)) {
+      errors.middleInitial = "Middle initial cannot contain numbers";
+      isValid = false;
+    }
     if (!userForm.lastname) {
       errors.lastname = "Last name is required";
       isValid = false;
@@ -280,6 +291,7 @@ const ManageUser = () => {
             .toUpperCase()
             .trim()
             .replace(/\s+/g, " "),
+          middleInitial: userForm.middleInitial.toUpperCase().trim(),
           lastname: userForm.lastname.toUpperCase().trim().replace(/\s+/g, " "),
           email: userForm.email,
           phone: userForm.phone,
@@ -296,6 +308,7 @@ const ManageUser = () => {
             .toUpperCase()
             .trim()
             .replace(/\s+/g, " "),
+          middleInitial: userForm.middleInitial.toUpperCase().trim(),
           lastname: userForm.lastname.toUpperCase().trim().replace(/\s+/g, " "),
           email: userForm.email,
           role: userForm.role,
@@ -412,7 +425,9 @@ const ManageUser = () => {
                       {user.employeeID || "Not Available"}
                     </td>
                     <td className="table-cell">
-                      {user.firstname} {user.lastname || "Not Available"}
+                      {user.firstname}{" "}
+                      {user.middleInitial ? user.middleInitial + ". " : ""}{" "}
+                      {user.lastname || "Not Available"}
                     </td>
                     <td className="table-cell">
                       {user.email || "Not Available"}
@@ -550,6 +565,22 @@ const ManageUser = () => {
                   />
                   {formErrors.firstname && (
                     <p className="error-message">{formErrors.firstname}</p>
+                  )}
+                </div>
+              </div>
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Middle Initial:</label> {/* Add this line */}
+                  <input
+                    type="text"
+                    name="middleInitial"
+                    value={userForm.middleInitial}
+                    onChange={handleFormChange}
+                    className="user-input"
+                    disabled={!isEditable}
+                  />
+                  {formErrors.middleInitial && (
+                    <p className="error-message">{formErrors.middleInitial}</p>
                   )}
                 </div>
               </div>
