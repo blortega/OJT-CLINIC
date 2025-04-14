@@ -655,35 +655,39 @@ const ManageUser = () => {
               </div>
             </div>
 
-            <div className="form-group">
-              <label>Email:</label>
-              <input
-                type="email"
-                name="email"
-                value={userForm.email}
-                onChange={handleFormChange}
-                className="user-input"
-                disabled={!isEditable}
-              />
-              {formErrors.email && (
-                <p className="error-message">{formErrors.email}</p>
-              )}
-            </div>
+            <div className="form-row">
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Date of Birth:</label>
+                  <input
+                    type="date"
+                    name="dob"
+                    value={userForm.dob}
+                    onChange={handleFormChange}
+                    className="user-input"
+                    disabled={!isEditable}
+                  />
+                  {formErrors.dob && (
+                    <p className="error-message">{formErrors.dob}</p>
+                  )}
+                </div>
+              </div>
 
-            <div className="half-width">
-              <div className="form-group">
-                <label>Date of Birth:</label>
-                <input
-                  type="date"
-                  name="dob"
-                  value={userForm.dob}
-                  onChange={handleFormChange}
-                  className="user-input"
-                  disabled={!isEditable}
-                />
-                {formErrors.dob && (
-                  <p className="error-message">{formErrors.dob}</p>
-                )}
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Department:</label>
+                  <input
+                    type="text"
+                    name="department"
+                    value={userForm.department}
+                    onChange={handleFormChange}
+                    className="user-input"
+                    disabled={!isEditable}
+                  />
+                  {formErrors.department && (
+                    <p className="error-message">{formErrors.department}</p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -707,35 +711,20 @@ const ManageUser = () => {
 
               <div className="half-width">
                 <div className="form-group">
-                  <label>Department:</label>
+                  <label>Role:</label>
                   <input
                     type="text"
-                    name="department"
-                    value={userForm.department}
+                    name="role"
+                    value={userForm.role}
                     onChange={handleFormChange}
                     className="user-input"
-                    disabled={!isEditable}
+                    disabled={true}
                   />
-                  {formErrors.department && (
-                    <p className="error-message">{formErrors.department}</p>
+                  {formErrors.role && (
+                    <p className="error-message">{formErrors.role}</p>
                   )}
                 </div>
               </div>
-            </div>
-
-            <div className="form-group">
-              <label>Role:</label>
-              <input
-                type="text"
-                name="role"
-                value={userForm.role}
-                onChange={handleFormChange}
-                className="user-input"
-                disabled={true}
-              />
-              {formErrors.role && (
-                <p className="error-message">{formErrors.role}</p>
-              )}
             </div>
 
             <div className="button-container">
