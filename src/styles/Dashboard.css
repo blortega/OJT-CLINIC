@@ -1,0 +1,26 @@
+/* Dashboard.css */
+
+.dashboard-container {
+  padding: 20px;
+  text-align: center;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.chart-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+}
+
+.chart-container {
+  max-width: 100%;
+  min-width: 320px;
+}
+
+.dashboard-text {
+  color: black;
+}

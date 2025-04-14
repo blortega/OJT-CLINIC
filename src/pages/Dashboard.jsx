@@ -1,23 +1,39 @@
 import React, { useState, useEffect } from "react";
-import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
-import { db } from "../firebase"; // Adjust import based on your Firebase setup
-import { collection, getDocs } from "firebase/firestore";
+import {
+  PieChart,
+  Pie,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Cell,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
+import { db, app } from "../firebase";
+import { collection, getDocs,  getFirestore } from "firebase/firestore";
 import Sidebar from "../components/Sidebar";
+import "../styles/Dashboard.css"; // ✅ Importing the new CSS file
+import InventoryAlert from "../components/InventoryAlert";
 
-const GENDER_COLORS = ["#0088FE", "#FF69B4"]; // Blue for Male, Pink for Female
+const GENDER_COLORS = ["#0088FE", "#FF69B4"];
 const CONDITION_COLORS = [
   "#0088FE",
   "#FF69B4",
   "#FFBB28",
   "#00C49F",
   "#FF8042",
-]; // Top 5 condition colors
+];
 
 const Dashboard = () => {
   const [genderData, setGenderData] = useState([
     { name: "Male", value: 0 },
     { name: "Female", value: 0 },
   ]);
+
+  const [medicines, setMedicines] = useState([]);
 
   const [topConditions, setTopConditions] = useState([]);
 
@@ -76,17 +92,43 @@ const Dashboard = () => {
     fetchConditions();
   }, []);
 
+  useEffect(() => {
+    const fetchMedicines = async () => {
+      try {
+        const db = getFirestore(app);
+        const medicineCollection = collection(db, "medicine");
+        const snapshot = await getDocs(medicineCollection);
+        const medicineLists = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setMedicines(medicineLists);
+      } catch (error) {
+        toast.error("Failed to fetch Medicines!");
+        console.error("Failed to fetch Medicines: ", error);
+      }
+    };
+
+    fetchMedicines();
+  }, []);
+
+  const areValuesEqual = (data) => {
+    if (data.length === 0) return false;
+    const firstValue = data[0].value;
+    return data.every((item) => item.value === firstValue);
+  };
+
   return (
     <Sidebar>
-      <div style={styles.container}>
-        <h1 style={styles.text}>Dashboard</h1>
-        <p style={styles.text}>
+      <div className="dashboard-container">
+        <h1 className="dashboard-text">Dashboard</h1>
+        <p className="dashboard-text">
           This is a test page to check if navigation is working properly.
         </p>
 
-        <div style={styles.chartWrapper}>
-          <div style={styles.chartContainer}>
-            <h2 style={styles.text}>Gender Distribution</h2>
+        <div className="chart-wrapper">
+          <div className="chart-container">
+            <h2 className="dashboard-text">Gender Distribution</h2>
             <PieChart width={300} height={300}>
               <Pie
                 data={genderData}
@@ -108,56 +150,48 @@ const Dashboard = () => {
             </PieChart>
           </div>
 
-          <div style={styles.chartContainer}>
-            <h2 style={styles.text}>Top 5 Conditions</h2>
-            <PieChart width={300} height={300}>
-              <Pie
+          <InventoryAlert medicines={medicines} />
+
+          <div className="chart-container">
+            <h2 className="dashboard-text">Top 5 Conditions</h2>
+            <ResponsiveContainer width="100%" minWidth={400} height={300}>
+              <BarChart
                 data={topConditions}
-                cx="50%"
-                cy="50%"
-                outerRadius={100}
-                dataKey="value"
-                label
+                margin={{ top: 20, right: 30, left: 20, bottom: 50 }}
               >
-                {topConditions.map((entry, index) => (
-                  <Cell
-                    key={`cell-condition-${index}`}
-                    fill={CONDITION_COLORS[index % CONDITION_COLORS.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="name"
+                  interval={0}
+                  angle={-30}
+                  textAnchor="end"
+                  tickFormatter={(value) =>
+                    value.length > 10 ? `${value.slice(0, 10)}...` : value
+                  }
+                />
+                <YAxis allowDecimals={false} />
+                <Tooltip
+                  formatter={(value, name, props) => [
+                    value,
+                    props.payload.name,
+                  ]}
+                />
+                {/* <Legend /> <-- removed to prevent "value" label under chart */}
+                <Bar dataKey="value" fill="#8884d8">
+                  {topConditions.map((entry, index) => (
+                    <Cell
+                      key={`cell-bar-${index}`}
+                      fill={CONDITION_COLORS[index % CONDITION_COLORS.length]}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>
     </Sidebar>
   );
-};
-
-const styles = {
-  container: {
-    padding: "20px",
-    textAlign: "center",
-    maxWidth: "100%",
-    overflowX: "hidden",
-  },
-  chartWrapper: {
-    display: "flex",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: "20px",
-    width: "100%",
-  },
-  chartContainer: {
-    maxWidth: "100%",
-    minWidth: "320px",
-  },
-  text: {
-    color: "black",
-  },
 };
 
 export default Dashboard;

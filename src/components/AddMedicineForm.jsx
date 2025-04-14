@@ -1,24 +1,63 @@
 // AddMedicineForm.js
+import { serverTimestamp } from "firebase/firestore";
 import React, { useState } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-
+const formatDate = (date) => {
+  const options = { year: 'numeric', month: 'long', day: 'numeric' };
+  return new Date(date).toLocaleDateString('en-US', options);
+};
 const AddMedicineForm = ({ onClose, onAddMedicine }) => {
     const [name, setName] = useState("");
     const [dosage, setDosage] = useState("");
     const [type, setType] = useState("");
-    const [stock, setStock] = useState(0);
+    const [stock, setStock] = useState("");
+    const [expiryDate, setExpiryDate] = useState("");
+    const [createdAt, setCreatedAt] = useState("");
+
+    const handleStockChange = (e) => {
+      const value = e.target.value;
+      if (value === "" || /^\d+$/.test(value)) {
+        setStock(value); // ✅ allow delete/replace freely
+      }
+    };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!name || !dosage || !type || !stock) {
+    if (!name.trim() || !dosage.trim() || !type.trim() || !expiryDate.trim()) {
       toast.error("All fields are required!");
       return;
     }
+    
+    if (!name.trim()) {
+      toast.error("Medicine Name is required!");
+      return;
+    }
+    
+    if (!dosage.trim()) {
+      toast.error("Dosage is required!");
+      return;
+    }
+    
+    if (!type.trim()) {
+      toast.error("Type is required!");
+      return;
+    }
+
+    if (!expiryDate.trim()) {
+      toast.error("Expiry Date is required!");
+      return;
+    }
+    
 
     const numericStock = parseInt(stock, 10);
+
+    if (isNaN(numericStock)) {
+      toast.error("Stock must be a valid number.");
+      return;
+    }
 
     let stockStatus = "";
     if (numericStock === 0) {
@@ -28,18 +67,35 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
     } else {
       stockStatus = "In Stock";
     }
-
+    
     const newMedicine = {
         name,
         dosage,
         type,
         stock: numericStock,
         status: stockStatus,
+        expiryDate: formatDate(expiryDate),
     };
+    
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    const selectedDate = new Date(newMedicine.expiryDate);
+    selectedDate.setHours(0, 0, 0, 0); 
+    
+
+    if (selectedDate.getTime() === today.getTime()) {
+      toast.error("Expiry date must not be today.");
+      return;
+    } else if (selectedDate.getTime() < today.getTime()) {
+      toast.error("Expiry date must be in the future.");
+      return;
+    }
+
     
     console.log("Submitting new medicine:", newMedicine);
     
-    onAddMedicine(newMedicine);
+    await onAddMedicine(newMedicine);
 
     onClose();
   };
@@ -77,11 +133,22 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
             />
           </div>
           <div style={styles.inputGroup}>
+            <label>Expiry Date:</label>
+            <input
+            type="date"
+            value={expiryDate}
+            //min={new Date().toISOString().split("T")[0]}
+            onChange={(e) => setExpiryDate(e.target.value)}
+            style={styles.inputField}
+            />
+          </div>
+          <div style={styles.inputGroup}>
             <label>Stock:</label>
             <input
               type="number"
               value={stock}
-              onChange={(e) => setStock(Number(e.target.value))}
+              onChange={handleStockChange}
+              placeholder="0"
               style={styles.inputField}
             />
           </div>
