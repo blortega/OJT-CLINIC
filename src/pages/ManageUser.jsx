@@ -39,6 +39,8 @@ const ManageUser = () => {
     department: "",
     designation: "",
     gender: "",
+    employeeID: "",
+    dob: "",
   });
   const [formErrors, setFormErrors] = useState({
     firstname: "",
@@ -50,6 +52,7 @@ const ManageUser = () => {
     designation: "",
     gender: "",
     employeeID: "",
+    dob: "",
   });
 
   useEffect(() => {
@@ -191,7 +194,12 @@ const ManageUser = () => {
   const handleFormChange = (e) => {
     const { name, value } = e.target;
 
-    if (
+    if (name === "dob") {
+      setUserForm((prevForm) => ({
+        ...prevForm,
+        [name]: value,
+      }));
+    } else if (
       name === "firstname" ||
       name === "middleInitial" ||
       name === "lastname" ||
@@ -233,7 +241,10 @@ const ManageUser = () => {
       errors.lastname = "Last name cannot contain numbers";
       isValid = false;
     }
-
+    if (!userForm.dob) {
+      errors.dob = "Date of Birth is required";
+      isValid = false;
+    }
     if (!userForm.email) {
       errors.email = "Email is required";
       isValid = false;
@@ -293,6 +304,7 @@ const ManageUser = () => {
           department: userForm.department,
           gender: userForm.gender,
           employeeID: userForm.employeeID || "Not Available",
+          dob: userForm.dob,
         });
 
         toast.success("User updated successfully!");
@@ -311,6 +323,7 @@ const ManageUser = () => {
           designation: userForm.designation,
           gender: userForm.gender,
           employeeID: userForm.employeeID || "Not Available",
+          dob: userForm.dob,
           createdAt: serverTimestamp(),
           status: "Active",
         };
@@ -334,6 +347,7 @@ const ManageUser = () => {
         designation: "",
         gender: "",
         employeeID: "",
+        dob: "",
       });
       setCurrentUser(null);
 
@@ -650,6 +664,23 @@ const ManageUser = () => {
               {formErrors.email && (
                 <p className="error-message">{formErrors.email}</p>
               )}
+            </div>
+
+            <div className="half-width">
+              <div className="form-group">
+                <label>Date of Birth:</label>
+                <input
+                  type="date"
+                  name="dob"
+                  value={userForm.dob}
+                  onChange={handleFormChange}
+                  className="user-input"
+                  disabled={!isEditable}
+                />
+                {formErrors.dob && (
+                  <p className="error-message">{formErrors.dob}</p>
+                )}
+              </div>
             </div>
 
             <div className="form-row">
