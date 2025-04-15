@@ -1,98 +1,115 @@
-import React, { useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import Sidebar from "../components/Sidebar";
+import { db } from "../firebase"; // Import Firestore instance
 
 const Record = () => {
-  const [search, setSearch] = useState([]); // Array to hold selected genders
-  const [modalVisible, setModalVisible] = useState(false); // Track modal visibility
-  const [genderOptions, setGenderOptions] = useState([
-    "Male",
-    "Female",
-    "Other",
-  ]); // Gender options
+  const [scannedData, setScannedData] = useState("");
+  const [isScannerActive, setIsScannerActive] = useState(false);
+  const [userData, setUserData] = useState(null); // Store user data
+  const bufferRef = useRef("");
+  const timeoutRef = useRef(null);
 
-  // Handle checkbox changes inside the modal
-  const handleCheckboxChange = (e, gender) => {
-    if (e.target.checked) {
-      setSearch((prev) => [...prev, gender]);
-    } else {
-      setSearch((prev) => prev.filter((item) => item !== gender));
+  // Function to process and clean up the scanned employee ID
+  const processScannedData = (data) => {
+    return data.replace(/Shift/g, "").trim(); // Clean up "Shift"
+  };
+
+  // Function to fetch user data from Firestore based on employeeID field
+  const fetchUserData = async (employeeID) => {
+    try {
+      // Query Firestore for users where employeeID matches the scanned value
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("employeeID", "==", employeeID));
+
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        // Get the first matching document
+        const userDoc = querySnapshot.docs[0];
+        setUserData(userDoc.data()); // Set the user data to state
+      } else {
+        console.log("No user found with this employeeID.");
+        setUserData(null); // If no user is found, set userData to null
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
     }
   };
 
-  // Close the modal and clear the search
-  const handleCloseModal = () => {
-    setModalVisible(false);
-  };
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Enter") {
+        const processedData = processScannedData(bufferRef.current);
+        setScannedData(processedData);
+        bufferRef.current = "";
 
-  // Handle chip click to remove a selected gender
-  const handleChipRemove = (gender) => {
-    setSearch((prev) => prev.filter((item) => item !== gender));
-  };
+        // Fetch user data from Firestore once the scan is complete
+        fetchUserData(processedData);
+
+        setIsScannerActive(true);
+
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => {
+          setIsScannerActive(false);
+        }, 5000); // Active for 5 seconds after scan
+      } else {
+        bufferRef.current += e.key;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   return (
     <Sidebar>
       <div style={styles.container}>
-        <h1 style={styles.text}>Records Page</h1>
-        <p style={styles.text}>
-          This is a test page to check if navigation is working properly.
-        </p>
+        <h1 style={styles.heading}>ID Scanner</h1>
 
-        {/* Search bar with chips for selected filters */}
-        <div style={styles.searchContainer}>
-          <input type="text" placeholder="Search..." style={styles.searchBar} />
-          <div style={styles.chipContainer}>
-            {search.map((gender) => (
-              <span
-                key={gender}
-                style={styles.chip}
-                onClick={() => handleChipRemove(gender)}
-              >
-                {gender} <span style={styles.chipClose}>x</span>
-              </span>
-            ))}
-          </div>
-          {/* Button to open the modal */}
-          <button
-            style={styles.filterButton}
-            onClick={() => setModalVisible(true)}
-          >
-            Filter by Gender
-          </button>
+        <div style={styles.statusContainer}>
+          <div
+            style={{
+              ...styles.statusCircle,
+              backgroundColor: isScannerActive ? "limegreen" : "lightgray",
+            }}
+          />
+          <span style={styles.statusText}>
+            {isScannerActive ? "Scanner Active" : "Waiting for scan..."}
+          </span>
         </div>
 
-        {/* Modal for checkbox filter */}
-        {modalVisible && (
-          <div style={styles.modal}>
-            <div style={styles.modalContent}>
-              <h3>Select Genders</h3>
-              {genderOptions.map((gender) => (
-                <label key={gender} style={styles.checkboxLabel}>
-                  <input
-                    type="checkbox"
-                    checked={search.includes(gender)}
-                    onChange={(e) => handleCheckboxChange(e, gender)}
-                    style={styles.checkbox}
-                  />
-                  {gender}
-                </label>
-              ))}
-              <div style={styles.modalButtons}>
-                <button
-                  style={styles.modalCloseButton}
-                  onClick={handleCloseModal}
-                >
-                  Close
-                </button>
-                <button
-                  style={styles.modalClearButton}
-                  onClick={() => setSearch([])}
-                >
-                  Clear Selections
-                </button>
-              </div>
+        <div style={styles.resultBox}>
+          <h2>Scanned Data:</h2>
+          <pre>{scannedData || "No data scanned yet."}</pre>
+
+          {/* Display employee ID and user data if available */}
+          {userData ? (
+            <div style={styles.userInfo}>
+              <p>
+                <strong>Employee ID:</strong> {scannedData}
+              </p>{" "}
+              {/* Display the scanned employee ID */}
+              <p>
+                <strong>Firstname:</strong> {userData.firstname}
+              </p>
+              <p>
+                <strong>Lastname:</strong> {userData.lastname}
+              </p>
+              <p>
+                <strong>Gender:</strong> {userData.gender}
+              </p>
+              <p>
+                <strong>Department:</strong> {userData.department}
+              </p>
             </div>
-          </div>
-        )}
+          ) : (
+            <p>User not found or error fetching data.</p>
+          )}
+        </div>
       </div>
     </Sidebar>
   );
@@ -100,92 +117,41 @@ const Record = () => {
 
 const styles = {
   container: {
-    padding: "20px",
+    padding: "40px",
     textAlign: "center",
   },
-  text: {
-    color: "black",
+  heading: {
+    color: "#1e3a8a",
   },
-  searchContainer: {
-    marginTop: "20px",
-  },
-  searchBar: {
-    padding: "8px",
-    width: "300px",
-    marginBottom: "20px",
-  },
-  chipContainer: {
+  statusContainer: {
     display: "flex",
-    flexWrap: "wrap",
-    gap: "5px",
-    marginTop: "10px",
-  },
-  chip: {
-    backgroundColor: "#1e3a8a",
-    color: "white",
-    padding: "5px 10px",
-    borderRadius: "16px",
-    display: "inline-block",
-    cursor: "pointer",
-  },
-  chipClose: {
-    marginLeft: "8px",
-    cursor: "pointer",
-  },
-  filterButton: {
-    padding: "8px 15px",
-    backgroundColor: "#162d5e",
-    color: "white",
-    border: "none",
-    borderRadius: "4px",
-    cursor: "pointer",
-    marginTop: "10px",
-  },
-  modal: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    display: "flex",
-    justifyContent: "center",
     alignItems: "center",
+    justifyContent: "center",
+    gap: "10px",
+    marginBottom: "30px",
   },
-  modalContent: {
-    backgroundColor: "white",
+  statusCircle: {
+    width: "20px",
+    height: "20px",
+    borderRadius: "50%",
+    transition: "background-color 0.3s ease",
+  },
+  statusText: {
+    fontSize: "16px",
+    fontWeight: "500",
+  },
+  resultBox: {
+    backgroundColor: "#f9f9f9",
+    border: "1px solid #ccc",
     padding: "20px",
     borderRadius: "8px",
-    width: "300px",
-    textAlign: "center",
+    maxWidth: "600px",
+    margin: "0 auto",
   },
-  checkboxLabel: {
-    display: "block",
-    margin: "10px 0",
-    fontSize: "16px",
-  },
-  checkbox: {
-    marginRight: "10px",
-  },
-  modalButtons: {
+  userInfo: {
     marginTop: "20px",
-  },
-  modalCloseButton: {
-    backgroundColor: "#1e3a8a",
-    color: "white",
-    padding: "8px 15px",
-    border: "none",
-    borderRadius: "4px",
-    cursor: "pointer",
-    marginRight: "10px",
-  },
-  modalClearButton: {
-    backgroundColor: "#d41c48",
-    color: "white",
-    padding: "8px 15px",
-    border: "none",
-    borderRadius: "4px",
-    cursor: "pointer",
+    textAlign: "left",
+    fontSize: "16px",
   },
 };
 

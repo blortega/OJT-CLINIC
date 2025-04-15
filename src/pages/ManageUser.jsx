@@ -33,7 +33,6 @@ const ManageUser = () => {
     firstname: "",
     middleInitial: "",
     lastname: "",
-    email: "",
     role: "",
     department: "",
     designation: "",
@@ -239,10 +238,7 @@ const ManageUser = () => {
       errors.firstname = "First name cannot contain numbers";
       isValid = false;
     }
-    if (!userForm.middleInitial) {
-      errors.middleInitial = "Middle initial name is required";
-      isValid = false;
-    }
+
     if (!userForm.lastname) {
       errors.lastname = "Last name is required";
       isValid = false;
@@ -252,13 +248,6 @@ const ManageUser = () => {
     }
     if (!userForm.dob) {
       errors.dob = "Date of Birth is required";
-      isValid = false;
-    }
-    if (!userForm.email) {
-      errors.email = "Email is required";
-      isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(userForm.email)) {
-      errors.email = "Email is not valid";
       isValid = false;
     }
 
@@ -625,7 +614,6 @@ const ManageUser = () => {
                   {formErrors.middleInitial && (
                     <p className="error-message">
                       <FiAlertCircle />
-                      {formErrors.middleInitial}
                     </p>
                   )}
                 </div>
