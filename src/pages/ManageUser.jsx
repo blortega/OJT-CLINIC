@@ -8,6 +8,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  Timestamp,
   serverTimestamp,
 } from "firebase/firestore";
 import { app } from "../firebase";
@@ -134,7 +135,7 @@ const ManageUser = () => {
       designation: user.designation || "",
       gender: user.gender || "",
       employeeID: user.employeeID || "",
-      dob: user.dob || "",
+      dob: user.dob ? user.dob.toDate().toISOString().split("T")[0] : "",
     });
     setIsEditable(false);
     setModalVisible(true);
@@ -313,7 +314,7 @@ const ManageUser = () => {
           department: userForm.department,
           gender: userForm.gender,
           employeeID: userForm.employeeID || "Not Available",
-          dob: userForm.dob,
+          dob: userForm.dob ? Timestamp.fromDate(new Date(userForm.dob)) : null,
         });
 
         toast.success("User updated successfully!");
@@ -332,7 +333,7 @@ const ManageUser = () => {
           designation: userForm.designation,
           gender: userForm.gender,
           employeeID: userForm.employeeID || "Not Available",
-          dob: userForm.dob,
+          dob: userForm.dob ? Timestamp.fromDate(new Date(userForm.dob)) : null,
           createdAt: serverTimestamp(),
           status: "Active",
         };
@@ -451,7 +452,7 @@ const ManageUser = () => {
                     <td className="table-cell">
                       {/* Format the DOB if it exists */}
                       {user.dob
-                        ? new Date(user.dob).toLocaleDateString()
+                        ? user.dob.toDate().toLocaleDateString()
                         : "Not Available"}
                     </td>
                     <td className="table-cell">
