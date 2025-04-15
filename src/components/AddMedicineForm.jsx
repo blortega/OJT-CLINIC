@@ -11,7 +11,7 @@ const formatDate = (date) => {
 const AddMedicineForm = ({ onClose, onAddMedicine }) => {
     const [name, setName] = useState("");
     const [dosage, setDosage] = useState("");
-    const [type, setType] = useState("");
+    const [form, setForm] = useState("");
     const [stock, setStock] = useState("");
     const [expiryDate, setExpiryDate] = useState("");
     const [createdAt, setCreatedAt] = useState("");
@@ -26,7 +26,7 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!name.trim() || !dosage.trim() || !type.trim() || !expiryDate.trim()) {
+    if (!name.trim() || !dosage.trim() || !form.trim() || !expiryDate.trim()) {
       toast.error("All fields are required!");
       return;
     }
@@ -41,8 +41,8 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
       return;
     }
     
-    if (!type.trim()) {
-      toast.error("Type is required!");
+    if (!form.trim()) {
+      toast.error("Form is required!");
       return;
     }
 
@@ -71,7 +71,7 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
     const newMedicine = {
         name,
         dosage,
-        type,
+        form,
         stock: numericStock,
         status: stockStatus,
         expiryDate: formatDate(expiryDate),
@@ -124,13 +124,17 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
             />
           </div>
           <div style={styles.inputGroup}>
-            <label>Type:</label>
-            <input
+            <label>Form:</label>
+            <select
               type="text"
-              value={type}
-              onChange={(e) => setType(e.target.value)}
+              value={form}
+              onChange={(e) => setForm(e.target.value)}
               style={styles.inputField}
-            />
+            >
+              <option value="">-- Select Form --</option>
+              <option value="Tablet">Tablet</option>
+              <option value="Capsule">Capsule</option>
+            </select>
           </div>
           <div style={styles.inputGroup}>
             <label>Expiry Date:</label>

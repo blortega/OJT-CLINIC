@@ -78,7 +78,7 @@ const Inventory = () => {
     const fieldToSearch = [
       medicine.name,
       medicine.dosage,
-      medicine.type,
+      medicine.form,
       medicine.status,
       medicine.expiryDate ? medicine.expiryDate.toString() : "",
       medicine.createdAt ? medicine.createdAt.toDate().toLocaleDateString('en-US', { month: 'long', year: 'numeric', day: 'numeric' })
@@ -314,7 +314,7 @@ const Inventory = () => {
               <tr>
                 <th style={styles.thead}>Medicine</th>
                 <th style={styles.thead}>Dosage</th>
-                <th style={styles.thead}>Type</th>
+                <th style={styles.thead}>Form</th>
                 <th style={styles.thead}>Stocks</th>
                 <th style={styles.thead}>Status</th>
                 <th style={styles.thead}>Expiry Date</th>
@@ -331,7 +331,7 @@ const Inventory = () => {
                 <tr key={index}>
                   <td style={styles.tdata}>{medicine.name}</td>
                   <td style={styles.tdata}>{medicine.dosage}</td>
-                  <td style={styles.tdata}>{medicine.type}</td>
+                  <td style={styles.tdata}>{medicine.form}</td>
                   <td style={styles.tdata}>{medicine.stock}</td>
                   <td style={styles.tdata}>{getStockStatus(medicine.stock)}</td>
                   <td style={styles.tdata}>
