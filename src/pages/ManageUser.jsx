@@ -239,10 +239,7 @@ const ManageUser = () => {
       errors.firstname = "First name cannot contain numbers";
       isValid = false;
     }
-    if (!userForm.middleInitial) {
-      errors.middleInitial = "Middle initial name is required";
-      isValid = false;
-    }
+
     if (!userForm.lastname) {
       errors.lastname = "Last name is required";
       isValid = false;
@@ -625,7 +622,6 @@ const ManageUser = () => {
                   {formErrors.middleInitial && (
                     <p className="error-message">
                       <FiAlertCircle />
-                      {formErrors.middleInitial}
                     </p>
                   )}
                 </div>
