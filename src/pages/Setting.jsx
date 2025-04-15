@@ -8,13 +8,13 @@ import {
   where,
   deleteDoc,
   doc,
+  Timestamp, // Import Firestore Timestamp
 } from "firebase/firestore";
-import { db } from "../firebase"; // Adjust path if needed
+import { db } from "../firebase";
 import Sidebar from "../components/Sidebar";
 
-// Helper function to convert the name to uppercase
 const toUpperCaseName = (name) => {
-  return name.toUpperCase(); // Convert the entire name to uppercase
+  return name.toUpperCase();
 };
 
 const Setting = () => {
@@ -27,7 +27,6 @@ const Setting = () => {
 
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data, { type: "buffer" });
-
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
@@ -39,21 +38,31 @@ const Setting = () => {
       const row = rows[i];
       const employeeID = row[1]; // Column B
       const fullName = row[2]; // Column C
+      const dobRaw = row[3]; // Column D - Date of Birth
       const gender = row[4]; // Column E
 
       if (!employeeID || !fullName || !gender) continue;
 
-      // Parse full name: "LASTNAME, FIRSTNAME M."
       const [lastNamePart, firstAndMiddle] = fullName.split(",");
       if (!firstAndMiddle) continue;
 
       const lastname = toUpperCaseName(lastNamePart.trim());
       const nameParts = firstAndMiddle.trim().split(" ");
-
       const middleInitial = nameParts.pop()?.replace(".", "") || "";
       const firstname = toUpperCaseName(nameParts.join(" ").trim());
 
-      // Check for existing employeeID
+      // Convert DOB to Firestore Timestamp
+      let dob = null;
+      if (dobRaw) {
+        try {
+          const dobDate = new Date(dobRaw);
+          dob = Timestamp.fromDate(dobDate); // Convert to Firestore Timestamp
+        } catch (error) {
+          console.error("Invalid DOB format in row", i + 1, dobRaw);
+        }
+      }
+
+      // Check if employee already exists
       const q = query(collectionRef, where("employeeID", "==", employeeID));
       const existing = await getDocs(q);
       if (existing.empty) {
@@ -62,7 +71,8 @@ const Setting = () => {
           firstname,
           middleInitial,
           lastname,
-          gender: gender.trim(), // Store gender as is (no uppercase conversion)
+          gender: gender.trim(),
+          dob, // Store the Firestore Timestamp object
         });
         added++;
       }
@@ -76,7 +86,7 @@ const Setting = () => {
     const snapshot = await getDocs(collection(db, "excelTest"));
     const employeesData = snapshot.docs
       .map((doc) => doc.data())
-      .filter((data) => data.employeeID); // Filter out the "test" document and any docs without employeeID
+      .filter((data) => data.employeeID);
     setEmployees(employeesData);
   };
 
@@ -84,12 +94,9 @@ const Setting = () => {
     const snapshot = await getDocs(collection(db, "excelTest"));
     const deletePromises = snapshot.docs
       .filter((docSnap) => {
-        // Only delete documents that contain the employeeID field and are not the "test" document
         return docSnap.id !== "test" && docSnap.data().employeeID;
       })
-      .map(
-        (docSnap) => deleteDoc(doc(db, "excelTest", docSnap.id)) // Delete these specific documents
-      );
+      .map((docSnap) => deleteDoc(doc(db, "excelTest", docSnap.id)));
     await Promise.all(deletePromises);
     setUploadStatus("All employee records have been deleted.");
     fetchEmployees();
@@ -130,7 +137,10 @@ const Setting = () => {
               <li key={index}>
                 <strong>{emp.employeeID}</strong> - {emp.lastname},{" "}
                 {emp.firstname} {emp.middleInitial && emp.middleInitial + "."} -{" "}
-                {emp.gender}
+                {emp.gender}{" "}
+                {emp.dob &&
+                  `- DOB: ${emp.dob.toDate().toISOString().split("T")[0]}`}
+                {/* Display DOB in 'YYYY-MM-DD' format */}
               </li>
             ))}
           </ul>
