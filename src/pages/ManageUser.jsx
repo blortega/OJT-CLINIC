@@ -33,7 +33,6 @@ const ManageUser = () => {
     firstname: "",
     middleInitial: "",
     lastname: "",
-    email: "",
     role: "",
     department: "",
     designation: "",
@@ -249,13 +248,6 @@ const ManageUser = () => {
     }
     if (!userForm.dob) {
       errors.dob = "Date of Birth is required";
-      isValid = false;
-    }
-    if (!userForm.email) {
-      errors.email = "Email is required";
-      isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(userForm.email)) {
-      errors.email = "Email is not valid";
       isValid = false;
     }
 
