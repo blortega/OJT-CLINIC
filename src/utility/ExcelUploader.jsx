@@ -120,7 +120,7 @@ export const ExcelUploader = (collectionName = "excelTest") => {
     }
   };
 
-  // Function to delete all employees with an employeeID
+  // Function to delete all employees with an employeeID check
   const handleDeleteAll = async () => {
     const collectionRef = collection(db, collectionName);
 
