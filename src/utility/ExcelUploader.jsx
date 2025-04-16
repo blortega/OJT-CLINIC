@@ -7,6 +7,7 @@ import {
   query,
   where,
   Timestamp,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "../firebase";
 
@@ -19,11 +20,31 @@ const toTitleCase = (str) =>
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 
+const parseFullName = (fullName) => {
+  const [lastNamePart, firstAndMiddle] = fullName.split(",");
+  if (!firstAndMiddle) return null;
+
+  const lastname = toUpperCaseName(lastNamePart.trim());
+  const nameParts = firstAndMiddle.trim().split(" ");
+  const middleInitial = nameParts.pop()?.replace(".", "") || "";
+  const firstname = toUpperCaseName(nameParts.join(" ").trim());
+
+  return { firstname, middleInitial, lastname };
+};
+
+const parseDate = (dobRaw) => {
+  const parsedDate = new Date(dobRaw);
+  return !isNaN(parsedDate) ? Timestamp.fromDate(parsedDate) : null;
+};
+
+// Main hook (ExcelUploader)
 export const ExcelUploader = (collectionName = "excelTest") => {
   const [employees, setEmployees] = useState([]);
   const [uploadStatus, setUploadStatus] = useState("");
   const [isUploading, setIsUploading] = useState(false); // Loading state
+  const [fileError, setFileError] = useState(""); // File error state
 
+  // Fetch existing employees from Firestore
   const fetchEmployees = async () => {
     const snapshot = await getDocs(collection(db, collectionName));
     const employeesData = snapshot.docs
@@ -32,17 +53,25 @@ export const ExcelUploader = (collectionName = "excelTest") => {
     setEmployees(employeesData);
   };
 
+  // Handle file upload
   const handleFileUpload = async (file) => {
     if (!file) return;
 
+    // File size validation (Max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setFileError("File is too large. Please upload a file smaller than 5MB.");
+      return;
+    }
+
     // Validate the file type
     if (!file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
-      setUploadStatus("Please upload a valid Excel file.");
+      setFileError("Please upload a valid Excel file.");
       return;
     }
 
     setIsUploading(true);
     setUploadStatus("Uploading...");
+    setFileError(""); // Clear previous errors
 
     try {
       const data = await file.arrayBuffer();
@@ -51,6 +80,7 @@ export const ExcelUploader = (collectionName = "excelTest") => {
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
       const collectionRef = collection(db, collectionName);
+      const batch = writeBatch(db);
       let added = 0;
 
       for (let i = 1; i < Math.min(rows.length, 101); i++) {
@@ -64,31 +94,21 @@ export const ExcelUploader = (collectionName = "excelTest") => {
 
         if (!employeeID || !fullName || !gender) continue;
 
-        const [lastNamePart, firstAndMiddle] = fullName.split(",");
-        if (!firstAndMiddle) continue;
-
-        const lastname = toUpperCaseName(lastNamePart.trim());
-        const nameParts = firstAndMiddle.trim().split(" ");
-        const middleInitial = nameParts.pop()?.replace(".", "") || "";
-        const firstname = toUpperCaseName(nameParts.join(" ").trim());
+        const { firstname, middleInitial, lastname } = parseFullName(fullName);
+        if (!firstname || !lastname) continue;
 
         // Convert DOB to Firestore Timestamp
         let dob = null;
         if (dobRaw) {
-          const parsedDate = new Date(dobRaw);
-          if (!isNaN(parsedDate)) {
-            dob = Timestamp.fromDate(parsedDate);
-          } else {
-            console.error("Invalid DOB format in row", i + 1, dobRaw);
-          }
+          dob = parseDate(dobRaw);
         }
 
         // Check if employee already exists
         const q = query(collectionRef, where("employeeID", "==", employeeID));
         const existing = await getDocs(q);
         if (existing.empty) {
-          // Add new employee with additional fields `role` and `status`
-          await addDoc(collectionRef, {
+          const docRef = doc(collectionRef, employeeID.toString().trim());
+          batch.set(docRef, {
             employeeID: employeeID.toString().trim(),
             firstname,
             middleInitial,
@@ -104,6 +124,8 @@ export const ExcelUploader = (collectionName = "excelTest") => {
         }
       }
 
+      await batch.commit();
+
       setUploadStatus(`${added} new employee(s) added.`);
       fetchEmployees();
     } catch (error) {
@@ -114,6 +136,7 @@ export const ExcelUploader = (collectionName = "excelTest") => {
     }
   };
 
+  // Fetch employee data on initial load
   useEffect(() => {
     fetchEmployees();
   }, []);
@@ -122,6 +145,7 @@ export const ExcelUploader = (collectionName = "excelTest") => {
     employees,
     uploadStatus,
     handleFileUpload,
-    isUploading, // Provide uploading status to the component
+    isUploading,
+    fileError, // Provide error status to the component
   };
 };

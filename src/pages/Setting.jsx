@@ -9,10 +9,12 @@ import {
   deleteDoc,
   doc,
   Timestamp,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import Sidebar from "../components/Sidebar";
 
+// Helper functions
 const toUpperCaseName = (name) => name.toUpperCase();
 
 const parseDate = (dobRaw) => {
@@ -20,10 +22,24 @@ const parseDate = (dobRaw) => {
   return !isNaN(parsedDate) ? Timestamp.fromDate(parsedDate) : null;
 };
 
+const parseFullName = (fullName) => {
+  const [lastNamePart, firstAndMiddle] = fullName.split(",");
+  if (!firstAndMiddle) return null;
+
+  const lastname = toUpperCaseName(lastNamePart.trim());
+  const nameParts = firstAndMiddle.trim().split(" ");
+  const middleInitial = nameParts.pop()?.replace(".", "") || "";
+  const firstname = toUpperCaseName(nameParts.join(" ").trim());
+
+  return { firstname, middleInitial, lastname };
+};
+
+// Main component
 const Setting = () => {
   const [employees, setEmployees] = useState([]);
   const [uploadStatus, setUploadStatus] = useState("");
   const [isUploading, setIsUploading] = useState(false); // Loading state
+  const [fileError, setFileError] = useState("");
 
   // Fetch existing employees from Firestore
   const fetchEmployees = async () => {
@@ -39,14 +55,21 @@ const Setting = () => {
     const file = e.target.files[0];
     if (!file) return;
 
+    // File size validation (Max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setFileError("File is too large. Please upload a file smaller than 5MB.");
+      return;
+    }
+
     // File type validation
     if (!file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
-      setUploadStatus("Please upload a valid Excel file.");
+      setFileError("Please upload a valid Excel file.");
       return;
     }
 
     setIsUploading(true);
     setUploadStatus("Uploading...");
+    setFileError(""); // Clear previous errors
 
     try {
       const data = await file.arrayBuffer();
@@ -55,6 +78,7 @@ const Setting = () => {
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
       const collectionRef = collection(db, "excelTest");
+      const batch = writeBatch(db);
       let added = 0;
 
       for (let i = 1; i < Math.min(rows.length, 101); i++) {
@@ -68,13 +92,8 @@ const Setting = () => {
 
         if (!employeeID || !fullName || !gender) continue;
 
-        const [lastNamePart, firstAndMiddle] = fullName.split(",");
-        if (!firstAndMiddle) continue;
-
-        const lastname = toUpperCaseName(lastNamePart.trim());
-        const nameParts = firstAndMiddle.trim().split(" ");
-        const middleInitial = nameParts.pop()?.replace(".", "") || "";
-        const firstname = toUpperCaseName(nameParts.join(" ").trim());
+        const { firstname, middleInitial, lastname } = parseFullName(fullName);
+        if (!firstname || !lastname) continue;
 
         let dob = null;
         if (dobRaw) {
@@ -85,8 +104,8 @@ const Setting = () => {
         const q = query(collectionRef, where("employeeID", "==", employeeID));
         const existing = await getDocs(q);
         if (existing.empty) {
-          // Add employee including new fields: role, status, department, and designation
-          await addDoc(collectionRef, {
+          const docRef = doc(collectionRef, employeeID.toString().trim());
+          batch.set(docRef, {
             employeeID: employeeID.toString().trim(),
             firstname,
             middleInitial,
@@ -101,6 +120,8 @@ const Setting = () => {
           added++;
         }
       }
+
+      await batch.commit();
 
       setUploadStatus(`${added} new employee(s) added.`);
       fetchEmployees();
@@ -151,8 +172,16 @@ const Setting = () => {
             onChange={handleFileUpload}
             disabled={isUploading}
           />
-          {uploadStatus && (
+          {fileError && (
+            <p style={{ color: "red", marginTop: "10px" }}>{fileError}</p>
+          )}
+          {uploadStatus && !fileError && (
             <p style={{ color: "green", marginTop: "10px" }}>{uploadStatus}</p>
+          )}
+          {isUploading && (
+            <div className="spinner" style={styles.spinner}>
+              <div className="spinner-circle"></div>
+            </div>
           )}
 
           <h3 style={{ marginTop: "30px", color: "black" }}>
@@ -209,6 +238,15 @@ const styles = {
   },
   text: {
     color: "black",
+  },
+  spinner: {
+    marginTop: "20px",
+    border: "4px solid #f3f3f3",
+    borderTop: "4px solid #3498db",
+    borderRadius: "50%",
+    width: "30px",
+    height: "30px",
+    animation: "spin 2s linear infinite",
   },
 };
 
