@@ -1,17 +1,21 @@
 // AddMedicineForm.js
-import { serverTimestamp } from "firebase/firestore";
+import { serverTimestamp, Timestamp } from "firebase/firestore";
 import React, { useState } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
+import FetchDosageForm from "../hooks/FetchDosageForm";
+import FetchMedicineType from "../hooks/FetchMedicineType";
 const formatDate = (date) => {
   const options = { year: 'numeric', month: 'long', day: 'numeric' };
   return new Date(date).toLocaleDateString('en-US', options);
 };
 const AddMedicineForm = ({ onClose, onAddMedicine }) => {
+    const { dosageForms, loading } = FetchDosageForm();
     const [name, setName] = useState("");
     const [dosage, setDosage] = useState("");
-    const [type, setType] = useState("");
+    const [dosageform, setDosageForm] = useState("");
+    const {medicineType} = FetchMedicineType();
+    const [medType, setMedType] = useState("");
     const [stock, setStock] = useState("");
     const [expiryDate, setExpiryDate] = useState("");
     const [createdAt, setCreatedAt] = useState("");
@@ -26,7 +30,7 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!name.trim() || !dosage.trim() || !type.trim() || !expiryDate.trim()) {
+    if (!name.trim() || !dosage.trim() || !dosageform.trim() || !expiryDate.trim()) {
       toast.error("All fields are required!");
       return;
     }
@@ -41,8 +45,8 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
       return;
     }
     
-    if (!type.trim()) {
-      toast.error("Type is required!");
+    if (!dosageform.trim()) {
+      toast.error("Form is required!");
       return;
     }
 
@@ -71,10 +75,12 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
     const newMedicine = {
         name,
         dosage,
-        type,
+        dosageform,
+        type: medType,
         stock: numericStock,
         status: stockStatus,
-        expiryDate: formatDate(expiryDate),
+        expiryDate: Timestamp.fromDate(new Date(expiryDate)),
+
     };
     
     const today = new Date();
@@ -84,6 +90,7 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
     selectedDate.setHours(0, 0, 0, 0); 
     
 
+    
     if (selectedDate.getTime() === today.getTime()) {
       toast.error("Expiry date must not be today.");
       return;
@@ -124,13 +131,31 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
             />
           </div>
           <div style={styles.inputGroup}>
-            <label>Type:</label>
-            <input
-              type="text"
-              value={type}
-              onChange={(e) => setType(e.target.value)}
+            <label>Form:</label>
+            <select
+              value={dosageform}
+              onChange={(e) => setDosageForm(e.target.value)}
               style={styles.inputField}
-            />
+            >
+              <option value="">-- Select Form --</option>
+              {dosageForms.map((form) => (
+                <option key={form.id} value={form.name}>{form.name}</option>
+              ))}
+            </select>
+          </div>
+          <div style={styles.inputGroup}>
+            <label>Type:</label>
+            <select
+              value={medType}
+              onChange={(e) => setMedType(e.target.value)}
+              style={styles.inputField}
+            >
+              <option value="">-- Select Form --</option> 
+              {medicineType.map((form) => ( 
+                <option key={form.id} value={form.name}>{form.name}</option>
+              ))}
+              
+            </select>
           </div>
           <div style={styles.inputGroup}>
             <label>Expiry Date:</label>

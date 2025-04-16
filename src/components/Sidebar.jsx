@@ -23,6 +23,7 @@ const sidebarLinks = [
   { to: "/inventory", icon: <FiClipboard />, label: "Inventory" },
   { to: "/manage-user", icon: <FiUsers />, label: "User Management" },
   { to: "/records", icon: <FiBell />, label: "Records" },
+  { to: "/requestmedicine", icon: <FiBell />, label: "Request Medicine" },
   { to: "/settings", icon: <FiSettings />, label: "Settings" },
 ];
 

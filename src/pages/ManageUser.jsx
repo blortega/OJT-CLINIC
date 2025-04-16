@@ -8,7 +8,9 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  Timestamp,
   serverTimestamp,
+  setDoc,
 } from "firebase/firestore";
 import { app } from "../firebase";
 import { FiPlus, FiEdit, FiTrash, FiUserX } from "react-icons/fi";
@@ -44,7 +46,6 @@ const ManageUser = () => {
     firstname: "",
     middleInitial: "",
     lastname: "",
-    email: "",
     role: "",
     department: "",
     designation: "",
@@ -86,7 +87,6 @@ const ManageUser = () => {
 
     const fieldsToSearch = [
       fullName,
-      user.email || "Not Available",
       user.role || "Not Available",
       user.department || "Not Available",
       user.employeeID || "Not Available",
@@ -111,7 +111,6 @@ const ManageUser = () => {
       firstname: "",
       middleInitial: "",
       lastname: "",
-      email: "",
       role: "Employee",
       department: "",
       designation: "",
@@ -128,13 +127,12 @@ const ManageUser = () => {
       firstname: user.firstname.toUpperCase(),
       middleInitial: user.middleInitial ? user.middleInitial.toUpperCase() : "",
       lastname: user.lastname ? user.lastname.toUpperCase() : "",
-      email: user.email,
       role: user.role,
       department: user.department,
       designation: user.designation || "",
       gender: user.gender || "",
       employeeID: user.employeeID || "",
-      dob: user.dob || "",
+      dob: user.dob ? user.dob.toDate().toISOString().split("T")[0] : "",
     });
     setIsEditable(false);
     setModalVisible(true);
@@ -199,6 +197,14 @@ const ManageUser = () => {
     }
   };
 
+  const capitalizeWords = (str) => {
+    return str
+      .toLowerCase()
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
   const handleFormChange = (e) => {
     const { name, value } = e.target;
 
@@ -221,6 +227,11 @@ const ManageUser = () => {
       setUserForm((prevForm) => ({
         ...prevForm,
         [name]: value.toUpperCase().trim(),
+      }));
+    } else if (name === "department") {
+      setUserForm((prevForm) => ({
+        ...prevForm,
+        [name]: capitalizeWords(value),
       }));
     } else {
       setUserForm((prevForm) => ({ ...prevForm, [name]: value }));
@@ -308,17 +319,16 @@ const ManageUser = () => {
             .replace(/\s+/g, " "),
           middleInitial: userForm.middleInitial.toUpperCase().trim(),
           lastname: userForm.lastname.toUpperCase().trim().replace(/\s+/g, " "),
-          email: userForm.email,
           designation: userForm.designation,
           department: userForm.department,
           gender: userForm.gender,
           employeeID: userForm.employeeID || "Not Available",
-          dob: userForm.dob,
+          dob: userForm.dob ? Timestamp.fromDate(new Date(userForm.dob)) : null,
         });
 
         toast.success("User updated successfully!");
       } else {
-        // Add new user
+        // Add new user with employeeID as document ID
         const newUserData = {
           firstname: userForm.firstname
             .toUpperCase()
@@ -326,19 +336,20 @@ const ManageUser = () => {
             .replace(/\s+/g, " "),
           middleInitial: userForm.middleInitial.toUpperCase().trim(),
           lastname: userForm.lastname.toUpperCase().trim().replace(/\s+/g, " "),
-          email: userForm.email,
           role: userForm.role,
           department: userForm.department,
           designation: userForm.designation,
           gender: userForm.gender,
           employeeID: userForm.employeeID || "Not Available",
-          dob: userForm.dob,
+          dob: userForm.dob ? Timestamp.fromDate(new Date(userForm.dob)) : null,
           createdAt: serverTimestamp(),
           status: "Active",
         };
 
-        // Create new user document
-        await addDoc(collection(db, "users"), newUserData);
+        // Use employeeID as the document ID
+        const userRef = doc(db, "users", userForm.employeeID);
+        await setDoc(userRef, newUserData);
+
         toast.success(
           `${
             userForm.role.charAt(0).toUpperCase() + userForm.role.slice(1)
@@ -350,7 +361,6 @@ const ManageUser = () => {
       setUserForm({
         firstname: "",
         lastname: "",
-        email: "",
         role: "",
         department: "",
         designation: "",
@@ -428,130 +438,135 @@ const ManageUser = () => {
                 </tr>
               </thead>
               <tbody>
-                {users.filter(filterUsers).map((user) => (
-                  <tr
-                    key={user.id}
-                    className={`table-row ${
-                      users.indexOf(user) % 2 === 0 ? "even-row" : "odd-row"
-                    }`}
-                    style={
-                      user.status === "Suspended"
-                        ? { backgroundColor: "#FFCCCB", opacity: 0.8 }
-                        : {}
-                    }
-                  >
-                    <td className="table-cell">
-                      {user.employeeID || "Not Available"}
-                    </td>
-                    <td className="table-cell">
-                      {user.firstname}{" "}
-                      {user.middleInitial ? user.middleInitial + ". " : ""}{" "}
-                      {user.lastname || "Not Available"}
-                    </td>
-                    <td className="table-cell">
-                      {/* Format the DOB if it exists */}
-                      {user.dob
-                        ? new Date(user.dob).toLocaleDateString()
-                        : "Not Available"}
-                    </td>
-                    <td className="table-cell">
-                      {user.designation || "Not Available"}
-                    </td>
-                    <td className="table-cell">
-                      {user.department || "Not Available"}
-                    </td>
-                    <td className="table-cell">
-                      {/* Gender Badge - keeping inline style for dynamic color */}
-                      <span
-                        className="gender-badge"
-                        style={{
-                          backgroundColor:
-                            user.gender === "Male"
-                              ? "#1e3a8a"
-                              : user.gender === "Female"
-                              ? "#d41c48"
-                              : "#6c757d",
-                        }}
-                      >
-                        {user.gender || "Not Available"}
-                      </span>
-                    </td>
-                    <td className="action-cell">
-                      {/* Edit Button */}
-                      <button
-                        className={`icon-button ${
-                          hoveredUser === user.id && hoveredIcon === "edit"
-                            ? "button-hover"
-                            : ""
-                        }`}
-                        onMouseEnter={() => {
-                          setHoveredUser(user.id);
-                          setHoveredIcon("edit");
-                        }}
-                        onMouseLeave={() => setHoveredIcon(null)}
-                        onClick={() => handleEdit(user)}
-                        title="Edit"
-                      >
-                        <FiEdit />
-                      </button>
-
-                      {/* Suspend/Activate Button */}
-                      {user.status === "Suspended" ? (
+                {users
+                  .filter((user) => user.employeeID?.trim()) // only include users with an employeeID
+                  .filter(filterUsers)
+                  .map((user) => (
+                    <tr
+                      key={user.id}
+                      className={`table-row ${
+                        users.indexOf(user) % 2 === 0 ? "even-row" : "odd-row"
+                      }`}
+                      style={
+                        user.status === "Suspended"
+                          ? { backgroundColor: "#FFCCCB", opacity: 0.8 }
+                          : {}
+                      }
+                    >
+                      <td className="table-cell">
+                        {user.employeeID || "Not Available"}
+                      </td>
+                      <td className="table-cell">
+                        {user.firstname}{" "}
+                        {user.middleInitial ? user.middleInitial + ". " : ""}{" "}
+                        {user.lastname || "Not Available"}
+                      </td>
+                      <td className="table-cell">
+                        {/* Format the DOB if it exists */}
+                        {user.dob
+                          ? user.dob.toDate().toLocaleDateString()
+                          : "Not Available"}
+                      </td>
+                      <td className="table-cell">
+                        {user.designation || "Not Available"}
+                      </td>
+                      <td className="table-cell">
+                        {user.department || "Not Available"}
+                      </td>
+                      <td className="table-cell">
+                        {/* Gender Badge - keeping inline style for dynamic color */}
+                        <span
+                          className="gender-badge"
+                          style={{
+                            backgroundColor:
+                              user.gender === "Male"
+                                ? "#1e3a8a"
+                                : user.gender === "Female"
+                                ? "#d41c48"
+                                : "#6c757d",
+                          }}
+                        >
+                          {user.gender || "Not Available"}
+                        </span>
+                      </td>
+                      <td className="action-cell">
+                        {/* Edit Button */}
                         <button
                           className={`icon-button ${
-                            hoveredUser === user.id && hoveredIcon === "suspend"
+                            hoveredUser === user.id && hoveredIcon === "edit"
                               ? "button-hover"
                               : ""
                           }`}
                           onMouseEnter={() => {
                             setHoveredUser(user.id);
-                            setHoveredIcon("suspend");
+                            setHoveredIcon("edit");
                           }}
                           onMouseLeave={() => setHoveredIcon(null)}
-                          onClick={() => handleSuspend(user)}
-                          title="Activate"
+                          onClick={() => handleEdit(user)}
+                          title="Edit"
                         >
-                          <FaUserCheck />
+                          <FiEdit />
                         </button>
-                      ) : (
+
+                        {/* Suspend/Activate Button */}
+                        {user.status === "Suspended" ? (
+                          <button
+                            className={`icon-button ${
+                              hoveredUser === user.id &&
+                              hoveredIcon === "suspend"
+                                ? "button-hover"
+                                : ""
+                            }`}
+                            onMouseEnter={() => {
+                              setHoveredUser(user.id);
+                              setHoveredIcon("suspend");
+                            }}
+                            onMouseLeave={() => setHoveredIcon(null)}
+                            onClick={() => handleSuspend(user)}
+                            title="Activate"
+                          >
+                            <FaUserCheck />
+                          </button>
+                        ) : (
+                          <button
+                            className={`icon-button ${
+                              hoveredUser === user.id &&
+                              hoveredIcon === "suspend"
+                                ? "button-hover"
+                                : ""
+                            }`}
+                            onMouseEnter={() => {
+                              setHoveredUser(user.id);
+                              setHoveredIcon("suspend");
+                            }}
+                            onMouseLeave={() => setHoveredIcon(null)}
+                            onClick={() => handleSuspend(user)}
+                            title="Suspend"
+                          >
+                            <FiUserX />
+                          </button>
+                        )}
+
+                        {/* Delete Button */}
                         <button
                           className={`icon-button ${
-                            hoveredUser === user.id && hoveredIcon === "suspend"
+                            hoveredUser === user.id && hoveredIcon === "delete"
                               ? "button-hover"
                               : ""
                           }`}
                           onMouseEnter={() => {
                             setHoveredUser(user.id);
-                            setHoveredIcon("suspend");
+                            setHoveredIcon("delete");
                           }}
                           onMouseLeave={() => setHoveredIcon(null)}
-                          onClick={() => handleSuspend(user)}
-                          title="Suspend"
+                          onClick={() => handleDelete(user)}
+                          title="Delete"
                         >
-                          <FiUserX />
+                          <FiTrash />
                         </button>
-                      )}
-
-                      {/* Delete Button */}
-                      <button
-                        className={`icon-button ${
-                          hoveredUser === user.id && hoveredIcon === "delete"
-                            ? "button-hover"
-                            : ""
-                        }`}
-                        onMouseEnter={() => {
-                          setHoveredUser(user.id);
-                          setHoveredIcon("delete");
-                        }}
-                        onMouseLeave={() => setHoveredIcon(null)}
-                        onClick={() => handleDelete(user)}
-                        title="Delete"
-                      >
-                        <FiTrash />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           )}
