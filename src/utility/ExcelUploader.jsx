@@ -10,6 +10,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 
+// Utility functions
 const toUpperCaseName = (name) => name.toUpperCase();
 const toTitleCase = (str) =>
   str
@@ -21,6 +22,7 @@ const toTitleCase = (str) =>
 export const ExcelUploader = (collectionName = "excelTest") => {
   const [employees, setEmployees] = useState([]);
   const [uploadStatus, setUploadStatus] = useState("");
+  const [isUploading, setIsUploading] = useState(false); // Loading state
 
   const fetchEmployees = async () => {
     const snapshot = await getDocs(collection(db, collectionName));
@@ -33,65 +35,83 @@ export const ExcelUploader = (collectionName = "excelTest") => {
   const handleFileUpload = async (file) => {
     if (!file) return;
 
-    const data = await file.arrayBuffer();
-    const workbook = XLSX.read(data, { type: "buffer" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    // Validate the file type
+    if (!file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
+      setUploadStatus("Please upload a valid Excel file.");
+      return;
+    }
 
-    const collectionRef = collection(db, collectionName);
-    let added = 0;
+    setIsUploading(true);
+    setUploadStatus("Uploading...");
 
-    for (let i = 1; i < Math.min(rows.length, 101); i++) {
-      const row = rows[i];
-      const employeeID = row[1];
-      const fullName = row[2];
-      const dobRaw = row[3];
-      const gender = row[4];
-      const designation = row[12];
-      const department = row[13];
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: "buffer" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-      if (!employeeID || !fullName || !gender) continue;
+      const collectionRef = collection(db, collectionName);
+      let added = 0;
 
-      const [lastNamePart, firstAndMiddle] = fullName.split(",");
-      if (!firstAndMiddle) continue;
+      for (let i = 1; i < Math.min(rows.length, 101); i++) {
+        const row = rows[i];
+        const employeeID = row[1];
+        const fullName = row[2];
+        const dobRaw = row[3];
+        const gender = row[4];
+        const designation = row[12];
+        const department = row[13];
 
-      const lastname = toUpperCaseName(lastNamePart.trim());
-      const nameParts = firstAndMiddle.trim().split(" ");
-      const middleInitial = nameParts.pop()?.replace(".", "") || "";
-      const firstname = toUpperCaseName(nameParts.join(" ").trim());
+        if (!employeeID || !fullName || !gender) continue;
 
-      let dob = null;
-      if (dobRaw) {
-        try {
-          dob = Timestamp.fromDate(new Date(dobRaw));
-        } catch (error) {
-          console.error("Invalid DOB format in row", i + 1, dobRaw);
+        const [lastNamePart, firstAndMiddle] = fullName.split(",");
+        if (!firstAndMiddle) continue;
+
+        const lastname = toUpperCaseName(lastNamePart.trim());
+        const nameParts = firstAndMiddle.trim().split(" ");
+        const middleInitial = nameParts.pop()?.replace(".", "") || "";
+        const firstname = toUpperCaseName(nameParts.join(" ").trim());
+
+        // Convert DOB to Firestore Timestamp
+        let dob = null;
+        if (dobRaw) {
+          const parsedDate = new Date(dobRaw);
+          if (!isNaN(parsedDate)) {
+            dob = Timestamp.fromDate(parsedDate);
+          } else {
+            console.error("Invalid DOB format in row", i + 1, dobRaw);
+          }
+        }
+
+        // Check if employee already exists
+        const q = query(collectionRef, where("employeeID", "==", employeeID));
+        const existing = await getDocs(q);
+        if (existing.empty) {
+          // Add new employee with additional fields `role` and `status`
+          await addDoc(collectionRef, {
+            employeeID: employeeID.toString().trim(),
+            firstname,
+            middleInitial,
+            lastname,
+            gender: gender.trim(),
+            dob,
+            designation: designation ? toUpperCaseName(designation.trim()) : "",
+            department: department ? toTitleCase(department.trim()) : "",
+            role: "Employee", // Automatically adding role
+            status: "Active", // Automatically adding status
+          });
+          added++;
         }
       }
 
-      // Check if employee already exists
-      const q = query(collectionRef, where("employeeID", "==", employeeID));
-      const existing = await getDocs(q);
-      if (existing.empty) {
-        // Add new employee with additional fields `role` and `status`
-        await addDoc(collectionRef, {
-          employeeID: employeeID.toString().trim(),
-          firstname,
-          middleInitial,
-          lastname,
-          gender: gender.trim(),
-          dob,
-          designation: designation ? toUpperCaseName(designation.trim()) : "",
-          department: department ? toTitleCase(department.trim()) : "",
-          role: "Employee", // Automatically adding role
-          status: "Active", // Automatically adding status
-        });
-        added++;
-      }
+      setUploadStatus(`${added} new employee(s) added.`);
+      fetchEmployees();
+    } catch (error) {
+      console.error("Error processing file:", error);
+      setUploadStatus("Error processing file. Please try again.");
+    } finally {
+      setIsUploading(false); // Reset loading state
     }
-
-    setUploadStatus(`${added} new employee(s) added.`);
-    fetchEmployees();
   };
 
   useEffect(() => {
@@ -102,5 +122,6 @@ export const ExcelUploader = (collectionName = "excelTest") => {
     employees,
     uploadStatus,
     handleFileUpload,
+    isUploading, // Provide uploading status to the component
   };
 };
