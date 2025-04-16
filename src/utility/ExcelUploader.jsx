@@ -1,3 +1,4 @@
+// hooks/useExcelUpload.js
 import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import {
@@ -37,8 +38,8 @@ const parseDate = (dobRaw) => {
   return !isNaN(parsedDate) ? Timestamp.fromDate(parsedDate) : null;
 };
 
-// Main hook (ExcelUploader)
-export const ExcelUploader = (collectionName = "excelTest") => {
+// Custom Hook for Excel file upload
+export const useExcelUpload = (collectionName = "excelTest") => {
   const [employees, setEmployees] = useState([]);
   const [uploadStatus, setUploadStatus] = useState("");
   const [isUploading, setIsUploading] = useState(false); // Loading state
@@ -136,7 +137,6 @@ export const ExcelUploader = (collectionName = "excelTest") => {
     }
   };
 
-  // Fetch employee data on initial load
   useEffect(() => {
     fetchEmployees();
   }, []);
