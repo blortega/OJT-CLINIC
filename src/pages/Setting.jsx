@@ -40,6 +40,7 @@ const Setting = () => {
   const [uploadStatus, setUploadStatus] = useState("");
   const [isUploading, setIsUploading] = useState(false); // Loading state
   const [fileError, setFileError] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null); // Track selected file
 
   // Fetch existing employees from Firestore
   const fetchEmployees = async () => {
@@ -50,19 +51,29 @@ const Setting = () => {
     setEmployees(employeesData);
   };
 
+  // Handle file change
+  const handleFileChange = (e) => {
+    setSelectedFile(e.target.files[0]); // Store the selected file
+  };
+
   // Handle file upload
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const handleFileUpload = async () => {
+    if (!selectedFile) {
+      setFileError("Please select a file first.");
+      return;
+    }
 
     // File size validation (Max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
+    if (selectedFile.size > 5 * 1024 * 1024) {
       setFileError("File is too large. Please upload a file smaller than 5MB.");
       return;
     }
 
     // File type validation
-    if (!file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
+    if (
+      !selectedFile.name.endsWith(".xlsx") &&
+      !selectedFile.name.endsWith(".xls")
+    ) {
       setFileError("Please upload a valid Excel file.");
       return;
     }
@@ -72,7 +83,7 @@ const Setting = () => {
     setFileError(""); // Clear previous errors
 
     try {
-      const data = await file.arrayBuffer();
+      const data = await selectedFile.arrayBuffer();
       const workbook = XLSX.read(data, { type: "buffer" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
@@ -169,9 +180,25 @@ const Setting = () => {
           <input
             type="file"
             accept=".xlsx, .xls"
-            onChange={handleFileUpload}
+            onChange={handleFileChange} // Track the selected file
             disabled={isUploading}
           />
+          <button
+            onClick={handleFileUpload} // Trigger file upload on button click
+            disabled={isUploading || !selectedFile}
+            style={{
+              marginTop: "10px",
+              padding: "8px 16px",
+              backgroundColor: "#4CAF50",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+          >
+            Upload
+          </button>
+
           {fileError && (
             <p style={{ color: "red", marginTop: "10px" }}>{fileError}</p>
           )}
