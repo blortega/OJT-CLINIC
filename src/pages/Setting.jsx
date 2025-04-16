@@ -24,10 +24,6 @@ const Setting = () => {
   const [employees, setEmployees] = useState([]);
   const [uploadStatus, setUploadStatus] = useState("");
   const [isUploading, setIsUploading] = useState(false); // Loading state
-  const [departments, setDepartments] = useState([]); // Departments list
-  const [roles, setRoles] = useState([]); // Roles list
-  const [statuses, setStatuses] = useState(["Active", "Inactive"]); // Status options
-  const [designation, setDesignation] = useState(""); // Designation input
 
   // Fetch existing employees from Firestore
   const fetchEmployees = async () => {
