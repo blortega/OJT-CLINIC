@@ -45,7 +45,6 @@ const ManageUser = () => {
     firstname: "",
     middleInitial: "",
     lastname: "",
-    email: "",
     role: "",
     department: "",
     designation: "",
@@ -87,7 +86,6 @@ const ManageUser = () => {
 
     const fieldsToSearch = [
       fullName,
-      user.email || "Not Available",
       user.role || "Not Available",
       user.department || "Not Available",
       user.employeeID || "Not Available",
@@ -112,7 +110,6 @@ const ManageUser = () => {
       firstname: "",
       middleInitial: "",
       lastname: "",
-      email: "",
       role: "Employee",
       department: "",
       designation: "",
@@ -129,7 +126,6 @@ const ManageUser = () => {
       firstname: user.firstname.toUpperCase(),
       middleInitial: user.middleInitial ? user.middleInitial.toUpperCase() : "",
       lastname: user.lastname ? user.lastname.toUpperCase() : "",
-      email: user.email,
       role: user.role,
       department: user.department,
       designation: user.designation || "",
@@ -200,6 +196,14 @@ const ManageUser = () => {
     }
   };
 
+  const capitalizeWords = (str) => {
+    return str
+      .toLowerCase()
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
   const handleFormChange = (e) => {
     const { name, value } = e.target;
 
@@ -222,6 +226,11 @@ const ManageUser = () => {
       setUserForm((prevForm) => ({
         ...prevForm,
         [name]: value.toUpperCase().trim(),
+      }));
+    } else if (name === "department") {
+      setUserForm((prevForm) => ({
+        ...prevForm,
+        [name]: capitalizeWords(value),
       }));
     } else {
       setUserForm((prevForm) => ({ ...prevForm, [name]: value }));
@@ -309,7 +318,6 @@ const ManageUser = () => {
             .replace(/\s+/g, " "),
           middleInitial: userForm.middleInitial.toUpperCase().trim(),
           lastname: userForm.lastname.toUpperCase().trim().replace(/\s+/g, " "),
-          email: userForm.email,
           designation: userForm.designation,
           department: userForm.department,
           gender: userForm.gender,
@@ -327,7 +335,6 @@ const ManageUser = () => {
             .replace(/\s+/g, " "),
           middleInitial: userForm.middleInitial.toUpperCase().trim(),
           lastname: userForm.lastname.toUpperCase().trim().replace(/\s+/g, " "),
-          email: userForm.email,
           role: userForm.role,
           department: userForm.department,
           designation: userForm.designation,
@@ -351,7 +358,6 @@ const ManageUser = () => {
       setUserForm({
         firstname: "",
         lastname: "",
-        email: "",
         role: "",
         department: "",
         designation: "",
