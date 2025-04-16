@@ -11,7 +11,7 @@ const formatDate = (date) => {
 const AddMedicineForm = ({ onClose, onAddMedicine }) => {
     const [name, setName] = useState("");
     const [dosage, setDosage] = useState("");
-    const [form, setForm] = useState("");
+    const [dosageform, setDosageForm] = useState("");
     const [stock, setStock] = useState("");
     const [expiryDate, setExpiryDate] = useState("");
     const [createdAt, setCreatedAt] = useState("");
@@ -26,7 +26,7 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!name.trim() || !dosage.trim() || !form.trim() || !expiryDate.trim()) {
+    if (!name.trim() || !dosage.trim() || !dosageform.trim() || !expiryDate.trim()) {
       toast.error("All fields are required!");
       return;
     }
@@ -41,7 +41,7 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
       return;
     }
     
-    if (!form.trim()) {
+    if (!dosageform.trim()) {
       toast.error("Form is required!");
       return;
     }
@@ -71,7 +71,7 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
     const newMedicine = {
         name,
         dosage,
-        form,
+        dosageform,
         stock: numericStock,
         status: stockStatus,
         expiryDate: formatDate(expiryDate),
@@ -127,8 +127,8 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
             <label>Form:</label>
             <select
               type="text"
-              value={form}
-              onChange={(e) => setForm(e.target.value)}
+              value={dosageform}
+              onChange={(e) => setDosageForm(e.target.value)}
               style={styles.inputField}
             >
               <option value="">-- Select Form --</option>

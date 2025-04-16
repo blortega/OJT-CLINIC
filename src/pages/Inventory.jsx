@@ -78,7 +78,7 @@ const Inventory = () => {
     const fieldToSearch = [
       medicine.name,
       medicine.dosage,
-      medicine.form,
+      medicine.dosageform,
       medicine.status,
       medicine.expiryDate ? medicine.expiryDate.toString() : "",
       medicine.createdAt ? medicine.createdAt.toDate().toLocaleDateString('en-US', { month: 'long', year: 'numeric', day: 'numeric' })
@@ -234,11 +234,11 @@ const Inventory = () => {
         filtered.sort((a, b) => b.name.localeCompare(a.name));
         break;
       case "expiryDate":
-        filtered.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
-        break;  
+        filtered.sort((a, b) => new Date(a.expiryDate?.toDate?.() || a.expiryDate) - new Date(b.expiryDate?.toDate?.() || b.expiryDate));
+        break;
       case "createdAt":
-        filtered.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
-        break; 
+        filtered.sort((a, b) => new Date(a.createdAt?.toDate?.() || a.createdAt) - new Date(b.createdAt?.toDate?.() || b.createdAt));
+        break;
       case "lowStock":
         filtered = filtered.filter((item) => item.status?.toLowerCase() === "low stock");
         break;
@@ -314,7 +314,7 @@ const Inventory = () => {
               <tr>
                 <th style={styles.thead}>Medicine</th>
                 <th style={styles.thead}>Dosage</th>
-                <th style={styles.thead}>Form</th>
+                <th style={styles.thead}>Dosage Form</th>
                 <th style={styles.thead}>Stocks</th>
                 <th style={styles.thead}>Status</th>
                 <th style={styles.thead}>Expiry Date</th>
@@ -331,7 +331,7 @@ const Inventory = () => {
                 <tr key={index}>
                   <td style={styles.tdata}>{medicine.name}</td>
                   <td style={styles.tdata}>{medicine.dosage}</td>
-                  <td style={styles.tdata}>{medicine.form}</td>
+                  <td style={styles.tdata}>{medicine.dosageform}</td>
                   <td style={styles.tdata}>{medicine.stock}</td>
                   <td style={styles.tdata}>{getStockStatus(medicine.stock)}</td>
                   <td style={styles.tdata}>
