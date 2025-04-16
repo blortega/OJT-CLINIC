@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Sidebar from "../components/Sidebar";
 import { ExcelUploader } from "../Utility/ExcelUploader";
 
 const Setting = () => {
-  // Use the ExcelUploader hook
-  const { employees, uploadStatus, handleFileUpload } = ExcelUploader();
+  // Use the ExcelUploader hook with delete logic included
+  const { employees, uploadStatus, handleFileUpload, handleDeleteAll } =
+    ExcelUploader();
 
   // Handle file change
   const onFileChange = (e) => {
@@ -12,17 +13,6 @@ const Setting = () => {
     if (file) {
       handleFileUpload(file);
     }
-  };
-
-  // Handle Delete All Employees
-  const handleDeleteAll = async () => {
-    const snapshot = await getDocs(collection(db, "excelTest"));
-    const deletePromises = snapshot.docs
-      .filter((docSnap) => docSnap.data().employeeID && docSnap.id !== "test") // Don't delete the one without employeeID or 'test' record
-      .map((docSnap) => deleteDoc(doc(db, "excelTest", docSnap.id)));
-
-    await Promise.all(deletePromises);
-    fetchEmployees(); // Refresh the employee list after deletion
   };
 
   return (
@@ -61,8 +51,8 @@ const Setting = () => {
                   ` - DOB: ${emp.dob.toDate().toISOString().split("T")[0]}`}
                 {emp.designation && ` - Designation: ${emp.designation}`}
                 {emp.department && ` - Department: ${emp.department}`}
-                {emp.role && ` - Role: ${emp.role}`} {/* Show Role */}
-                {emp.status && ` - Status: ${emp.status}`} {/* Show Status */}
+                {emp.role && ` - Role: ${emp.role}`}
+                {emp.status && ` - Status: ${emp.status}`}
               </li>
             ))}
           </ul>

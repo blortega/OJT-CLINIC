@@ -6,6 +6,8 @@ import {
   getDocs,
   query,
   where,
+  deleteDoc,
+  doc,
   Timestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
@@ -69,11 +71,9 @@ export const ExcelUploader = (collectionName = "excelTest") => {
         }
       }
 
-      // Check if employee already exists
       const q = query(collectionRef, where("employeeID", "==", employeeID));
       const existing = await getDocs(q);
       if (existing.empty) {
-        // Add new employee with additional fields `role` and `status`
         await addDoc(collectionRef, {
           employeeID: employeeID.toString().trim(),
           firstname,
@@ -83,14 +83,25 @@ export const ExcelUploader = (collectionName = "excelTest") => {
           dob,
           designation: designation ? toUpperCaseName(designation.trim()) : "",
           department: department ? toTitleCase(department.trim()) : "",
-          role: "Employee", // Automatically adding role
-          status: "Active", // Automatically adding status
+          role: "Employee",
+          status: "Active",
         });
         added++;
       }
     }
 
     setUploadStatus(`${added} new employee(s) added.`);
+    fetchEmployees();
+  };
+
+  const handleDeleteAll = async () => {
+    const snapshot = await getDocs(collection(db, collectionName));
+    const deletePromises = snapshot.docs
+      .filter((docSnap) => docSnap.data().employeeID && docSnap.id !== "test")
+      .map((docSnap) => deleteDoc(doc(db, collectionName, docSnap.id)));
+
+    await Promise.all(deletePromises);
+    setUploadStatus("All employee records have been deleted.");
     fetchEmployees();
   };
 
@@ -102,5 +113,6 @@ export const ExcelUploader = (collectionName = "excelTest") => {
     employees,
     uploadStatus,
     handleFileUpload,
+    handleDeleteAll,
   };
 };
