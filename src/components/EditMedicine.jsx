@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getFirestore, updateDoc, doc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, updateDoc, doc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { app } from "../firebase";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -17,6 +17,7 @@ const formatForInput = (date) => {
   return d.toISOString().split("T")[0]; // Format for input[type="date"]
 };
 
+
 const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
   if (!isOpen) return null;
 
@@ -29,6 +30,8 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
   });
 
   const [isEdit, setisEdit] = useState(false)
+
+  
 
   useEffect(() => {
     if (medicine) {
@@ -103,9 +106,14 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
 
     const stockStatus = getStockStatus(editedMedicine.stock);
 
+     
+
     try {
       const db = getFirestore(app);
       const medicineRef = doc(db, "medicine", medicine.id);
+
+      const expiry = new Date(editedMedicine.expiryDate);
+      expiry.setHours(0, 0, 0, 0);
 
       await updateDoc(medicineRef, {
         name: editedMedicine.name,
@@ -114,13 +122,13 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
         stock: editedMedicine.stock,
         status: stockStatus,
         updatedAt: serverTimestamp(),
-        expiryDate: new Date(editedMedicine.expiryDate), // Store as real Date object
+        expiryDate: Timestamp.fromDate(expiry),
       });
 
       onUpdate({
         ...medicine,
         ...editedMedicine,
-        expiryDate: new Date(editedMedicine.expiryDate),
+        expiryDate: expiry,
         status: stockStatus,
       });
       toast.success("Medicine details updated successfully!");

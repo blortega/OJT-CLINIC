@@ -11,7 +11,7 @@ const formatDate = (date) => {
 const AddMedicineForm = ({ onClose, onAddMedicine }) => {
     const [name, setName] = useState("");
     const [dosage, setDosage] = useState("");
-    const [dosageform, setDosageForm] = useState("");
+    const [dosageform, setDForm] = useState("");
     const [stock, setStock] = useState("");
     const [expiryDate, setExpiryDate] = useState("");
     const [createdAt, setCreatedAt] = useState("");
@@ -74,7 +74,8 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
         dosageform,
         stock: numericStock,
         status: stockStatus,
-        expiryDate: formatDate(expiryDate),
+        expiryDate: Timestamp.fromDate(new Date(expiryDate)),
+
     };
     
     const today = new Date();

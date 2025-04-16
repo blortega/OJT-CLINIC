@@ -7,6 +7,7 @@ import Inventory from "./pages/Inventory";
 import ManageUser from "./pages/ManageUser";
 import Record from "./pages/Record";
 import Setting from "./pages/Setting";
+import RequestMedicine from "./pages/RequestMedicine";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="inventory" element={<Inventory />} />
         <Route path="manage-user" element={<ManageUser />} />
         <Route path="records" element={<Record />} />
+        <Route path="requestmedicine" element={<RequestMedicine />} />
         <Route path="settings" element={<Setting />} />
         ``
       </Routes>
