@@ -1,18 +1,159 @@
-// Setting.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import * as XLSX from "xlsx";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  deleteDoc,
+  doc,
+  Timestamp,
+  writeBatch,
+} from "firebase/firestore";
+import { db } from "../firebase";
 import Sidebar from "../components/Sidebar";
-import { ExcelUploader } from "../hooks/ExcelUploader"; // Use the custom hook
 
+// Helper functions
+const toUpperCaseName = (name) => name.toUpperCase();
+
+const parseDate = (dobRaw) => {
+  const parsedDate = new Date(dobRaw);
+  return !isNaN(parsedDate) ? Timestamp.fromDate(parsedDate) : null;
+};
+
+const parseFullName = (fullName) => {
+  const [lastNamePart, firstAndMiddle] = fullName.split(",");
+  if (!firstAndMiddle) return null;
+
+  const lastname = toUpperCaseName(lastNamePart.trim());
+  const nameParts = firstAndMiddle.trim().split(" ");
+  const middleInitial = nameParts.pop()?.replace(".", "") || "";
+  const firstname = toUpperCaseName(nameParts.join(" ").trim());
+
+  return { firstname, middleInitial, lastname };
+};
+
+// Main component
 const Setting = () => {
-  const { employees, uploadStatus, handleFileUpload, isUploading, fileError } =
-    ExcelUploader(); // Use the custom hook for Excel upload
+  const [employees, setEmployees] = useState([]);
+  const [uploadStatus, setUploadStatus] = useState("");
+  const [isUploading, setIsUploading] = useState(false); // Loading state
+  const [fileError, setFileError] = useState("");
 
-  const [selectedFile, setSelectedFile] = useState(null);
-
-  // Handle file selection
-  const handleFileChange = (e) => {
-    setSelectedFile(e.target.files[0]);
+  // Fetch existing employees from Firestore
+  const fetchEmployees = async () => {
+    const snapshot = await getDocs(collection(db, "excelTest"));
+    const employeesData = snapshot.docs
+      .map((doc) => doc.data())
+      .filter((data) => data.employeeID);
+    setEmployees(employeesData);
   };
+
+  // Handle file upload
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // File size validation (Max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setFileError("File is too large. Please upload a file smaller than 5MB.");
+      return;
+    }
+
+    // File type validation
+    if (!file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
+      setFileError("Please upload a valid Excel file.");
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadStatus("Uploading...");
+    setFileError(""); // Clear previous errors
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: "buffer" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+      const collectionRef = collection(db, "excelTest");
+      const batch = writeBatch(db);
+      let added = 0;
+
+      for (let i = 1; i < Math.min(rows.length, 101); i++) {
+        const row = rows[i];
+        const employeeID = row[1]; // Column B
+        const fullName = row[2]; // Column C
+        const dobRaw = row[3]; // Column D - Date of Birth
+        const gender = row[4]; // Column E
+        const designation = row[12]; // Column M - Designation
+        const department = row[13]; // Column N - Department
+
+        if (!employeeID || !fullName || !gender) continue;
+
+        const { firstname, middleInitial, lastname } = parseFullName(fullName);
+        if (!firstname || !lastname) continue;
+
+        let dob = null;
+        if (dobRaw) {
+          dob = parseDate(dobRaw);
+        }
+
+        // Check if employee already exists
+        const q = query(collectionRef, where("employeeID", "==", employeeID));
+        const existing = await getDocs(q);
+        if (existing.empty) {
+          const docRef = doc(collectionRef, employeeID.toString().trim());
+          batch.set(docRef, {
+            employeeID: employeeID.toString().trim(),
+            firstname,
+            middleInitial,
+            lastname,
+            gender: gender.trim(),
+            dob,
+            designation: designation ? toUpperCaseName(designation.trim()) : "",
+            department: department ? department.trim() : "",
+            role: "Employee", // Default role
+            status: "Active", // Default status
+          });
+          added++;
+        }
+      }
+
+      await batch.commit();
+
+      setUploadStatus(`${added} new employee(s) added.`);
+      fetchEmployees();
+    } catch (error) {
+      console.error("Error processing file:", error);
+      setUploadStatus("Error processing file. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Delete all employees
+  const handleDeleteAll = async () => {
+    if (
+      !window.confirm("Are you sure you want to delete all employee records?")
+    )
+      return;
+
+    const snapshot = await getDocs(collection(db, "excelTest"));
+    const deletePromises = snapshot.docs
+      .filter((docSnap) => docSnap.id !== "test" && docSnap.data().employeeID)
+      .map((docSnap) => deleteDoc(doc(db, "excelTest", docSnap.id)));
+
+    await Promise.all(deletePromises);
+    setUploadStatus("All employee records have been deleted.");
+    fetchEmployees();
+  };
+
+  // Fetch employee data on initial load
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
 
   return (
     <Sidebar>
@@ -28,7 +169,7 @@ const Setting = () => {
           <input
             type="file"
             accept=".xlsx, .xls"
-            onChange={handleFileChange}
+            onChange={handleFileUpload}
             disabled={isUploading}
           />
           {fileError && (
@@ -67,21 +208,23 @@ const Setting = () => {
               </li>
             ))}
           </ul>
-          <button
-            onClick={() => handleFileUpload(selectedFile)}
-            style={{
-              marginTop: "20px",
-              padding: "8px 16px",
-              backgroundColor: "#4caf50",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-            disabled={isUploading}
-          >
-            Upload File
-          </button>
+
+          {employees.length > 0 && (
+            <button
+              onClick={handleDeleteAll}
+              style={{
+                marginTop: "20px",
+                padding: "8px 16px",
+                backgroundColor: "#ff4d4f",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+            >
+              Delete All Employee Records
+            </button>
+          )}
         </div>
       </div>
     </Sidebar>
