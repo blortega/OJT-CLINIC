@@ -9,6 +9,7 @@ import { FiPlus, FiEdit, FiTrash } from "react-icons/fi";
 import EditModal from "../components/EditMedicine";
 import AddMedicineForm from "../components/AddMedicineForm";
 import InventoryAlert from "../components/InventoryAlert";
+import FetchDosageForm from "../hooks/FetchDosageForm";
 
 const formatDate = (date) => {
   // Return "N/A" if no date is provided
@@ -315,6 +316,8 @@ const Inventory = () => {
                 <th style={styles.thead}>Medicine</th>
                 <th style={styles.thead}>Dosage</th>
                 <th style={styles.thead}>Dosage Form</th>
+                <th style={styles.thead}>Type</th>
+                <th style={styles.thead}>Medication</th>
                 <th style={styles.thead}>Stocks</th>
                 <th style={styles.thead}>Status</th>
                 <th style={styles.thead}>Expiry Date</th>
@@ -332,6 +335,8 @@ const Inventory = () => {
                   <td style={styles.tdata}>{medicine.name}</td>
                   <td style={styles.tdata}>{medicine.dosage}</td>
                   <td style={styles.tdata}>{medicine.dosageform}</td>
+                  <td style={styles.tdata}>{medicine.type}</td>
+                  <td style={styles.tdata}>{medicine.stock}</td>
                   <td style={styles.tdata}>{medicine.stock}</td>
                   <td style={styles.tdata}>{getStockStatus(medicine.stock)}</td>
                   <td style={styles.tdata}>

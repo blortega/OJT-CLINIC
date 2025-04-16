@@ -1,17 +1,21 @@
 // AddMedicineForm.js
-import { serverTimestamp } from "firebase/firestore";
+import { serverTimestamp, Timestamp } from "firebase/firestore";
 import React, { useState } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
+import FetchDosageForm from "../hooks/FetchDosageForm";
+import FetchMedicineType from "../hooks/FetchMedicineType";
 const formatDate = (date) => {
   const options = { year: 'numeric', month: 'long', day: 'numeric' };
   return new Date(date).toLocaleDateString('en-US', options);
 };
 const AddMedicineForm = ({ onClose, onAddMedicine }) => {
+    const { dosageForms, loading } = FetchDosageForm();
     const [name, setName] = useState("");
     const [dosage, setDosage] = useState("");
-    const [dosageform, setDForm] = useState("");
+    const [dosageform, setDosageForm] = useState("");
+    const {medicineType} = FetchMedicineType();
+    const [medType, setMedType] = useState("");
     const [stock, setStock] = useState("");
     const [expiryDate, setExpiryDate] = useState("");
     const [createdAt, setCreatedAt] = useState("");
@@ -72,6 +76,7 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
         name,
         dosage,
         dosageform,
+        type: medType,
         stock: numericStock,
         status: stockStatus,
         expiryDate: Timestamp.fromDate(new Date(expiryDate)),
@@ -85,6 +90,7 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
     selectedDate.setHours(0, 0, 0, 0); 
     
 
+    
     if (selectedDate.getTime() === today.getTime()) {
       toast.error("Expiry date must not be today.");
       return;
@@ -127,14 +133,28 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
           <div style={styles.inputGroup}>
             <label>Form:</label>
             <select
-              type="text"
               value={dosageform}
               onChange={(e) => setDosageForm(e.target.value)}
               style={styles.inputField}
             >
               <option value="">-- Select Form --</option>
-              <option value="Tablet">Tablet</option>
-              <option value="Capsule">Capsule</option>
+              {dosageForms.map((form) => (
+                <option key={form.id} value={form.name}>{form.name}</option>
+              ))}
+            </select>
+          </div>
+          <div style={styles.inputGroup}>
+            <label>Type:</label>
+            <select
+              value={medType}
+              onChange={(e) => setMedType(e.target.value)}
+              style={styles.inputField}
+            >
+              <option value="">-- Select Form --</option> 
+              {medicineType.map((form) => ( 
+                <option key={form.id} value={form.name}>{form.name}</option>
+              ))}
+              
             </select>
           </div>
           <div style={styles.inputGroup}>
