@@ -435,130 +435,135 @@ const ManageUser = () => {
                 </tr>
               </thead>
               <tbody>
-                {users.filter(filterUsers).map((user) => (
-                  <tr
-                    key={user.id}
-                    className={`table-row ${
-                      users.indexOf(user) % 2 === 0 ? "even-row" : "odd-row"
-                    }`}
-                    style={
-                      user.status === "Suspended"
-                        ? { backgroundColor: "#FFCCCB", opacity: 0.8 }
-                        : {}
-                    }
-                  >
-                    <td className="table-cell">
-                      {user.employeeID || "Not Available"}
-                    </td>
-                    <td className="table-cell">
-                      {user.firstname}{" "}
-                      {user.middleInitial ? user.middleInitial + ". " : ""}{" "}
-                      {user.lastname || "Not Available"}
-                    </td>
-                    <td className="table-cell">
-                      {/* Format the DOB if it exists */}
-                      {user.dob
-                        ? user.dob.toDate().toLocaleDateString()
-                        : "Not Available"}
-                    </td>
-                    <td className="table-cell">
-                      {user.designation || "Not Available"}
-                    </td>
-                    <td className="table-cell">
-                      {user.department || "Not Available"}
-                    </td>
-                    <td className="table-cell">
-                      {/* Gender Badge - keeping inline style for dynamic color */}
-                      <span
-                        className="gender-badge"
-                        style={{
-                          backgroundColor:
-                            user.gender === "Male"
-                              ? "#1e3a8a"
-                              : user.gender === "Female"
-                              ? "#d41c48"
-                              : "#6c757d",
-                        }}
-                      >
-                        {user.gender || "Not Available"}
-                      </span>
-                    </td>
-                    <td className="action-cell">
-                      {/* Edit Button */}
-                      <button
-                        className={`icon-button ${
-                          hoveredUser === user.id && hoveredIcon === "edit"
-                            ? "button-hover"
-                            : ""
-                        }`}
-                        onMouseEnter={() => {
-                          setHoveredUser(user.id);
-                          setHoveredIcon("edit");
-                        }}
-                        onMouseLeave={() => setHoveredIcon(null)}
-                        onClick={() => handleEdit(user)}
-                        title="Edit"
-                      >
-                        <FiEdit />
-                      </button>
-
-                      {/* Suspend/Activate Button */}
-                      {user.status === "Suspended" ? (
+                {users
+                  .filter((user) => user.employeeID?.trim()) // only include users with an employeeID
+                  .filter(filterUsers)
+                  .map((user) => (
+                    <tr
+                      key={user.id}
+                      className={`table-row ${
+                        users.indexOf(user) % 2 === 0 ? "even-row" : "odd-row"
+                      }`}
+                      style={
+                        user.status === "Suspended"
+                          ? { backgroundColor: "#FFCCCB", opacity: 0.8 }
+                          : {}
+                      }
+                    >
+                      <td className="table-cell">
+                        {user.employeeID || "Not Available"}
+                      </td>
+                      <td className="table-cell">
+                        {user.firstname}{" "}
+                        {user.middleInitial ? user.middleInitial + ". " : ""}{" "}
+                        {user.lastname || "Not Available"}
+                      </td>
+                      <td className="table-cell">
+                        {/* Format the DOB if it exists */}
+                        {user.dob
+                          ? user.dob.toDate().toLocaleDateString()
+                          : "Not Available"}
+                      </td>
+                      <td className="table-cell">
+                        {user.designation || "Not Available"}
+                      </td>
+                      <td className="table-cell">
+                        {user.department || "Not Available"}
+                      </td>
+                      <td className="table-cell">
+                        {/* Gender Badge - keeping inline style for dynamic color */}
+                        <span
+                          className="gender-badge"
+                          style={{
+                            backgroundColor:
+                              user.gender === "Male"
+                                ? "#1e3a8a"
+                                : user.gender === "Female"
+                                ? "#d41c48"
+                                : "#6c757d",
+                          }}
+                        >
+                          {user.gender || "Not Available"}
+                        </span>
+                      </td>
+                      <td className="action-cell">
+                        {/* Edit Button */}
                         <button
                           className={`icon-button ${
-                            hoveredUser === user.id && hoveredIcon === "suspend"
+                            hoveredUser === user.id && hoveredIcon === "edit"
                               ? "button-hover"
                               : ""
                           }`}
                           onMouseEnter={() => {
                             setHoveredUser(user.id);
-                            setHoveredIcon("suspend");
+                            setHoveredIcon("edit");
                           }}
                           onMouseLeave={() => setHoveredIcon(null)}
-                          onClick={() => handleSuspend(user)}
-                          title="Activate"
+                          onClick={() => handleEdit(user)}
+                          title="Edit"
                         >
-                          <FaUserCheck />
+                          <FiEdit />
                         </button>
-                      ) : (
+
+                        {/* Suspend/Activate Button */}
+                        {user.status === "Suspended" ? (
+                          <button
+                            className={`icon-button ${
+                              hoveredUser === user.id &&
+                              hoveredIcon === "suspend"
+                                ? "button-hover"
+                                : ""
+                            }`}
+                            onMouseEnter={() => {
+                              setHoveredUser(user.id);
+                              setHoveredIcon("suspend");
+                            }}
+                            onMouseLeave={() => setHoveredIcon(null)}
+                            onClick={() => handleSuspend(user)}
+                            title="Activate"
+                          >
+                            <FaUserCheck />
+                          </button>
+                        ) : (
+                          <button
+                            className={`icon-button ${
+                              hoveredUser === user.id &&
+                              hoveredIcon === "suspend"
+                                ? "button-hover"
+                                : ""
+                            }`}
+                            onMouseEnter={() => {
+                              setHoveredUser(user.id);
+                              setHoveredIcon("suspend");
+                            }}
+                            onMouseLeave={() => setHoveredIcon(null)}
+                            onClick={() => handleSuspend(user)}
+                            title="Suspend"
+                          >
+                            <FiUserX />
+                          </button>
+                        )}
+
+                        {/* Delete Button */}
                         <button
                           className={`icon-button ${
-                            hoveredUser === user.id && hoveredIcon === "suspend"
+                            hoveredUser === user.id && hoveredIcon === "delete"
                               ? "button-hover"
                               : ""
                           }`}
                           onMouseEnter={() => {
                             setHoveredUser(user.id);
-                            setHoveredIcon("suspend");
+                            setHoveredIcon("delete");
                           }}
                           onMouseLeave={() => setHoveredIcon(null)}
-                          onClick={() => handleSuspend(user)}
-                          title="Suspend"
+                          onClick={() => handleDelete(user)}
+                          title="Delete"
                         >
-                          <FiUserX />
+                          <FiTrash />
                         </button>
-                      )}
-
-                      {/* Delete Button */}
-                      <button
-                        className={`icon-button ${
-                          hoveredUser === user.id && hoveredIcon === "delete"
-                            ? "button-hover"
-                            : ""
-                        }`}
-                        onMouseEnter={() => {
-                          setHoveredUser(user.id);
-                          setHoveredIcon("delete");
-                        }}
-                        onMouseLeave={() => setHoveredIcon(null)}
-                        onClick={() => handleDelete(user)}
-                        title="Delete"
-                      >
-                        <FiTrash />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           )}
