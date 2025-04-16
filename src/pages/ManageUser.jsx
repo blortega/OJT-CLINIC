@@ -10,6 +10,7 @@ import {
   deleteDoc,
   Timestamp,
   serverTimestamp,
+  setDoc,
 } from "firebase/firestore";
 import { app } from "../firebase";
 import { FiPlus, FiEdit, FiTrash, FiUserX } from "react-icons/fi";
@@ -327,7 +328,7 @@ const ManageUser = () => {
 
         toast.success("User updated successfully!");
       } else {
-        // Add new user
+        // Add new user with employeeID as document ID
         const newUserData = {
           firstname: userForm.firstname
             .toUpperCase()
@@ -345,8 +346,10 @@ const ManageUser = () => {
           status: "Active",
         };
 
-        // Create new user document
-        await addDoc(collection(db, "users"), newUserData);
+        // Use employeeID as the document ID
+        const userRef = doc(db, "users", userForm.employeeID);
+        await setDoc(userRef, newUserData);
+
         toast.success(
           `${
             userForm.role.charAt(0).toUpperCase() + userForm.role.slice(1)
