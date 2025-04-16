@@ -4,29 +4,40 @@ import { app } from "../firebase";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+// You can still use this if needed elsewhere
 const formatDate = (date) => {
   const options = { year: 'numeric', month: 'long', day: 'numeric' };
   return new Date(date).toLocaleDateString('en-US', options);
 };
+
+// New helper to convert to YYYY-MM-DD
+const formatForInput = (date) => {
+  if (!date) return "";
+  const d = new Date(date.seconds ? date.seconds * 1000 : date);
+  return d.toISOString().split("T")[0]; // Format for input[type="date"]
+};
+
 const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
   if (!isOpen) return null;
 
   const [editedMedicine, setEditedMedicine] = useState({
     name: medicine?.name || "",
     dosage: medicine?.dosage || "",
-    type: medicine?.type || "",
+    dosageform: medicine?.dosageform || "",
     stock: medicine?.stock || 0,
-    expiryDate: medicine?.expiryDate || "",
+    expiryDate: formatForInput(medicine?.expiryDate),
   });
+
+  const [isEdit, setisEdit] = useState(false)
 
   useEffect(() => {
     if (medicine) {
       setEditedMedicine({
-        name: medicine.name,
-        dosage: medicine.dosage,
-        type: medicine.type,
-        stock: medicine.stock,
-        expiryDate: medicine.expiryDate || "",
+        name: medicine.name || "",
+        dosage: medicine.dosage || "",
+        dosageform: medicine.dosageform || "",
+        stock: medicine.stock || 0,
+        expiryDate: formatForInput(medicine.expiryDate),
       });
     }
   }, [medicine]);
@@ -79,14 +90,18 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
       return;
     }
 
-    if (!editedMedicine.name || !editedMedicine.dosage || !editedMedicine.type || editedMedicine.stock < 0 || !editedMedicine.expiryDate){
+    if (
+      !editedMedicine.name ||
+      !editedMedicine.dosage ||
+      !editedMedicine.dosageform ||
+      editedMedicine.stock < 0 ||
+      !editedMedicine.expiryDate
+    ) {
       toast.error("Please fill in all fields correctly.");
       return;
     }
 
     const stockStatus = getStockStatus(editedMedicine.stock);
-
-    const formattedExpiryDate = formatDate(editedMedicine.expiryDate);
 
     try {
       const db = getFirestore(app);
@@ -95,14 +110,19 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
       await updateDoc(medicineRef, {
         name: editedMedicine.name,
         dosage: editedMedicine.dosage,
-        type: editedMedicine.type,
+        dosageform: editedMedicine.dosageform,
         stock: editedMedicine.stock,
         status: stockStatus,
         updatedAt: serverTimestamp(),
-        expiryDate: editedMedicine.expiryDate || "",
+        expiryDate: new Date(editedMedicine.expiryDate), // Store as real Date object
       });
 
-      onUpdate({ ...medicine, ...editedMedicine, expiryDate: formattedExpiryDate, status: stockStatus, });
+      onUpdate({
+        ...medicine,
+        ...editedMedicine,
+        expiryDate: new Date(editedMedicine.expiryDate),
+        status: stockStatus,
+      });
       toast.success("Medicine details updated successfully!");
       onClose();
     } catch (error) {
@@ -115,15 +135,16 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
     setEditedMedicine({
       name: medicine?.name || "",
       dosage: medicine?.dosage || "",
-      type: medicine?.type || "",
+      dosageform: medicine?.dosageform || "",
       stock: medicine?.stock || 0,
+      expiryDate: formatForInput(medicine?.expiryDate),
     });
     onClose();
   };
 
   const getStockStatus = (stock) => {
     stock = Number(stock);
-  
+
     if (stock === 0) {
       return "Out of Stock";
     } else if (stock <= 20 && stock > 0) {
@@ -164,27 +185,29 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
           </label>
 
           <label style={styles.label}>
-            Type:
-            <input
-              type="text"
-              name="type"
-              value={editedMedicine.type}
+            Dosage Form:
+            <select
+              name="dosageform"
+              value={editedMedicine.dosageform}
               onChange={handleInputChange}
               style={styles.inputField}
-              placeholder="Enter Type"
-            />
+            >
+              <option value="" disabled={!isEdit}>-- Select Form --</option>
+              <option value="Tablet">Tablet</option>
+              <option value="Capsule">Capsule</option>
+            </select>
           </label>
 
           <label style={styles.label}>
             Expiry Date:
-          <input
-            type="date"
-            name="expiryDate"
-            onChange={handleInputChange}
-            value={editedMedicine.expiryDate}
-            placeholder="Enter Expiry Date"
-            style={styles.inputField}
-          />
+            <input
+              type="date"
+              name="expiryDate"
+              onChange={handleInputChange}
+              value={editedMedicine.expiryDate}
+              placeholder="Enter Expiry Date"
+              style={styles.inputField}
+            />
           </label>
 
           <label style={styles.label}>
@@ -267,17 +290,17 @@ const styles = {
     color: "#333",
     marginBottom: "8px",
     display: "block",
-    textAlign: "left", // Ensure the label aligns with the input field
+    textAlign: "left",
   },
   inputField: {
     fontSize: "16px",
     padding: "12px",
-    width: "100%", // Ensure it takes full available width
+    width: "100%",
     borderRadius: "8px",
     border: "1px solid #ddd",
     marginBottom: "20px",
     textAlign: "left",
-    boxSizing: "border-box", // Prevent overflow by including padding in width
+    boxSizing: "border-box",
   },
   stockContainer: {
     display: "flex",
@@ -288,7 +311,7 @@ const styles = {
   inputFieldStock: {
     fontSize: "16px",
     padding: "12px",
-    width: "80px", // Align with buttons
+    width: "80px",
     borderRadius: "8px",
     border: "1px solid #ddd",
     textAlign: "center",
