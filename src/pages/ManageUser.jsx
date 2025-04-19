@@ -13,12 +13,20 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { app } from "../firebase";
-import { FiPlus, FiEdit, FiTrash, FiUserX } from "react-icons/fi";
+import {
+  FiPlus,
+  FiEdit,
+  FiTrash,
+  FiUserX,
+  FiUpload,
+  FiTrash2,
+} from "react-icons/fi";
 import { FaUserCheck, FaEdit } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "../styles/ManageUser.css"; // Import the CSS file
 import { FiAlertCircle } from "react-icons/fi";
+import * as XLSX from "xlsx"; // Import xlsx library
 
 const ManageUser = () => {
   const [users, setUsers] = useState([]);
@@ -31,6 +39,7 @@ const ManageUser = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditable, setIsEditable] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [userForm, setUserForm] = useState({
     firstname: "",
     middleInitial: "",
@@ -77,6 +86,140 @@ const ManageUser = () => {
 
     fetchUsers();
   }, []);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+
+      // Read the Excel file
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const data = new Uint8Array(event.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+
+          // Get the first worksheet
+          const worksheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[worksheetName];
+
+          // Extract data from column B (starts from B2)
+          const employeeIDs = [];
+          let rowIndex = 2; // Start from B2
+          const maxRows = 10;
+          let rowCount = 0;
+
+          // Loop through cells B2, B3, etc.
+          while (rowCount < maxRows) {
+            const cellAddress = `B${rowIndex}`;
+            const cell = worksheet[cellAddress];
+
+            // If cell doesn't exist or is empty, stop the loop
+            if (!cell || !cell.v) break;
+
+            employeeIDs.push(String(cell.v).trim());
+            rowIndex++;
+            rowCount++;
+          }
+
+          if (employeeIDs.length === 0) {
+            toast.error("No employee IDs found in the Excel file");
+            setIsUploading(false);
+            return;
+          }
+          // Show warning if there might be more data
+          if (rowCount === maxRows) {
+            toast.warning(
+              `Only the first ${maxRows} employee IDs were processed. Additional rows were ignored.`
+            );
+          }
+
+          // Save the employee IDs to Firestore
+          await saveEmployeeIDsToFirestore(employeeIDs);
+        } catch (error) {
+          console.error("Error processing Excel file:", error);
+          toast.error("Failed to process Excel file");
+        } finally {
+          setIsUploading(false);
+        }
+      };
+
+      reader.onerror = () => {
+        toast.error("Failed to read the file");
+        setIsUploading(false);
+      };
+
+      reader.readAsArrayBuffer(file);
+    } catch (error) {
+      console.error("File upload error:", error);
+      toast.error("File upload failed");
+      setIsUploading(false);
+    }
+
+    // Reset the file input
+    e.target.value = null;
+  };
+
+  // Function to save employee IDs to Firestore
+  const saveEmployeeIDsToFirestore = async (employeeIDs) => {
+    const db = getFirestore(app);
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      for (const employeeID of employeeIDs) {
+        try {
+          // Create a new document with the employeeID as the document ID
+          const userRef = doc(db, "users", employeeID);
+
+          // Basic user data with just the employeeID field
+          const userData = {
+            employeeID: employeeID,
+            firstname: "",
+            middleInitial: "",
+            lastname: "",
+            role: "Employee", // Default role
+            department: "",
+            designation: "",
+            gender: "",
+            dob: null,
+            createdAt: serverTimestamp(),
+            status: "Active",
+          };
+
+          await setDoc(userRef, userData);
+          successCount++;
+        } catch (err) {
+          console.error(`Error adding employee ID ${employeeID}:`, err);
+          errorCount++;
+        }
+      }
+
+      // Refresh the user list
+      const snapshot = await getDocs(collection(db, "users"));
+      const updatedUsersList = snapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .sort((a, b) => a.lastname?.localeCompare(b.lastname));
+      setUsers(updatedUsersList);
+
+      // Show success/error message
+      if (errorCount === 0) {
+        toast.success(`Successfully added ${successCount} employee IDs`);
+      } else {
+        toast.warning(
+          `Added ${successCount} employee IDs with ${errorCount} errors`
+        );
+      }
+    } catch (error) {
+      console.error("Failed to save employee IDs:", error);
+      toast.error("Failed to save employee IDs to database");
+    }
+  };
 
   const filterUsers = (user) => {
     const searchLower = search.toLowerCase();
@@ -194,6 +337,45 @@ const ManageUser = () => {
     } catch (error) {
       console.error("Failed to delete user:", error);
       toast.error("Failed to delete user.");
+    }
+  };
+  const handleDeleteAll = async () => {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete all users except the one with employeeID 'T6N'? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    const db = getFirestore(app);
+    const usersCollection = collection(db, "users");
+
+    try {
+      const snapshot = await getDocs(usersCollection);
+      const usersToDelete = [];
+
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.employeeID !== "T6N") {
+          usersToDelete.push(docSnap.id);
+        }
+      });
+
+      // Delete each user except T6N
+      await Promise.all(
+        usersToDelete.map(async (userId) => {
+          await deleteDoc(doc(db, "users", userId));
+        })
+      );
+
+      toast.success("All users except T6N have been deleted.");
+
+      // Optionally update local state
+      setUsers((prevUsers) => prevUsers.filter((u) => u.employeeID === "T6N"));
+    } catch (error) {
+      console.error("Failed to delete users:", error);
+      toast.error("Failed to delete users.");
     }
   };
 
@@ -400,6 +582,22 @@ const ManageUser = () => {
             onChange={(e) => setSearch(e.target.value)}
           />
           <div className="button-container">
+            {/* Excel Upload Button */}
+            <label className="upload-button">
+              <FiUpload className="upload-icon" />
+              {isUploading ? "Uploading..." : "Upload Excel"}
+              <input
+                type="file"
+                accept=".xlsx, .xls"
+                onChange={handleFileUpload}
+                style={{ display: "none" }}
+                disabled={isUploading}
+              />
+            </label>
+            <button className="delete-all-button" onClick={handleDeleteAll}>
+              <FiTrash2 className="delete-icon" />
+              Delete All Employee
+            </button>
             <button className="add-user-button" onClick={() => handleAddUser()}>
               <FiPlus className="add-icon" />
               Add Employee
