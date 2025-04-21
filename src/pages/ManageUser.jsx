@@ -563,11 +563,25 @@ const ManageUser = () => {
         }
       });
 
-      await Promise.all(
-        usersToDelete.map(async (userId) => {
-          await deleteDoc(doc(db, "users", userId));
-        })
-      );
+      let batch = writeBatch(db);
+      let batchCount = 0;
+
+      for (let i = 0; i < usersToDelete.length; i++) {
+        const userRef = doc(db, "users", usersToDelete[i]);
+        batch.delete(userRef);
+        batchCount++;
+
+        if (batchCount === 400) {
+          await batch.commit();
+          batch = writeBatch(db);
+          batchCount = 0;
+        }
+      }
+
+      // Commit any remaining deletions
+      if (batchCount > 0) {
+        await batch.commit();
+      }
 
       toast.success("All users except T6N have been deleted.");
 
