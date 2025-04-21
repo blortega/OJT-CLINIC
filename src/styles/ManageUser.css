@@ -44,6 +44,30 @@
   margin-top: 0;
 }
 
+/* Upload Button */
+.upload-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background-color: #1e3a8a;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s;
+  font-size: 16px;
+  font-weight: bold;
+}
+.upload-button:hover {
+  background-color: #162d5e;
+}
+
+.upload-icon {
+  margin-right: 5px;
+  font-size: 20px;
+}
+
 /* Add User Button */
 .add-user-button {
   display: flex;
@@ -66,6 +90,25 @@
 
 .add-icon {
   font-size: 20px;
+}
+
+/* Delete All Button */
+.delete-all-button {
+  background-color: #ff4d4d;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 15px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.delete-all-button:hover {
+  background-color: #e60000; /* Optional hover effect */
 }
 
 /* Card */
@@ -118,6 +161,7 @@
 
 /* Table Cells */
 .table-cell {
+  color: #000;
   padding: 12px;
   text-align: center;
   max-width: none;

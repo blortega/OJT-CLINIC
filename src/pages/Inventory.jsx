@@ -10,6 +10,7 @@ import EditModal from "../components/EditMedicine";
 import AddMedicineForm from "../components/AddMedicineForm";
 import InventoryAlert from "../components/InventoryAlert";
 import FetchDosageForm from "../hooks/FetchDosageForm";
+import FetchComplaints from "../hooks/FetchComplaints";
 
 const formatDate = (date) => {
   // Return "N/A" if no date is provided
@@ -36,6 +37,7 @@ const formatDate = (date) => {
 
 const Inventory = () => {
   const [medicines, setMedicines] = useState([]);
+  const {complaints} = FetchComplaints();
   const [search, setSearch] = useState("");
   const [isHovered, setIsHovered] = useState(false);
   const [hoveredUser, setHoveredUser] = useState(null);
@@ -76,10 +78,17 @@ const Inventory = () => {
       return medicine.status && medicine.status.toLowerCase() === searchLower;
     }
 
+    const medicationString = Array.isArray(medicine.medication)
+    ? medicine.medication.join(" ")
+    : medicine.medication || "";
+
     const fieldToSearch = [
       medicine.name,
       medicine.dosage,
       medicine.dosageform,
+      medicine.type,
+      
+      medicationString,
       medicine.status,
       medicine.expiryDate ? medicine.expiryDate.toString() : "",
       medicine.createdAt ? medicine.createdAt.toDate().toLocaleDateString('en-US', { month: 'long', year: 'numeric', day: 'numeric' })
@@ -336,7 +345,17 @@ const Inventory = () => {
                   <td style={styles.tdata}>{medicine.dosage}</td>
                   <td style={styles.tdata}>{medicine.dosageform}</td>
                   <td style={styles.tdata}>{medicine.type}</td>
-                  <td style={styles.tdata}>{medicine.stock}</td>
+                  <td style={styles.tdata}>
+                    {Array.isArray(medicine.medication) && medicine.medication.length > 0 ? (
+                      <ul style={styles.bulletList}>
+                        {medicine.medication.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span style={{ fontStyle: "italic", color: "#888" }}>None</span>
+                    )}
+                  </td>
                   <td style={styles.tdata}>{medicine.stock}</td>
                   <td style={styles.tdata}>{getStockStatus(medicine.stock)}</td>
                   <td style={styles.tdata}>
@@ -562,6 +581,11 @@ const styles = {
     backgroundColor: "#fff",
     color: "#000",
     marginLeft: "10px",
+  },
+  bulletList: {
+    paddingLeft: "20px",
+    margin: 0,
+    listStyleType: "disc", // or "circle", "square"
   },
   
 
