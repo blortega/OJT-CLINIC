@@ -5,6 +5,16 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import FetchDosageForm from "../hooks/FetchDosageForm";
 import FetchMedicineType from "../hooks/FetchMedicineType";
+import FetchComplaints from "../hooks/FetchComplaints";
+import {
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Checkbox,
+  ListItemText,
+  OutlinedInput,
+} from "@mui/material";
 // You can still use this if needed elsewhere
 const formatDate = (date) => {
   const options = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -24,6 +34,8 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
 
   const { dosageForms } = FetchDosageForm();
   const { medicineType } = FetchMedicineType();
+  const { complaints } = FetchComplaints(); // Fetch complaints
+  const [selectedComplaints, setSelectedComplaints] = useState(medicine?.complaints || []); 
 
 
   const [editedMedicine, setEditedMedicine] = useState({
@@ -49,6 +61,7 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
         stock: medicine.stock || 0,
         expiryDate: formatForInput(medicine.expiryDate),
       });
+      setSelectedComplaints(medicine?.medication || []);
     }
   }, [medicine]);
 
@@ -132,6 +145,7 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
         status: stockStatus,
         updatedAt: serverTimestamp(),
         expiryDate: Timestamp.fromDate(expiry),
+        medication: selectedComplaints,
       });
 
 
@@ -140,6 +154,7 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
         ...editedMedicine,
         expiryDate: expiry,
         status: stockStatus,
+        medication: selectedComplaints,
       });
       toast.success("Medicine details updated successfully!");
       onClose();
@@ -157,6 +172,7 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
       stock: medicine?.stock || 0,
       expiryDate: formatForInput(medicine?.expiryDate),
     });
+    setSelectedComplaints(medicine?.medication || []); 
     onClose();
   };
 
@@ -210,7 +226,7 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
               onChange={handleInputChange}
               style={styles.inputField}
             >
-              <option value="">-- Select Form --</option>
+              <option value="" disabled hidden>-- Select Form --</option>
               {dosageForms.map((form) => (
                 <option key={form.id} value={form.name}>{form.name}</option>
               ))}
@@ -225,12 +241,32 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
               onChange={handleInputChange}
               style={styles.inputField}
             >
-              <option value="">-- Select Type --</option>
+              <option value="" disabled hidden>-- Select Type --</option>
               {medicineType.map((item) => (
                 <option key={item.id} value={item.name}>{item.name}</option>
               ))}
             </select>
           </label>
+
+          <div style={styles.inputGroup}>
+          <FormControl fullWidth style={{ marginBottom: "20px" }}>
+            <InputLabel>Indicated Medication/s</InputLabel>
+            <Select
+              multiple
+              value={selectedComplaints}
+              onChange={(e) => setSelectedComplaints(e.target.value)}
+              input={<OutlinedInput label="Indicated Complaints" />}
+              renderValue={(selected) => selected.join(', ')}
+            >
+              {complaints.map((complaint) => (
+                <MenuItem key={complaint.id} value={complaint.name}>
+                  <Checkbox checked={selectedComplaints.includes(complaint.name)} />
+                  <ListItemText primary={complaint.name} />
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </div>
 
           <label style={styles.label}>
             Expiry Date:

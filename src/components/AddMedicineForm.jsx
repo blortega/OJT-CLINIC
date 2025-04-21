@@ -5,12 +5,25 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import FetchDosageForm from "../hooks/FetchDosageForm";
 import FetchMedicineType from "../hooks/FetchMedicineType";
+import FetchComplaints from "../hooks/FetchComplaints";
+import {
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Checkbox,
+  ListItemText,
+  OutlinedInput,
+} from "@mui/material";
+
 const formatDate = (date) => {
   const options = { year: 'numeric', month: 'long', day: 'numeric' };
   return new Date(date).toLocaleDateString('en-US', options);
 };
 const AddMedicineForm = ({ onClose, onAddMedicine }) => {
     const { dosageForms, loading } = FetchDosageForm();
+    const {complaints} = FetchComplaints();
+    const [selectedComplaints, setSelectedComplaints] = useState([]);
     const [name, setName] = useState("");
     const [dosage, setDosage] = useState("");
     const [dosageform, setDosageForm] = useState("");
@@ -131,13 +144,13 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
             />
           </div>
           <div style={styles.inputGroup}>
-            <label>Form:</label>
+            <label>Dosage Form:</label>
             <select
               value={dosageform}
               onChange={(e) => setDosageForm(e.target.value)}
               style={styles.inputField}
             >
-              <option value="">-- Select Form --</option>
+              <option value="" disabled hidden>-- Select Form --</option>
               {dosageForms.map((form) => (
                 <option key={form.id} value={form.name}>{form.name}</option>
               ))}
@@ -150,13 +163,32 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
               onChange={(e) => setMedType(e.target.value)}
               style={styles.inputField}
             >
-              <option value="">-- Select Form --</option> 
+              <option value="" disabled hidden>-- Select Type --</option> 
               {medicineType.map((form) => ( 
                 <option key={form.id} value={form.name}>{form.name}</option>
               ))}
-              
             </select>
           </div>
+          <div style={styles.inputGroup}>
+          <FormControl fullWidth style={{ marginBottom: "20px" }}>
+  <InputLabel>Indicated Medication/s</InputLabel>
+  <Select
+    multiple
+    value={selectedComplaints}
+    onChange={(e) => setSelectedComplaints(e.target.value)}
+    input={<OutlinedInput label="Indicated Complaints" />}
+    renderValue={(selected) => selected.join(', ')}
+  >
+    {complaints.map((complaint) => (
+      <MenuItem key={complaint.id} value={complaint.name}>
+        <Checkbox checked={selectedComplaints.includes(complaint.name)} />
+        <ListItemText primary={complaint.name} />
+      </MenuItem>
+    ))}
+  </Select>
+</FormControl>
+</div>
+
           <div style={styles.inputGroup}>
             <label>Expiry Date:</label>
             <input
