@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import Sidebar from "../components/Sidebar";
 import { db } from "../firebase";
 
@@ -10,11 +10,64 @@ const RequestMedicine = () => {
   const [formVisible, setFormVisible] = useState(false);
   const [complaint, setComplaint] = useState("");
   const [medicine, setMedicine] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [complaints, setComplaints] = useState([]);
+  const [medicines, setMedicines] = useState([]);
+  const [filteredMedicines, setFilteredMedicines] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const bufferRef = useRef("");
   const timeoutRef = useRef(null);
 
-  const complaintOptions = ["Headache", "Fever", "Cough", "Stomachache"];
-  const medicineOptions = ["Paracetamol", "Ibuprofen", "Antacid", "Cough Syrup"];
+  // Fetch complaints and medicines from Firestore
+  useEffect(() => {
+    const fetchComplaints = async () => {
+      setIsLoading(true);
+      try {
+        const complaintsRef = collection(db, "complaints");
+        const querySnapshot = await getDocs(complaintsRef);
+        const complaintsData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setComplaints(complaintsData);
+      } catch (error) {
+        console.error("Error fetching complaints:", error);
+      }
+    };
+
+    const fetchMedicines = async () => {
+      try {
+        const medicinesRef = collection(db, "medicine");
+        const querySnapshot = await getDocs(medicinesRef);
+        const medicinesData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setMedicines(medicinesData);
+      } catch (error) {
+        console.error("Error fetching medicines:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchComplaints();
+    fetchMedicines();
+  }, []);
+
+  // Filter medicines when complaint changes
+  useEffect(() => {
+    if (complaint) {
+      const relevantMedicines = medicines.filter(med => 
+        med.medication && med.medication.includes(complaint)
+      );
+      setFilteredMedicines(relevantMedicines);
+    } else {
+      setFilteredMedicines([]);
+    }
+    // Reset selected medicine when complaint changes
+    setMedicine("");
+  }, [complaint, medicines]);
 
   const processScannedData = (data) => {
     return data.replace(/Shift/g, "").trim();
@@ -70,6 +123,51 @@ const RequestMedicine = () => {
     setFormVisible(true);
     setUserData(null);
     setScannedData("");
+    setComplaint("");
+    setMedicine("");
+  };
+
+  const handleSave = async () => {
+    if (!userData || !complaint || !medicine) {
+      alert("Please fill all required fields");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Save the medicine request to Firestore
+      const medicineRequestRef = collection(db, "medicineRequests");
+      await addDoc(medicineRequestRef, {
+        employeeID: scannedData,
+        firstName: userData.firstname,
+        lastName: userData.lastname,
+        department: userData.department,
+        complaint: complaint,
+        medicine: medicine,
+        status: "Completed",
+        timestamp: serverTimestamp()
+      });
+
+      alert("Medicine request submitted successfully!");
+      resetForm();
+    } catch (error) {
+      console.error("Error saving medicine request:", error);
+      alert("Error submitting request. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCancel = () => {
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setFormVisible(false);
+    setUserData(null);
+    setScannedData("");
+    setComplaint("");
+    setMedicine("");
   };
 
   return (
@@ -112,39 +210,56 @@ const RequestMedicine = () => {
               )}
 
               {userData && (
-                <div style={styles.dropdownContainer}>
-                  <label>
-                    Complaint:
-                    <select
-                      value={complaint}
-                      onChange={(e) => setComplaint(e.target.value)}
-                      style={styles.dropdown}
-                    >
-                      <option value="">Select Complaint</option>
-                      {complaintOptions.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                <>
+                  <div style={styles.dropdownContainer}>
+                    <label>
+                      Complaint:
+                      <select
+                        value={complaint}
+                        onChange={(e) => setComplaint(e.target.value)}
+                        style={styles.dropdown}
+                        disabled={isLoading}
+                      >
+                        <option value="">Select Complaint</option>
+                        {complaints.map((item) => (
+                          <option key={item.id} value={item.name}>
+                            {item.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
 
-                  <label>
-                    Medicine:
-                    <select
-                      value={medicine}
-                      onChange={(e) => setMedicine(e.target.value)}
-                      style={styles.dropdown}
+                    <label>
+                      Medicine:
+                      <select
+                        value={medicine}
+                        onChange={(e) => setMedicine(e.target.value)}
+                        style={styles.dropdown}
+                        disabled={!complaint || isLoading}
+                      >
+                        <option value="">Select Medicine</option>
+                        {filteredMedicines.map((item) => (
+                          <option key={item.id} value={item.name}>
+                            {item.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <div style={styles.buttonContainer}>
+                    <button 
+                      style={styles.saveButton} 
+                      onClick={handleSave}
+                      disabled={!userData || !complaint || !medicine || isSubmitting}
                     >
-                      <option value="">Select Medicine</option>
-                      {medicineOptions.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
+                      {isSubmitting ? "Saving..." : "Save Request"}
+                    </button>
+                    <button style={styles.cancelButton} onClick={handleCancel}>
+                      Cancel
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </>
@@ -214,6 +329,30 @@ const styles = {
     marginTop: "5px",
     marginBottom: "15px",
     fontSize: "16px",
+  },
+  buttonContainer: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginTop: "20px",
+    gap: "10px",
+  },
+  saveButton: {
+    padding: "10px 20px",
+    backgroundColor: "#10b981",
+    color: "white",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    flex: "1",
+  },
+  cancelButton: {
+    padding: "10px 20px",
+    backgroundColor: "#ef4444",
+    color: "white",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    flex: "1",
   },
 };
 
