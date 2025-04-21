@@ -11,6 +11,7 @@ import {
   Timestamp,
   serverTimestamp,
   setDoc,
+  writeBatch,
 } from "firebase/firestore";
 import { app } from "../firebase";
 import {
@@ -290,7 +291,7 @@ const ManageUser = () => {
         users.map((user) => user.employeeID.toUpperCase())
       );
 
-      // Always keep admin ID in the safe list
+      // Add admin employeeID to the set to prevent deletion
       importedEmployeeIDs.add("T6N");
 
       const existingUsersSnapshot = await getDocs(collection(db, "users"));
@@ -313,6 +314,9 @@ const ManageUser = () => {
         }
       }
 
+      let batch = writeBatch(db);
+      let batchCount = 0;
+
       for (const user of users) {
         try {
           const userRef = doc(db, "users", user.employeeID);
@@ -331,12 +335,24 @@ const ManageUser = () => {
             status: "Active",
           };
 
-          await setDoc(userRef, userData);
-          successCount++;
+          batch.set(userRef, userData);
+          batchCount++;
+
+          if (batchCount >= 400) {
+            await batch.commit();
+            successCount += batchCount;
+            batch = writeBatch(db);
+            batchCount = 0;
+          }
         } catch (err) {
           console.error(`Error adding employee ${user.employeeID}:`, err);
           errorCount++;
         }
+      }
+
+      if (batchCount > 0) {
+        await batch.commit();
+        successCount += batchCount;
       }
 
       const snapshot = await getDocs(collection(db, "users"));
