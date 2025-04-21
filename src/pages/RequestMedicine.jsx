@@ -7,6 +7,9 @@ import {
   where,
   getDocs,
   addDoc,
+  doc,
+  getDoc,
+  updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
 import Sidebar from "../components/Sidebar";
@@ -20,6 +23,8 @@ const RequestMedicine = () => {
   const [formVisible, setFormVisible] = useState(false);
   const [complaint, setComplaint] = useState("");
   const [medicine, setMedicine] = useState("");
+  const [medicineId, setMedicineId] = useState("");
+  const [medicineStock, setMedicineStock] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [complaints, setComplaints] = useState([]);
   const [medicines, setMedicines] = useState([]);
@@ -77,7 +82,20 @@ const RequestMedicine = () => {
     }
     // Reset selected medicine when complaint changes
     setMedicine("");
+    setMedicineId("");
+    setMedicineStock(0);
   }, [complaint, medicines]);
+
+  // Update medicine stock info when medicine is selected
+  useEffect(() => {
+    if (medicine) {
+      const selectedMedicine = filteredMedicines.find(med => med.name === medicine);
+      if (selectedMedicine) {
+        setMedicineId(selectedMedicine.id);
+        setMedicineStock(selectedMedicine.stock || 0);
+      }
+    }
+  }, [medicine, filteredMedicines]);
 
   const processScannedData = (data) => {
     return data.replace(/Shift/g, "").trim();
@@ -136,9 +154,51 @@ const RequestMedicine = () => {
     resetUserSelection();
   };
 
+  const updateMedicineStock = async () => {
+    if (!medicineId) return false;
+    
+    try {
+      // Get the current stock to double-check
+      const medicineRef = doc(db, "medicine", medicineId);
+      const medicineDoc = await getDoc(medicineRef);
+      
+      if (!medicineDoc.exists()) {
+        toast.error("Medicine not found in database");
+        return false;
+      }
+      
+      const currentStock = medicineDoc.data().stock || 0;
+      
+      // Check if there's enough stock
+      if (currentStock <= 0) {
+        toast.error("This medicine is out of stock");
+        return false;
+      }
+      
+      // Update the stock by decrementing it by 1
+      const newStock = currentStock - 1;
+      await updateDoc(medicineRef, {
+        stock: newStock
+      });
+      
+      console.log(`Medicine stock updated: ${currentStock} -> ${newStock}`);
+      return true;
+      
+    } catch (error) {
+      console.error("Error updating medicine stock:", error);
+      toast.error("Failed to update medicine stock");
+      return false;
+    }
+  };
+
   const handleSave = async () => {
     if (!userData || !complaint || !medicine) {
       toast.warn("Please fill all required fields");
+      return;
+    }
+
+    if (medicineStock <= 0) {
+      toast.error("This medicine is out of stock");
       return;
     }
 
@@ -153,6 +213,14 @@ const RequestMedicine = () => {
         return;
       }
       
+      // First update the stock
+      const stockUpdated = await updateMedicineStock();
+      
+      if (!stockUpdated) {
+        setIsSubmitting(false);
+        return;
+      }
+      
       // Save the medicine request to Firestore
       const medicineRequestRef = collection(db, "medicineRequests");
       await addDoc(medicineRequestRef, {
@@ -162,6 +230,8 @@ const RequestMedicine = () => {
         department: userData.department,
         complaint: complaint,
         medicine: medicine,
+        medicineId: medicineId,
+        quantityDispensed: 1,
         status: "Completed",
         timestamp: serverTimestamp(),
       });
@@ -177,6 +247,15 @@ const RequestMedicine = () => {
       timeoutRef.current = setTimeout(() => {
         setIsScannerActive(false);
       }, 5000);
+      
+      // Update the medicines list to reflect new stock levels
+      const medicinesRef = collection(db, "medicine");
+      const querySnapshot = await getDocs(medicinesRef);
+      const medicinesData = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setMedicines(medicinesData);
       
     } catch (error) {
       console.error("Error saving medicine request:", error);
@@ -202,6 +281,8 @@ const RequestMedicine = () => {
     setScannedData("");
     setComplaint("");
     setMedicine("");
+    setMedicineId("");
+    setMedicineStock(0);
     bufferRef.current = "";
   };
 
@@ -286,11 +367,24 @@ const RequestMedicine = () => {
                         <option value="" disabled hidden>Select Medicine</option>
                         {filteredMedicines.map((item) => (
                           <option key={item.id} value={item.name}>
-                            {item.name}
+                            {item.name} {item.stock > 0 ? `(Stock: ${item.stock})` : "(Out of Stock)"}
                           </option>
                         ))}
                       </select>
                     </label>
+
+                    {medicine && (
+                      <div style={styles.stockInfo}>
+                        <p style={{
+                          color: medicineStock > 5 ? "green" : medicineStock > 0 ? "orange" : "red",
+                          fontWeight: "bold"
+                        }}>
+                          Current Stock: {medicineStock}
+                          {medicineStock <= 5 && medicineStock > 0 && " (Low Stock)"}
+                          {medicineStock <= 0 && " (Out of Stock)"}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <div style={styles.buttonContainer}>
@@ -298,7 +392,7 @@ const RequestMedicine = () => {
                       style={styles.saveButton}
                       onClick={handleSave}
                       disabled={
-                        !userData || !complaint || !medicine || isSubmitting
+                        !userData || !complaint || !medicine || isSubmitting || medicineStock <= 0
                       }
                     >
                       {isSubmitting ? "Saving..." : "Save Request"}
@@ -380,6 +474,12 @@ const styles = {
     marginTop: "5px",
     marginBottom: "15px",
     fontSize: "16px",
+  },
+  stockInfo: {
+    marginBottom: "15px",
+    padding: "8px",
+    backgroundColor: "#f0f0f0",
+    borderRadius: "4px",
   },
   buttonContainer: {
     display: "flex",
