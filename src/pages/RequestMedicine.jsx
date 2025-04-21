@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import {
   collection,
   query,
@@ -9,6 +11,7 @@ import {
 } from "firebase/firestore";
 import Sidebar from "../components/Sidebar";
 import { db } from "../firebase";
+
 
 const RequestMedicine = () => {
   const [scannedData, setScannedData] = useState("");
@@ -92,9 +95,11 @@ const RequestMedicine = () => {
       } else {
         console.log("No user found with this employeeID.");
         setUserData(null);
+        toast.error("No user found with this Employee ID");
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
+      toast.error("Error fetching user data");
     }
   };
 
@@ -128,20 +133,26 @@ const RequestMedicine = () => {
 
   const handleRequestClick = () => {
     setFormVisible(true);
-    setUserData(null);
-    setScannedData("");
-    setComplaint("");
-    setMedicine("");
+    resetUserSelection();
   };
 
   const handleSave = async () => {
     if (!userData || !complaint || !medicine) {
-      alert("Please fill all required fields");
+      toast.warn("Please fill all required fields");
       return;
     }
 
     setIsSubmitting(true);
     try {
+      if(
+        !window.confirm(
+          "Proceed?"
+        )
+      ) {
+        setIsSubmitting(false);
+        return;
+      }
+      
       // Save the medicine request to Firestore
       const medicineRequestRef = collection(db, "medicineRequests");
       await addDoc(medicineRequestRef, {
@@ -155,11 +166,21 @@ const RequestMedicine = () => {
         timestamp: serverTimestamp(),
       });
 
-      alert("Medicine request submitted successfully!");
-      resetForm();
+      toast.success("Medicine request submitted successfully!");
+      
+      // Reset form for next scan but keep form visible
+      resetUserSelection();
+      
+      // Set scanner to active state again for the next scan
+      setIsScannerActive(true);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => {
+        setIsScannerActive(false);
+      }, 5000);
+      
     } catch (error) {
       console.error("Error saving medicine request:", error);
-      alert("Error submitting request. Please try again.");
+      toast.error("Error submitting request. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -169,16 +190,24 @@ const RequestMedicine = () => {
     resetForm();
   };
 
+  // Reset everything
   const resetForm = () => {
     setFormVisible(false);
+    resetUserSelection();
+  };
+
+  // Reset user-related selections but keep form visible
+  const resetUserSelection = () => {
     setUserData(null);
     setScannedData("");
     setComplaint("");
     setMedicine("");
+    bufferRef.current = "";
   };
 
   return (
     <Sidebar>
+      <ToastContainer position="top-right" autoClose={3000} />
       <div style={styles.container}>
         <h1 style={styles.heading}>Clinic Medicine Request</h1>
 
@@ -237,7 +266,7 @@ const RequestMedicine = () => {
                         style={styles.dropdown}
                         disabled={isLoading}
                       >
-                        <option value="">Select Complaint</option>
+                        <option value="" disabled hidden>Select Complaint</option>
                         {complaints.map((item) => (
                           <option key={item.id} value={item.name}>
                             {item.name}
@@ -254,7 +283,7 @@ const RequestMedicine = () => {
                         style={styles.dropdown}
                         disabled={!complaint || isLoading}
                       >
-                        <option value="">Select Medicine</option>
+                        <option value="" disabled hidden>Select Medicine</option>
                         {filteredMedicines.map((item) => (
                           <option key={item.id} value={item.name}>
                             {item.name}
@@ -322,6 +351,7 @@ const styles = {
   statusText: {
     fontSize: "16px",
     fontWeight: "500",
+    color: "black",
   },
   resultBox: {
     backgroundColor: "#f9f9f9",
@@ -331,6 +361,7 @@ const styles = {
     maxWidth: "600px",
     margin: "0 auto",
     marginTop: "20px",
+    color: "black",
   },
   userInfo: {
     textAlign: "left",
