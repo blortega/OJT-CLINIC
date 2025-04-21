@@ -78,10 +78,17 @@ const Inventory = () => {
       return medicine.status && medicine.status.toLowerCase() === searchLower;
     }
 
+    const medicationString = Array.isArray(medicine.medication)
+    ? medicine.medication.join(" ")
+    : medicine.medication || "";
+
     const fieldToSearch = [
       medicine.name,
       medicine.dosage,
       medicine.dosageform,
+      medicine.type,
+      
+      medicationString,
       medicine.status,
       medicine.expiryDate ? medicine.expiryDate.toString() : "",
       medicine.createdAt ? medicine.createdAt.toDate().toLocaleDateString('en-US', { month: 'long', year: 'numeric', day: 'numeric' })

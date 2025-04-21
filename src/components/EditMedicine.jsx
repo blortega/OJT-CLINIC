@@ -226,7 +226,7 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
               onChange={handleInputChange}
               style={styles.inputField}
             >
-              <option value="">-- Select Form --</option>
+              <option value="" disabled hidden>-- Select Form --</option>
               {dosageForms.map((form) => (
                 <option key={form.id} value={form.name}>{form.name}</option>
               ))}
@@ -241,7 +241,7 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
               onChange={handleInputChange}
               style={styles.inputField}
             >
-              <option value="">-- Select Type --</option>
+              <option value="" disabled hidden>-- Select Type --</option>
               {medicineType.map((item) => (
                 <option key={item.id} value={item.name}>{item.name}</option>
               ))}
