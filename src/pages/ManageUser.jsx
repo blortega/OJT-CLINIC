@@ -24,9 +24,9 @@ import {
 import { FaUserCheck, FaEdit } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import "../styles/ManageUser.css"; // Import the CSS file
+import "../styles/ManageUser.css";
 import { FiAlertCircle } from "react-icons/fi";
-import * as XLSX from "xlsx"; // Import xlsx library
+import * as XLSX from "xlsx";
 
 const ManageUser = () => {
   const [users, setUsers] = useState([]);
@@ -64,6 +64,10 @@ const ManageUser = () => {
   });
 
   useEffect(() => {
+    /**
+     * Fetches all users from Firestore database
+     * Sorts users alphabetically by last name
+     */
     const fetchUsers = async () => {
       try {
         setLoading(true);
@@ -87,6 +91,11 @@ const ManageUser = () => {
     fetchUsers();
   }, []);
 
+  /**
+   * Handles Excel file upload for bulk user import
+   * Processes first 10 rows of employee data from specific columns
+   * Extracts employee details and saves to Firestore
+   */
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -94,50 +103,169 @@ const ManageUser = () => {
     try {
       setIsUploading(true);
 
-      // Read the Excel file
       const reader = new FileReader();
       reader.onload = async (event) => {
         try {
           const data = new Uint8Array(event.target.result);
           const workbook = XLSX.read(data, { type: "array" });
 
-          // Get the first worksheet
           const worksheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[worksheetName];
 
-          // Extract data from column B (starts from B2)
-          const employeeIDs = [];
-          let rowIndex = 2; // Start from B2
+          const users = [];
+          let rowIndex = 2;
           const maxRows = 10;
           let rowCount = 0;
 
-          // Loop through cells B2, B3, etc.
           while (rowCount < maxRows) {
-            const cellAddress = `B${rowIndex}`;
-            const cell = worksheet[cellAddress];
+            const employeeIDCell = worksheet[`B${rowIndex}`];
+            const nameCell = worksheet[`C${rowIndex}`];
+            const dobCell = worksheet[`D${rowIndex}`];
+            const genderCell = worksheet[`E${rowIndex}`];
+            const designationCell = worksheet[`M${rowIndex}`];
+            const departmentCell = worksheet[`N${rowIndex}`];
 
-            // If cell doesn't exist or is empty, stop the loop
-            if (!cell || !cell.v) break;
+            if (!employeeIDCell || !employeeIDCell.v) break;
 
-            employeeIDs.push(String(cell.v).trim());
+            const employeeID = String(employeeIDCell.v).trim();
+
+            let firstname = "";
+            let middleInitial = "";
+            let lastname = "";
+
+            if (nameCell && nameCell.v) {
+              const fullName = String(nameCell.v).trim();
+
+              /**
+               * Parse name in format "lastname, firstname middleInitial."
+               */
+              if (fullName.includes(",")) {
+                const [lastPart, firstPart] = fullName
+                  .split(",")
+                  .map((part) => part.trim());
+
+                lastname = lastPart;
+
+                const firstNameParts = firstPart.split(" ");
+
+                if (firstNameParts.length >= 1) {
+                  firstname = firstNameParts[0];
+
+                  const lastPartIndex = firstNameParts.length - 1;
+                  const potentialMiddleInitial = firstNameParts[lastPartIndex];
+
+                  if (
+                    potentialMiddleInitial &&
+                    potentialMiddleInitial.endsWith(".")
+                  ) {
+                    middleInitial = potentialMiddleInitial.replace(".", "");
+
+                    if (firstNameParts.length > 1) {
+                      firstname = firstNameParts
+                        .slice(0, lastPartIndex)
+                        .join(" ");
+                    }
+                  } else if (firstNameParts.length > 1) {
+                    firstname = firstNameParts[0];
+                    middleInitial = firstNameParts[1].charAt(0);
+                  }
+                }
+              } else {
+                lastname = fullName;
+              }
+            }
+
+            /**
+             * Process Date of Birth from Excel
+             * Handles both Excel date serial numbers and string formats
+             */
+            let dob = null;
+            if (dobCell && dobCell.v) {
+              if (typeof dobCell.v === "number") {
+                dob = new Date(Math.round((dobCell.v - 25569) * 86400 * 1000));
+              } else {
+                const dobString = String(dobCell.v).trim();
+                const dobParts = dobString.split("/");
+
+                if (dobParts.length === 3) {
+                  const month = parseInt(dobParts[0], 10) - 1;
+                  const day = parseInt(dobParts[1], 10);
+                  const year = parseInt(dobParts[2], 10);
+
+                  dob = new Date(year, month, day);
+
+                  if (isNaN(dob.getTime())) {
+                    dob = null;
+                  }
+                }
+              }
+            }
+
+            /**
+             * Process Gender - normalize to "Male" or "Female"
+             */
+            let gender = "";
+            if (genderCell && genderCell.v) {
+              const genderValue = String(genderCell.v).trim().toLowerCase();
+              gender =
+                genderValue.charAt(0).toUpperCase() + genderValue.slice(1);
+
+              if (gender !== "Male" && gender !== "Female") {
+                if (
+                  gender.startsWith("M") ||
+                  gender === "M" ||
+                  gender === "m"
+                ) {
+                  gender = "Male";
+                } else if (
+                  gender.startsWith("F") ||
+                  gender === "F" ||
+                  gender === "f"
+                ) {
+                  gender = "Female";
+                }
+              }
+            }
+
+            let designation = "";
+            if (designationCell && designationCell.v) {
+              designation = String(designationCell.v).trim().toUpperCase();
+            }
+
+            let department = "";
+            if (departmentCell && departmentCell.v) {
+              department = String(departmentCell.v).trim();
+              department = capitalizeWords(department);
+            }
+
+            users.push({
+              employeeID,
+              firstname: firstname.toUpperCase(),
+              middleInitial: middleInitial.toUpperCase(),
+              lastname: lastname.toUpperCase(),
+              dob,
+              gender,
+              designation,
+              department,
+            });
+
             rowIndex++;
             rowCount++;
           }
 
-          if (employeeIDs.length === 0) {
-            toast.error("No employee IDs found in the Excel file");
+          if (users.length === 0) {
+            toast.error("No employee data found in the Excel file");
             setIsUploading(false);
             return;
           }
-          // Show warning if there might be more data
+
           if (rowCount === maxRows) {
             toast.warning(
-              `Only the first ${maxRows} employee IDs were processed. Additional rows were ignored.`
+              `Only the first ${maxRows} employees were processed. Additional rows were ignored.`
             );
           }
 
-          // Save the employee IDs to Firestore
-          await saveEmployeeIDsToFirestore(employeeIDs);
+          await saveEmployeesToFirestore(users);
         } catch (error) {
           console.error("Error processing Excel file:", error);
           toast.error("Failed to process Excel file");
@@ -158,33 +286,34 @@ const ManageUser = () => {
       setIsUploading(false);
     }
 
-    // Reset the file input
     e.target.value = null;
   };
 
-  // Function to save employee IDs to Firestore
-  const saveEmployeeIDsToFirestore = async (employeeIDs) => {
+  /**
+   * Saves imported employee data to Firestore
+   * Tracks successful and failed operations
+   * Updates UI with results
+   */
+  const saveEmployeesToFirestore = async (users) => {
     const db = getFirestore(app);
     let successCount = 0;
     let errorCount = 0;
 
     try {
-      for (const employeeID of employeeIDs) {
+      for (const user of users) {
         try {
-          // Create a new document with the employeeID as the document ID
-          const userRef = doc(db, "users", employeeID);
+          const userRef = doc(db, "users", user.employeeID);
 
-          // Basic user data with just the employeeID field
           const userData = {
-            employeeID: employeeID,
-            firstname: "",
-            middleInitial: "",
-            lastname: "",
-            role: "Employee", // Default role
-            department: "",
-            designation: "",
-            gender: "",
-            dob: null,
+            employeeID: user.employeeID,
+            firstname: user.firstname,
+            middleInitial: user.middleInitial,
+            lastname: user.lastname,
+            designation: user.designation,
+            department: user.department,
+            role: "Employee",
+            gender: user.gender,
+            dob: user.dob ? Timestamp.fromDate(user.dob) : null,
             createdAt: serverTimestamp(),
             status: "Active",
           };
@@ -192,12 +321,11 @@ const ManageUser = () => {
           await setDoc(userRef, userData);
           successCount++;
         } catch (err) {
-          console.error(`Error adding employee ID ${employeeID}:`, err);
+          console.error(`Error adding employee ${user.employeeID}:`, err);
           errorCount++;
         }
       }
 
-      // Refresh the user list
       const snapshot = await getDocs(collection(db, "users"));
       const updatedUsersList = snapshot.docs
         .map((doc) => ({
@@ -207,20 +335,24 @@ const ManageUser = () => {
         .sort((a, b) => a.lastname?.localeCompare(b.lastname));
       setUsers(updatedUsersList);
 
-      // Show success/error message
       if (errorCount === 0) {
-        toast.success(`Successfully added ${successCount} employee IDs`);
+        toast.success(`Successfully added ${successCount} employees`);
       } else {
         toast.warning(
-          `Added ${successCount} employee IDs with ${errorCount} errors`
+          `Added ${successCount} employees with ${errorCount} errors`
         );
       }
     } catch (error) {
-      console.error("Failed to save employee IDs:", error);
-      toast.error("Failed to save employee IDs to database");
+      console.error("Failed to save employee data:", error);
+      toast.error("Failed to save employee data to database");
     }
   };
 
+  /**
+   * Filters users based on search input
+   * Searches across multiple fields including name, role, department, etc.
+   * Special case handling for searching by gender
+   */
   const filterUsers = (user) => {
     const searchLower = search.toLowerCase();
 
@@ -247,6 +379,10 @@ const ManageUser = () => {
     );
   };
 
+  /**
+   * Prepares the modal for adding a new user
+   * Resets form fields and sets modal state
+   */
   const handleAddUser = () => {
     setCurrentUser(null);
     setIsEditable(true);
@@ -263,6 +399,10 @@ const ManageUser = () => {
     setModalVisible(true);
   };
 
+  /**
+   * Prepares the modal for editing an existing user
+   * Populates form with user data
+   */
   const handleEdit = (user) => {
     setCurrentUser(user);
     setIsEditable(false);
@@ -281,6 +421,10 @@ const ManageUser = () => {
     setModalVisible(true);
   };
 
+  /**
+   * Toggles user status between Active and Suspended
+   * Updates Firestore and refreshes user list
+   */
   const handleSuspend = async (user) => {
     if (
       !window.confirm(
@@ -317,6 +461,10 @@ const ManageUser = () => {
     }
   };
 
+  /**
+   * Deletes a single user from Firestore
+   * Confirms with user before deletion
+   */
   const handleDelete = async (user) => {
     if (
       !window.confirm(
@@ -339,6 +487,11 @@ const ManageUser = () => {
       toast.error("Failed to delete user.");
     }
   };
+
+  /**
+   * Deletes all users except the one with employeeID 'T6N'
+   * Used for admin reset functionality
+   */
   const handleDeleteAll = async () => {
     if (
       !window.confirm(
@@ -362,7 +515,6 @@ const ManageUser = () => {
         }
       });
 
-      // Delete each user except T6N
       await Promise.all(
         usersToDelete.map(async (userId) => {
           await deleteDoc(doc(db, "users", userId));
@@ -371,7 +523,6 @@ const ManageUser = () => {
 
       toast.success("All users except T6N have been deleted.");
 
-      // Optionally update local state
       setUsers((prevUsers) => prevUsers.filter((u) => u.employeeID === "T6N"));
     } catch (error) {
       console.error("Failed to delete users:", error);
@@ -379,6 +530,10 @@ const ManageUser = () => {
     }
   };
 
+  /**
+   * Helper function to capitalize each word in a string
+   * Used for formatting department names consistently
+   */
   const capitalizeWords = (str) => {
     return str
       .toLowerCase()
@@ -387,6 +542,10 @@ const ManageUser = () => {
       .join(" ");
   };
 
+  /**
+   * Handles form field changes with appropriate formatting
+   * Applies specific formatting rules based on field type
+   */
   const handleFormChange = (e) => {
     const { name, value } = e.target;
 
@@ -420,6 +579,11 @@ const ManageUser = () => {
     }
   };
 
+  /**
+   * Validates user form before saving
+   * Checks required fields and data format
+   * Prevents duplicate employee IDs
+   */
   const validateForm = () => {
     const errors = {};
     let isValid = true;
@@ -484,6 +648,11 @@ const ManageUser = () => {
     return isValid;
   };
 
+  /**
+   * Saves user data to Firestore
+   * Handles both new user creation and existing user updates
+   * Validates form before saving
+   */
   const handleSaveUser = async () => {
     if (!validateForm()) {
       return;
@@ -492,7 +661,6 @@ const ManageUser = () => {
     const db = getFirestore(app);
     try {
       if (currentUser) {
-        // Update existing user
         const userRef = doc(db, "users", currentUser.id);
         await updateDoc(userRef, {
           firstname: userForm.firstname
@@ -510,7 +678,6 @@ const ManageUser = () => {
 
         toast.success("User updated successfully!");
       } else {
-        // Add new user with employeeID as document ID
         const newUserData = {
           firstname: userForm.firstname
             .toUpperCase()
@@ -528,7 +695,6 @@ const ManageUser = () => {
           status: "Active",
         };
 
-        // Use employeeID as the document ID
         const userRef = doc(db, "users", userForm.employeeID);
         await setDoc(userRef, newUserData);
 
@@ -553,7 +719,6 @@ const ManageUser = () => {
       setCurrentUser(null);
       setIsEditable(false);
 
-      // Refresh the user list
       const snapshot = await getDocs(collection(db, "users"));
       const updatedUsersList = snapshot.docs
         .map((doc) => ({
