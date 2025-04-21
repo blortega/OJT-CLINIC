@@ -41,6 +41,7 @@ const ManageUser = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isEditable, setIsEditable] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [userForm, setUserForm] = useState({
     firstname: "",
     middleInitial: "",
@@ -548,7 +549,7 @@ const ManageUser = () => {
     ) {
       return;
     }
-
+    setIsDeleting(true);
     const db = getFirestore(app);
     const usersCollection = collection(db, "users");
 
@@ -589,6 +590,8 @@ const ManageUser = () => {
     } catch (error) {
       console.error("Failed to delete users:", error);
       toast.error("Failed to delete users.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -825,10 +828,15 @@ const ManageUser = () => {
                 disabled={isUploading}
               />
             </label>
-            <button className="delete-all-button" onClick={handleDeleteAll}>
+            <button
+              className="delete-all-button"
+              onClick={handleDeleteAll}
+              disabled={isDeleting}
+            >
               <FiTrash2 className="delete-icon" />
-              Delete All Employee
+              {isDeleting ? "Deleting..." : "Delete All Employee"}
             </button>
+
             <button className="add-user-button" onClick={() => handleAddUser()}>
               <FiPlus className="add-icon" />
               Add Employee
