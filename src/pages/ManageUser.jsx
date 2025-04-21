@@ -114,20 +114,20 @@ const ManageUser = () => {
 
           const users = [];
           let rowIndex = 2;
-          const maxRows = 10;
           let rowCount = 0;
 
-          while (rowCount < maxRows) {
+          while (true) {
             const employeeIDCell = worksheet[`B${rowIndex}`];
+
+            // Break if no employee ID is found (end of data)
+            if (!employeeIDCell || !employeeIDCell.v) break;
+
+            const employeeID = String(employeeIDCell.v).trim();
             const nameCell = worksheet[`C${rowIndex}`];
             const dobCell = worksheet[`D${rowIndex}`];
             const genderCell = worksheet[`E${rowIndex}`];
             const designationCell = worksheet[`M${rowIndex}`];
             const departmentCell = worksheet[`N${rowIndex}`];
-
-            if (!employeeIDCell || !employeeIDCell.v) break;
-
-            const employeeID = String(employeeIDCell.v).trim();
 
             let firstname = "";
             let middleInitial = "";
@@ -136,9 +136,6 @@ const ManageUser = () => {
             if (nameCell && nameCell.v) {
               const fullName = String(nameCell.v).trim();
 
-              /**
-               * Parse name in format "lastname, firstname middleInitial."
-               */
               if (fullName.includes(",")) {
                 const [lastPart, firstPart] = fullName
                   .split(",")
@@ -175,10 +172,6 @@ const ManageUser = () => {
               }
             }
 
-            /**
-             * Process Date of Birth from Excel
-             * Handles both Excel date serial numbers and string formats
-             */
             let dob = null;
             if (dobCell && dobCell.v) {
               if (typeof dobCell.v === "number") {
@@ -201,9 +194,6 @@ const ManageUser = () => {
               }
             }
 
-            /**
-             * Process Gender - normalize to "Male" or "Female"
-             */
             let gender = "";
             if (genderCell && genderCell.v) {
               const genderValue = String(genderCell.v).trim().toLowerCase();
@@ -259,12 +249,6 @@ const ManageUser = () => {
             return;
           }
 
-          if (rowCount === maxRows) {
-            toast.warning(
-              `Only the first ${maxRows} employees were processed. Additional rows were ignored.`
-            );
-          }
-
           await saveEmployeesToFirestore(users);
         } catch (error) {
           console.error("Error processing Excel file:", error);
@@ -291,15 +275,44 @@ const ManageUser = () => {
 
   /**
    * Saves imported employee data to Firestore
-   * Tracks successful and failed operations
+   * Removes employees not in the imported list (except admin)
    * Updates UI with results
    */
   const saveEmployeesToFirestore = async (users) => {
     const db = getFirestore(app);
     let successCount = 0;
     let errorCount = 0;
+    let removedCount = 0;
 
     try {
+      // Create a set of employeeIDs from the Excel file for quick lookup
+      const importedEmployeeIDs = new Set(
+        users.map((user) => user.employeeID.toUpperCase())
+      );
+
+      // Always keep admin ID in the safe list
+      importedEmployeeIDs.add("T6N");
+
+      const existingUsersSnapshot = await getDocs(collection(db, "users"));
+      const existingUsers = existingUsersSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        employeeID: doc.data().employeeID,
+      }));
+
+      const usersToDelete = existingUsers.filter(
+        (user) => !importedEmployeeIDs.has(user.employeeID?.toUpperCase())
+      );
+
+      for (const user of usersToDelete) {
+        try {
+          await deleteDoc(doc(db, "users", user.id));
+          removedCount++;
+        } catch (error) {
+          console.error(`Error removing employee ${user.id}:`, error);
+          errorCount++;
+        }
+      }
+
       for (const user of users) {
         try {
           const userRef = doc(db, "users", user.employeeID);
@@ -336,10 +349,12 @@ const ManageUser = () => {
       setUsers(updatedUsersList);
 
       if (errorCount === 0) {
-        toast.success(`Successfully added ${successCount} employees`);
+        toast.success(
+          `Successfully processed ${successCount} employees and removed ${removedCount} employees not in the uploaded file.`
+        );
       } else {
         toast.warning(
-          `Added ${successCount} employees with ${errorCount} errors`
+          `Added ${successCount} employees, removed ${removedCount} employees, with ${errorCount} errors`
         );
       }
     } catch (error) {
