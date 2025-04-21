@@ -1,5 +1,12 @@
 import React, { useEffect, useState, useRef } from "react";
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  addDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import Sidebar from "../components/Sidebar";
 import { db } from "../firebase";
 
@@ -25,9 +32,9 @@ const RequestMedicine = () => {
       try {
         const complaintsRef = collection(db, "complaints");
         const querySnapshot = await getDocs(complaintsRef);
-        const complaintsData = querySnapshot.docs.map(doc => ({
+        const complaintsData = querySnapshot.docs.map((doc) => ({
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
         }));
         setComplaints(complaintsData);
       } catch (error) {
@@ -39,9 +46,9 @@ const RequestMedicine = () => {
       try {
         const medicinesRef = collection(db, "medicine");
         const querySnapshot = await getDocs(medicinesRef);
-        const medicinesData = querySnapshot.docs.map(doc => ({
+        const medicinesData = querySnapshot.docs.map((doc) => ({
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
         }));
         setMedicines(medicinesData);
       } catch (error) {
@@ -58,8 +65,8 @@ const RequestMedicine = () => {
   // Filter medicines when complaint changes
   useEffect(() => {
     if (complaint) {
-      const relevantMedicines = medicines.filter(med => 
-        med.medication && med.medication.includes(complaint)
+      const relevantMedicines = medicines.filter(
+        (med) => med.medication && med.medication.includes(complaint)
       );
       setFilteredMedicines(relevantMedicines);
     } else {
@@ -145,7 +152,7 @@ const RequestMedicine = () => {
         complaint: complaint,
         medicine: medicine,
         status: "Completed",
-        timestamp: serverTimestamp()
+        timestamp: serverTimestamp(),
       });
 
       alert("Medicine request submitted successfully!");
@@ -199,11 +206,21 @@ const RequestMedicine = () => {
               <h2>Employee Information</h2>
               {userData ? (
                 <div style={styles.userInfo}>
-                  <p><strong>Employee ID:</strong> {scannedData}</p>
-                  <p><strong>Firstname:</strong> {userData.firstname}</p>
-                  <p><strong>Lastname:</strong> {userData.lastname}</p>
-                  <p><strong>Gender:</strong> {userData.gender}</p>
-                  <p><strong>Department:</strong> {userData.department}</p>
+                  <p>
+                    <strong>Employee ID:</strong> {scannedData}
+                  </p>
+                  <p>
+                    <strong>Firstname:</strong> {userData.firstname}
+                  </p>
+                  <p>
+                    <strong>Lastname:</strong> {userData.lastname}
+                  </p>
+                  <p>
+                    <strong>Gender:</strong> {userData.gender}
+                  </p>
+                  <p>
+                    <strong>Department:</strong> {userData.department}
+                  </p>
                 </div>
               ) : (
                 <p>Scan employee ID to fetch data.</p>
@@ -248,10 +265,12 @@ const RequestMedicine = () => {
                   </div>
 
                   <div style={styles.buttonContainer}>
-                    <button 
-                      style={styles.saveButton} 
+                    <button
+                      style={styles.saveButton}
                       onClick={handleSave}
-                      disabled={!userData || !complaint || !medicine || isSubmitting}
+                      disabled={
+                        !userData || !complaint || !medicine || isSubmitting
+                      }
                     >
                       {isSubmitting ? "Saving..." : "Save Request"}
                     </button>
@@ -317,6 +336,7 @@ const styles = {
     textAlign: "left",
     fontSize: "16px",
     marginTop: "10px",
+    color: "#000000",
   },
   dropdownContainer: {
     marginTop: "20px",
