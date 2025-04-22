@@ -241,6 +241,7 @@ const styles = {
     color: "black",
   },
   inputGroup: {
+    text: "black",
     marginBottom: "20px",
   },
   inputField: {
