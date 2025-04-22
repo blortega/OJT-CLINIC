@@ -11,7 +11,7 @@ import AddMedicineForm from "../components/AddMedicineForm";
 import InventoryAlert from "../components/InventoryAlert";
 import FetchDosageForm from "../hooks/FetchDosageForm";
 import FetchComplaints from "../hooks/FetchComplaints";
-
+import AddComplaints from "../components/AddComplaints";
 const formatDate = (date) => {
   // Return "N/A" if no date is provided
   if (!date) return "N/A";
@@ -39,7 +39,9 @@ const Inventory = () => {
   const [medicines, setMedicines] = useState([]);
   const {complaints} = FetchComplaints();
   const [search, setSearch] = useState("");
+  const [isComplaintModalOpen, setIsComplaintModalOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isHoveredComplaint, setIsHoveredComplaint] = useState(false);
   const [hoveredUser, setHoveredUser] = useState(null);
   const [hoveredIcon, setHoveredIcon] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -132,6 +134,12 @@ const Inventory = () => {
      toast.error("Failed to add medicine!");
      console.error("Error adding medicine:", error);
     }
+  };
+
+  const handleAddComplaint = async (complaintText) => {
+    // Logic for adding the complaint
+    console.log("Complaint added:", complaintText);
+    // You might send this to your server or update state
   };
 
   const getStockStatus = (stock) => {
@@ -304,495 +312,510 @@ const Inventory = () => {
             >
               <FiPlus /> Add Medicine
             </button>
+            <button
+            style={ isHoveredComplaint ? {...styles.addUserButton, ... styles.buttonHover } : styles.addUserButton}
+            onClick={() => setIsComplaintModalOpen(true)} // Open the Add Complaint modal
+            onMouseEnter={() => setIsHoveredComplaint(true)}
+            onMouseLeave={() => setIsHoveredComplaint(false)}
+          >
+          <FiPlus /> Add Complaint
+          </button>
           </div>
         </div>
 
-        <InventoryAlert medicines={medicines} />
+          <InventoryAlert medicines={medicines} />
 
-        {/* Add Medicine Form Modal */}
-        {isAddModalOpen && (
-          <AddMedicineForm
-            onClose={() => setIsAddModalOpen(false)}
-            onAddMedicine={handleAddMedicine}
+          {/* Add Medicine Form Modal */}
+          {isAddModalOpen && (
+            <AddMedicineForm
+              onClose={() => setIsAddModalOpen(false)}
+              onAddMedicine={handleAddMedicine}
+            />
+          )}
+          {/* Add Complaint Modal */}
+          {isComplaintModalOpen && (
+          <AddComplaints
+          onClose={() => setIsComplaintModalOpen(false)} // Close the modal
+          onAddComplaint={handleAddComplaint} // Pass the handler
           />
-        )}
+          )}
 
-        {/* Medicine List */}
-        <div style={styles.card}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.thead}>Medicine</th>
-                <th style={styles.thead}>Dosage</th>
-                <th style={styles.thead}>Dosage Form</th>
-                <th style={styles.thead}>Type</th>
-                <th style={styles.thead}>Medication</th>
-                <th style={styles.thead}>Stocks</th>
-                <th style={styles.thead}>Status</th>
-                <th style={styles.thead}>Expiry Date</th>
-                <th style={styles.thead}>Date Created</th>
-                <th style={styles.thead}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {FilterBy().map((medicine, index)=> {
-                console.log(`Medicine ${medicine.name} - expiryDate:`, medicine.expiryDate);
-                console.log(`Medicine ${medicine.name} - createdAt:`, medicine.createdAt);
-
-                return (
-                <tr key={index}>
-                  <td style={styles.tdata}>{medicine.name}</td>
-                  <td style={styles.tdata}>{medicine.dosage}</td>
-                  <td style={styles.tdata}>{medicine.dosageform}</td>
-                  <td style={styles.tdata}>{medicine.type}</td>
-                  <td style={styles.tdata}>
-                    {Array.isArray(medicine.medication) && medicine.medication.length > 0 ? (
-                      <ul style={styles.bulletList}>
-                        {medicine.medication.map((item, index) => (
-                          <li key={index}>{item}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <span style={{ fontStyle: "italic", color: "#888" }}>None</span>
-                    )}
-                  </td>
-                  <td style={styles.tdata}>{medicine.stock}</td>
-                  <td style={styles.tdata}>{getStockStatus(medicine.stock)}</td>
-                  <td style={styles.tdata}>
-                    {formatDate(medicine.expiryDate)}
-                  </td>
-                  <td style={styles.tdata}>
-                    {formatDate(medicine.createdAt)}
-                  </td>
-                  <td style={styles.tdata}>
-                    <button
-                      style={hoveredUser === medicine.id && hoveredIcon === "add" 
-                        ? {...styles.iconButton, ... styles.iconButtonHover} 
-                        : styles.iconButton
-                      }
-                      onMouseEnter={() => {
-                        setHoveredUser(medicine.id);
-                        setHoveredIcon("add");
-                      }}
-                      onMouseLeave={() => setHoveredIcon(null)}
-                      onClick={() => handleModalOpen(medicine)}
-                      title="Add"
-                    >
-                      <FiPlus/>
-                    </button>
-                    <button
-                      style={hoveredUser === medicine.id && hoveredIcon === "edit" 
-                        ? {...styles.iconButton, ... styles.iconButtonHover} 
-                        : styles.iconButton
-                      }
-                      onMouseEnter={() => {
-                        setHoveredUser(medicine.id);
-                        setHoveredIcon("edit");
-                      }}
-                      onMouseLeave={() => setHoveredIcon(null)}
-                      onClick={() => handleEdit(medicine)}
-                      title="Edit"
-                    >
-                      <FiEdit/>
-                    </button>
-                    <button
-                      style={hoveredUser === medicine.id && hoveredIcon === "delete" 
-                        ? {...styles.iconButton, ... styles.iconButtonHover} 
-                        : styles.iconButton
-                      }
-                      onMouseEnter={() => {
-                        setHoveredUser(medicine.id);
-                        setHoveredIcon("delete");
-                      }}
-                      onMouseLeave={() => setHoveredIcon(null)}
-                      onClick={() => handleDelete(medicine)}
-                      title="Delete"
-                    >
-                      <FiTrash/>
-                    </button>
-                  </td>
+          {/* Medicine List */}
+          <div style={styles.card}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.thead}>Medicine</th>
+                  <th style={styles.thead}>Dosage</th>
+                  <th style={styles.thead}>Dosage Form</th>
+                  <th style={styles.thead}>Type</th>
+                  <th style={styles.thead}>Medication</th>
+                  <th style={styles.thead}>Stocks</th>
+                  <th style={styles.thead}>Status</th>
+                  <th style={styles.thead}>Expiry Date</th>
+                  <th style={styles.thead}>Date Created</th>
+                  <th style={styles.thead}>Actions</th>
                 </tr>
-                );
-              })}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {FilterBy().map((medicine, index)=> {
+                  console.log(`Medicine ${medicine.name} - expiryDate:`, medicine.expiryDate);
+                  console.log(`Medicine ${medicine.name} - createdAt:`, medicine.createdAt);
+
+                  return (
+                  <tr key={index}>
+                    <td style={styles.tdata}>{medicine.name}</td>
+                    <td style={styles.tdata}>{medicine.dosage}</td>
+                    <td style={styles.tdata}>{medicine.dosageform}</td>
+                    <td style={styles.tdata}>{medicine.type}</td>
+                    <td style={styles.tdata}>
+                      {Array.isArray(medicine.medication) && medicine.medication.length > 0 ? (
+                        <ul style={styles.bulletList}>
+                          {medicine.medication.map((item, index) => (
+                            <li key={index}>{item}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <span style={{ fontStyle: "italic", color: "#888" }}>None</span>
+                      )}
+                    </td>
+                    <td style={styles.tdata}>{medicine.stock}</td>
+                    <td style={styles.tdata}>{getStockStatus(medicine.stock)}</td>
+                    <td style={styles.tdata}>
+                      {formatDate(medicine.expiryDate)}
+                    </td>
+                    <td style={styles.tdata}>
+                      {formatDate(medicine.createdAt)}
+                    </td>
+                    <td style={styles.tdata}>
+                      <button
+                        style={hoveredUser === medicine.id && hoveredIcon === "add" 
+                          ? {...styles.iconButton, ... styles.iconButtonHover} 
+                          : styles.iconButton
+                        }
+                        onMouseEnter={() => {
+                          setHoveredUser(medicine.id);
+                          setHoveredIcon("add");
+                        }}
+                        onMouseLeave={() => setHoveredIcon(null)}
+                        onClick={() => handleModalOpen(medicine)}
+                        title="Add"
+                      >
+                        <FiPlus/>
+                      </button>
+                      <button
+                        style={hoveredUser === medicine.id && hoveredIcon === "edit" 
+                          ? {...styles.iconButton, ... styles.iconButtonHover} 
+                          : styles.iconButton
+                        }
+                        onMouseEnter={() => {
+                          setHoveredUser(medicine.id);
+                          setHoveredIcon("edit");
+                        }}
+                        onMouseLeave={() => setHoveredIcon(null)}
+                        onClick={() => handleEdit(medicine)}
+                        title="Edit"
+                      >
+                        <FiEdit/>
+                      </button>
+                      <button
+                        style={hoveredUser === medicine.id && hoveredIcon === "delete" 
+                          ? {...styles.iconButton, ... styles.iconButtonHover} 
+                          : styles.iconButton
+                        }
+                        onMouseEnter={() => {
+                          setHoveredUser(medicine.id);
+                          setHoveredIcon("delete");
+                        }}
+                        onMouseLeave={() => setHoveredIcon(null)}
+                        onClick={() => handleDelete(medicine)}
+                        title="Delete"
+                      >
+                        <FiTrash/>
+                      </button>
+                    </td>
+                  </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Restock Modal */}
+          {isModalOpen && (
+            <RestockModal
+              isOpen={isModalOpen}
+              onClose={handleModalClose}
+              medicine={selectedMedicine}
+              onRestock={handleRestock}
+              restockAmount={restockAmount}
+              setRestockAmount={setRestockAmount}
+            />
+          )}
+
+          {/* Edit Modal */}
+          {isEditModalOpen && (
+            <EditModal
+              isOpen={isEditModalOpen}
+              onClose={() => setIsEditModalOpen(false)} // Close modal
+              medicine={selectedMedicine}
+              onUpdate={handleUpdate} // Pass the update handler
+            />
+          )}
+
         </div>
+      </Sidebar>
+    );
+  };
 
-        {/* Restock Modal */}
-        {isModalOpen && (
-          <RestockModal
-            isOpen={isModalOpen}
-            onClose={handleModalClose}
-            medicine={selectedMedicine}
-            onRestock={handleRestock}
-            restockAmount={restockAmount}
-            setRestockAmount={setRestockAmount}
-          />
-        )}
+  const RestockModal = ({ isOpen, onClose, medicine, onRestock, restockAmount, setRestockAmount }) => {
+    const handleRestockChange = (e) => {
+      const value = e.target.value;
+      if (value === "" || (/^\d+$/.test(value) && Number(value) >= 0)){
+        setRestockAmount(value);
+      }
+    };
 
-        {/* Edit Modal */}
-        {isEditModalOpen && (
-          <EditModal
-            isOpen={isEditModalOpen}
-            onClose={() => setIsEditModalOpen(false)} // Close modal
-            medicine={selectedMedicine}
-            onUpdate={handleUpdate} // Pass the update handler
-          />
-        )}
+    const handleIncrease = () => {
+      setRestockAmount((prevAmount) => parseInt(prevAmount) + 1);
+    };
 
+    const handleDecrease = () => {
+      setRestockAmount((prevAmount) => {
+        const newAmount = parseInt(prevAmount) - 1;
+        return newAmount >= 0 ? newAmount : 0; // Prevent going below 0
+      });
+    };
+
+    const handleSubmit = async () => {
+      const confirmStock = window.confirm(`Proceed to add stock for ${medicine.name}?`);
+      if (!confirmStock) {
+        return;
+      }
+
+      if (restockAmount <= 0) {
+        toast.error("Please enter a valid restock amount.");
+        return;
+      }
+      await onRestock(medicine, parseInt(restockAmount));
+      setRestockAmount(0); // Clear the input field after restocking
+      onClose(); // Close the modal after restocking
+    };
+
+    if (!isOpen) return null;
+
+    return (
+      <div style={styles.modalOverlay}>
+        <div style={styles.modalContent}>
+          <h2 style={styles.modalTitle}>Add Stock</h2>
+          <p style={styles.modalDescription}>
+            You are about to add stock for <strong>{medicine.name}</strong>.
+          </p>
+          <p style={styles.modalDescription}>
+            Please enter the amount you want to add to the stock.
+          </p>
+
+          {/* Display Current Stock */}
+          <p style={styles.currentStockText}>
+            <strong>Current Stock:</strong> {medicine.stock} unit/s
+          </p>
+
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>
+              Stock Amount:
+              <div style={styles.inputWrapper}>
+                <button 
+                  type="button" 
+                  onClick={handleDecrease}
+                  onMouseEnter={() => setIsHovered(true)}
+                  onMouseLeave={() => setIsHovered(false)}
+                  style={styles.decreaseButton}>-</button>
+                <input
+                  type="number"
+                  value={restockAmount}
+                  onChange={handleRestockChange}
+                  onKeyDown={(e) => {
+                    if (e.key === "-" || e.key === "e" || e.key === "+" || e.key === ".") {
+                      e.preventDefault(); // Block minus sign and other unwanted chars
+                    }
+                  }}
+                  style={styles.inputField}
+                  min="0"
+                  placeholder="Enter number of items"
+                />
+                <button 
+                  type="button" 
+                  onClick={handleIncrease} 
+                  style={styles.increaseButton}>+</button>
+              </div>
+            </label>
+          </div>
+
+          <div style={styles.modalButtonContainer}>
+            <button
+              onClick={handleSubmit}
+              style={styles.modalButton}
+            >
+              Add
+            </button>
+            <button
+              onClick={onClose}
+              style={styles.cancelButton}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       </div>
-    </Sidebar>
-  );
-};
-
-const RestockModal = ({ isOpen, onClose, medicine, onRestock, restockAmount, setRestockAmount }) => {
-  const handleRestockChange = (e) => {
-    const value = e.target.value;
-    if (value === "" || (/^\d+$/.test(value) && Number(value) >= 0)){
-      setRestockAmount(value);
-    }
+    );
   };
 
-  const handleIncrease = () => {
-    setRestockAmount((prevAmount) => parseInt(prevAmount) + 1);
+
+
+  const styles = {
+    container: {
+      padding: "20px",
+      textAlign: "center",
+    },
+    text: {
+      color: "black",
+    },
+    searchContainer: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      width: "80%",
+      margin: "0 auto 18px auto",
+    },
+
+    searchBar: {
+      width: "22%",
+      padding: "8px",
+      borderRadius: "6px",
+      border: "1px solid #ccc",
+      backgroundColor: "#fff",
+      color: "#000",
+    },
+
+    filterDropdown: {
+      padding: "8px",
+      borderRadius: "6px",
+      border: "1px solid #ccc",
+      backgroundColor: "#fff",
+      color: "#000",
+      marginLeft: "10px",
+    },
+    bulletList: {
+      paddingLeft: "20px",
+      margin: 0,
+      listStyleType: "disc", // or "circle", "square"
+    },
+    
+
+    buttonContainer: {
+      display: "flex",
+      justifyContent: "center",
+      gap: "10px",
+      marginTop: "0px",
+    },
+    buttonHover:{
+      backgroundColor: "#162d5e",
+    },
+    addUserButton: {
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      padding: "10px 16px",
+      borderRadius: "6px",
+      border: "none",
+      color: "#fff",
+      fontSize: "16px",
+      fontWeight: "bold",
+      cursor: "pointer",
+      backgroundColor: "#1e3a8a",
+      transition: "background-color 0.3s",
+    },
+    addIcon: {
+      fontSize: "20px",
+    },
+    card: {
+      width: "80%",
+      margin: "auto",
+      overflowX: "auto",
+      border: "1px solid #ddd",
+      borderRadius: "8px",
+      boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)",
+    },
+    table: {
+      width: "100%",
+      borderCollapse: "collapse",
+      color: "black",
+    },
+    thead: {
+      padding: "12px",
+      background: "#1e3a8a",
+      color: "#fff",
+      borderBottom: "2px solid #ddd",
+    },
+    tdata: {
+      padding: "12px",
+      borderBottom: "1px solid #ccc",
+      borderRight: "1px solid #ddd",
+      color: "#000",
+      textAlign: "center",
+    },
+    iconButton: {
+      color: "#1e3a8a",
+      background: "none",
+      border: "none",
+      cursor: "pointer",
+      fontSize: "18px",
+      margin: "0 5px",
+    },
+    iconButtonHover: {
+      color: "#d41c48",
+      transform: "scale(1.1)",
+    },
+    lowStockBadge: {
+      display: "inline-block",
+      padding: "4px 8px",
+      borderRadius: "12px",
+      backgroundColor: "#FFD700",
+      color: "#fff",
+      fontWeight: "bold",
+    },
+    inStockBadge: {
+      display: "inline-block",
+      padding: "4px 8px",
+      borderRadius: "12px",
+      backgroundColor: "#33ff86",
+      color: "#fff",
+      fontWeight: "bold",
+    },
+    noStockBadge: {
+      display: "inline-block",
+      padding: "4px 8px",
+      borderRadius: "12px",
+      backgroundColor: "#ff3342",
+      color: "#fff",
+      fontWeight: "bold",
+    },
+    currentStockText: {
+      fontSize: "16px",
+      color: "#333",
+      marginBottom: "15px",
+      fontWeight: "bold",
+    },
+    inputGroup: {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      marginBottom: "20px",
+    },
+    inputWrapper: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    decreaseButton: {
+      backgroundColor: "#dc3545", // Red for Decrease
+      color: "white",
+      border: "none",
+      padding: "10px 15px",
+      fontSize: "18px",
+      cursor: "pointer",
+      borderRadius: "8px",
+      margin: "0 10px",
+      transition: "background-color 0.3s",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    increaseButton: {
+      backgroundColor: "#28a745", // Green for Increase
+      color: "white",
+      border: "none",
+      padding: "10px 15px",
+      fontSize: "18px",
+      cursor: "pointer",
+      borderRadius: "8px",
+      margin: "0 10px",
+      transition: "background-color 0.3s",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    modalOverlay: {
+      position: "fixed",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    modalContent: {
+      background: "#fff",
+      padding: "30px",
+      borderRadius: "12px",
+      textAlign: "center",
+      width: "100%",
+      maxWidth: "400px",
+      boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.2)",
+    },
+    modalTitle: {
+      fontSize: "24px",
+      fontWeight: "bold",
+      color: "#333",
+      marginBottom: "15px",
+    },
+    modalDescription: {
+      fontSize: "16px",
+      color: "#666",
+      marginBottom: "10px",
+    },
+    label: {
+      fontSize: "16px",
+      color: "#333",
+      marginBottom: "10px",
+      display: "block",
+    },
+    inputField: {
+      fontSize: "18px",
+      padding: "10px",
+      width: "100%",
+      borderRadius: "8px",
+      border: "1px solid #ccc",
+      marginBottom: "0.5px",
+      textAlign: "center",
+    },
+    modalButtonContainer: {
+      display: "flex",
+      justifyContent: "space-between",
+      gap: "10px",
+    },
+    modalButton: {
+      backgroundColor: "#28a745",
+      color: "white",
+      padding: "12px 20px",
+      borderRadius: "8px",
+      border: "none",
+      fontSize: "16px",
+      cursor: "pointer",
+      flex: 1,
+      transition: "background-color 0.3s",
+    },
+    cancelButton: {
+      backgroundColor: "#dc3545",
+      color: "white",
+      padding: "12px 20px",
+      borderRadius: "8px",
+      border: "none",
+      fontSize: "16px",
+      cursor: "pointer",
+      flex: 1,
+      transition: "background-color 0.3s",
+    },
   };
 
-  const handleDecrease = () => {
-    setRestockAmount((prevAmount) => {
-      const newAmount = parseInt(prevAmount) - 1;
-      return newAmount >= 0 ? newAmount : 0; // Prevent going below 0
-    });
-  };
-
-  const handleSubmit = async () => {
-    const confirmStock = window.confirm(`Proceed to add stock for ${medicine.name}?`);
-    if (!confirmStock) {
-      return;
-    }
-
-    if (restockAmount <= 0) {
-      toast.error("Please enter a valid restock amount.");
-      return;
-    }
-    await onRestock(medicine, parseInt(restockAmount));
-    setRestockAmount(0); // Clear the input field after restocking
-    onClose(); // Close the modal after restocking
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div style={styles.modalOverlay}>
-      <div style={styles.modalContent}>
-        <h2 style={styles.modalTitle}>Add Stock</h2>
-        <p style={styles.modalDescription}>
-          You are about to add stock for <strong>{medicine.name}</strong>.
-        </p>
-        <p style={styles.modalDescription}>
-          Please enter the amount you want to add to the stock.
-        </p>
-
-        {/* Display Current Stock */}
-        <p style={styles.currentStockText}>
-          <strong>Current Stock:</strong> {medicine.stock} unit/s
-        </p>
-
-        <div style={styles.inputGroup}>
-          <label style={styles.label}>
-            Stock Amount:
-            <div style={styles.inputWrapper}>
-              <button 
-                type="button" 
-                onClick={handleDecrease}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
-                style={styles.decreaseButton}>-</button>
-              <input
-                type="number"
-                value={restockAmount}
-                onChange={handleRestockChange}
-                onKeyDown={(e) => {
-                  if (e.key === "-" || e.key === "e" || e.key === "+" || e.key === ".") {
-                    e.preventDefault(); // Block minus sign and other unwanted chars
-                  }
-                }}
-                style={styles.inputField}
-                min="0"
-                placeholder="Enter number of items"
-              />
-              <button 
-                type="button" 
-                onClick={handleIncrease} 
-                style={styles.increaseButton}>+</button>
-            </div>
-          </label>
-        </div>
-
-        <div style={styles.modalButtonContainer}>
-          <button
-            onClick={handleSubmit}
-            style={styles.modalButton}
-          >
-            Add
-          </button>
-          <button
-            onClick={onClose}
-            style={styles.cancelButton}
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-
-
-const styles = {
-  container: {
-    padding: "20px",
-    textAlign: "center",
-  },
-  text: {
-    color: "black",
-  },
-  searchContainer: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    width: "80%",
-    margin: "0 auto 18px auto",
-  },
-
-  searchBar: {
-    width: "22%",
-    padding: "8px",
-    borderRadius: "6px",
-    border: "1px solid #ccc",
-    backgroundColor: "#fff",
-    color: "#000",
-  },
-
-  filterDropdown: {
-    padding: "8px",
-    borderRadius: "6px",
-    border: "1px solid #ccc",
-    backgroundColor: "#fff",
-    color: "#000",
-    marginLeft: "10px",
-  },
-  bulletList: {
-    paddingLeft: "20px",
-    margin: 0,
-    listStyleType: "disc", // or "circle", "square"
-  },
-  
-
-  buttonContainer: {
-    display: "flex",
-    justifyContent: "center",
-    gap: "10px",
-    marginTop: "0px",
-  },
-  buttonHover:{
-    backgroundColor: "#162d5e",
-  },
-  addUserButton: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    padding: "10px 16px",
-    borderRadius: "6px",
-    border: "none",
-    color: "#fff",
-    fontSize: "16px",
-    fontWeight: "bold",
-    cursor: "pointer",
-    backgroundColor: "#1e3a8a",
-    transition: "background-color 0.3s",
-  },
-  addIcon: {
-    fontSize: "20px",
-  },
-  card: {
-    width: "80%",
-    margin: "auto",
-    overflowX: "auto",
-    border: "1px solid #ddd",
-    borderRadius: "8px",
-    boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)",
-  },
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    color: "black",
-  },
-  thead: {
-    padding: "12px",
-    background: "#1e3a8a",
-    color: "#fff",
-    borderBottom: "2px solid #ddd",
-  },
-  tdata: {
-    padding: "12px",
-    borderBottom: "1px solid #ccc",
-    borderRight: "1px solid #ddd",
-    color: "#000",
-    textAlign: "center",
-  },
-  iconButton: {
-    color: "#1e3a8a",
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    fontSize: "18px",
-    margin: "0 5px",
-  },
-  iconButtonHover: {
-    color: "#d41c48",
-    transform: "scale(1.1)",
-  },
-  lowStockBadge: {
-    display: "inline-block",
-    padding: "4px 8px",
-    borderRadius: "12px",
-    backgroundColor: "#FFD700",
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  inStockBadge: {
-    display: "inline-block",
-    padding: "4px 8px",
-    borderRadius: "12px",
-    backgroundColor: "#33ff86",
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  noStockBadge: {
-    display: "inline-block",
-    padding: "4px 8px",
-    borderRadius: "12px",
-    backgroundColor: "#ff3342",
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  currentStockText: {
-    fontSize: "16px",
-    color: "#333",
-    marginBottom: "15px",
-    fontWeight: "bold",
-  },
-  inputGroup: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    marginBottom: "20px",
-  },
-  inputWrapper: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  decreaseButton: {
-    backgroundColor: "#dc3545", // Red for Decrease
-    color: "white",
-    border: "none",
-    padding: "10px 15px",
-    fontSize: "18px",
-    cursor: "pointer",
-    borderRadius: "8px",
-    margin: "0 10px",
-    transition: "background-color 0.3s",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  increaseButton: {
-    backgroundColor: "#28a745", // Green for Increase
-    color: "white",
-    border: "none",
-    padding: "10px 15px",
-    fontSize: "18px",
-    cursor: "pointer",
-    borderRadius: "8px",
-    margin: "0 10px",
-    transition: "background-color 0.3s",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalOverlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    background: "#fff",
-    padding: "30px",
-    borderRadius: "12px",
-    textAlign: "center",
-    width: "100%",
-    maxWidth: "400px",
-    boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.2)",
-  },
-  modalTitle: {
-    fontSize: "24px",
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: "15px",
-  },
-  modalDescription: {
-    fontSize: "16px",
-    color: "#666",
-    marginBottom: "10px",
-  },
-  label: {
-    fontSize: "16px",
-    color: "#333",
-    marginBottom: "10px",
-    display: "block",
-  },
-  inputField: {
-    fontSize: "18px",
-    padding: "10px",
-    width: "100%",
-    borderRadius: "8px",
-    border: "1px solid #ccc",
-    marginBottom: "0.5px",
-    textAlign: "center",
-  },
-  modalButtonContainer: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "10px",
-  },
-  modalButton: {
-    backgroundColor: "#28a745",
-    color: "white",
-    padding: "12px 20px",
-    borderRadius: "8px",
-    border: "none",
-    fontSize: "16px",
-    cursor: "pointer",
-    flex: 1,
-    transition: "background-color 0.3s",
-  },
-  cancelButton: {
-    backgroundColor: "#dc3545",
-    color: "white",
-    padding: "12px 20px",
-    borderRadius: "8px",
-    border: "none",
-    fontSize: "16px",
-    cursor: "pointer",
-    flex: 1,
-    transition: "background-color 0.3s",
-  },
-};
-
-export default Inventory;
+  export default Inventory;
