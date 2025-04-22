@@ -3,8 +3,6 @@ import { serverTimestamp, Timestamp } from "firebase/firestore";
 import React, { useState } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import FetchDosageForm from "../hooks/FetchDosageForm";
-import FetchMedicineType from "../hooks/FetchMedicineType";
 import FetchComplaints from "../hooks/FetchComplaints";
 import {
   FormControl,
@@ -21,14 +19,9 @@ const formatDate = (date) => {
   return new Date(date).toLocaleDateString('en-US', options);
 };
 const AddMedicineForm = ({ onClose, onAddMedicine }) => {
-    const { dosageForms, loading } = FetchDosageForm();
     const {complaints} = FetchComplaints();
     const [selectedComplaints, setSelectedComplaints] = useState([]);
     const [name, setName] = useState("");
-    const [dosage, setDosage] = useState("");
-    const [dosageform, setDosageForm] = useState("");
-    const {medicineType} = FetchMedicineType();
-    const [medType, setMedType] = useState("");
     const [stock, setStock] = useState("");
     const [expiryDate, setExpiryDate] = useState("");
     const [createdAt, setCreatedAt] = useState("");
@@ -43,7 +36,7 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!name.trim() || !dosage.trim() || !dosageform.trim() || !expiryDate.trim()) {
+    if (!name.trim() || !expiryDate.trim()) {
       toast.error("All fields are required!");
       return;
     }
@@ -53,16 +46,6 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
       return;
     }
     
-    if (!dosage.trim()) {
-      toast.error("Dosage is required!");
-      return;
-    }
-    
-    if (!dosageform.trim()) {
-      toast.error("Form is required!");
-      return;
-    }
-
     if (!expiryDate.trim()) {
       toast.error("Expiry Date is required!");
       return;
@@ -87,12 +70,10 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
     
     const newMedicine = {
         name,
-        dosage,
-        dosageform,
-        type: medType,
         stock: numericStock,
         status: stockStatus,
         expiryDate: Timestamp.fromDate(new Date(expiryDate)),
+        medication: selectedComplaints, 
 
     };
     
@@ -133,41 +114,6 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
               onChange={(e) => setName(e.target.value)}
               style={styles.inputField}
             />
-          </div>
-          <div style={styles.inputGroup}>
-            <label>Dosage:</label>
-            <input
-              type="text"
-              value={dosage}
-              onChange={(e) => setDosage(e.target.value)}
-              style={styles.inputField}
-            />
-          </div>
-          <div style={styles.inputGroup}>
-            <label>Dosage Form:</label>
-            <select
-              value={dosageform}
-              onChange={(e) => setDosageForm(e.target.value)}
-              style={styles.inputField}
-            >
-              <option value="" disabled hidden>-- Select Form --</option>
-              {dosageForms.map((form) => (
-                <option key={form.id} value={form.name}>{form.name}</option>
-              ))}
-            </select>
-          </div>
-          <div style={styles.inputGroup}>
-            <label>Type:</label>
-            <select
-              value={medType}
-              onChange={(e) => setMedType(e.target.value)}
-              style={styles.inputField}
-            >
-              <option value="" disabled hidden>-- Select Type --</option> 
-              {medicineType.map((form) => ( 
-                <option key={form.id} value={form.name}>{form.name}</option>
-              ))}
-            </select>
           </div>
           <div style={styles.inputGroup}>
           <FormControl fullWidth style={{ marginBottom: "20px" }}>
