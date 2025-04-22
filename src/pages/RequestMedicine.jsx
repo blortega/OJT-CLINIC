@@ -264,8 +264,9 @@ const RequestMedicine = () => {
       const medicineRequestRef = collection(db, "medicineRequests");
       await addDoc(medicineRequestRef, {
         employeeID: scannedData,
-        firstName: userData.firstname,
-        lastName: userData.lastname,
+        firstname: userData.firstname,
+        lastname: userData.lastname,
+        middleInitial: userData.middleInitial,
         department: userData.department,
         complaint: complaint,
         medicine: medicine,
@@ -358,10 +359,14 @@ const RequestMedicine = () => {
                     <strong>Employee ID:</strong> {scannedData}
                   </p>
                   <p>
-                    <strong>Firstname:</strong> {userData.firstname}
+                    <strong>First Name:</strong> {userData.firstname}
                   </p>
                   <p>
-                    <strong>Lastname:</strong> {userData.lastname}
+                    <strong>Middle Initial:</strong> {userData.middleInitial}
+                  </p>
+                  <p></p>
+                  <p>
+                    <strong>Last Name:</strong> {userData.lastname}
                   </p>
                   <p>
                     <strong>Gender:</strong> {userData.gender}
