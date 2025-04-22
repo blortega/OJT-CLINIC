@@ -898,7 +898,11 @@ const ManageUser = () => {
                     <td className="table-cell">
                       {/* Format the DOB if it exists */}
                       {user.dob
-                        ? user.dob.toDate().toLocaleDateString()
+                        ? user.dob.toDate().toLocaleDateString("en-US", {
+                            month: "long",
+                            day: "numeric",
+                            year: "numeric",
+                          })
                         : "Not Available"}
                     </td>
                     <td className="table-cell">
