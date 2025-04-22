@@ -28,6 +28,7 @@ const RequestMedicine = () => {
   const [employeeIDs, setEmployeeIDs] = useState([]);
   const bufferRef = useRef("");
   const timeoutRef = useRef(null);
+  const [debugInfo, setDebugInfo] = useState({});
 
   // Fetch complaints, medicines, and employee IDs from Firestore
   useEffect(() => {
@@ -110,30 +111,70 @@ const RequestMedicine = () => {
 
   // Function to find employee ID within scanned data
   const findEmployeeIDInScan = (scanData) => {
-    // Sort employee IDs by length (descending) to check longer IDs first
-    // This helps when one ID might be a subset of another
-    const sortedIDs = [...employeeIDs].sort((a, b) => b.length - a.length);
+    // Create an array to keep track of matches and their quality scores
+    let matches = [];
 
-    for (const id of sortedIDs) {
-      // Case 1: Direct match
+    // First pass: look for exact matches
+    for (const id of employeeIDs) {
       if (scanData === id) {
+        // Exact match is best - return immediately
         return id;
       }
+    }
 
-      // Case 2: ID is contained within the scan data
+    // Second pass: look for prefix matches (cases like "0HCY847723" should match "HCY")
+    // Weight this higher as prefixes are more likely to be the correct employee ID
+    for (const id of employeeIDs) {
+      // Clean the scan data to handle additional numeric prefixes (like "0" before "HCY")
+      const cleanedScan = scanData.replace(/^\d+/, "");
+
+      // Check if ID is at the beginning of the cleaned scan data (prefix match)
+      if (cleanedScan.startsWith(id)) {
+        matches.push({ id, score: 90 + id.length }); // High score for prefix matches
+      }
+    }
+
+    // Third pass: look for substring matches within the scan
+    for (const id of employeeIDs) {
       if (scanData.includes(id)) {
-        return id;
-      }
-
-      // Case 3: Special handling for alphanumeric IDs - more flexible matching
-      if (id.length > 2) {
-        // Create a regex that allows for numbers/letters before or after the core ID
-        // Example: For ID "2CORNMV", match "02CORNMVPMH"
-        const idRegex = new RegExp(id.split("").join("\\s*"), "i");
-        if (idRegex.test(scanData)) {
-          return id;
+        // Check that we don't already have this ID from prefix matching
+        if (!matches.some((match) => match.id === id)) {
+          // Score based on length - longer IDs get higher scores
+          matches.push({ id, score: 70 + id.length });
         }
       }
+    }
+
+    // Fourth pass: look for similar patterns for complex IDs
+    for (const id of employeeIDs) {
+      if (id.length > 2) {
+        try {
+          // Create a regex pattern for the ID
+          const idRegex = new RegExp(id.split("").join("\\s*"), "i");
+          if (idRegex.test(scanData)) {
+            // Check that we don't already have this ID from other matching methods
+            if (!matches.some((match) => match.id === id)) {
+              matches.push({ id, score: 50 + id.length });
+            }
+          }
+        } catch (error) {
+          console.error("Regex error for ID:", id, error);
+        }
+      }
+    }
+
+    // For debugging purposes
+    setDebugInfo({
+      scanData,
+      matches,
+    });
+
+    // Sort matches by score (highest first)
+    matches.sort((a, b) => b.score - a.score);
+
+    // Return the best match if we have one
+    if (matches.length > 0) {
+      return matches[0].id;
     }
 
     return null;
