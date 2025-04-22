@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import {
   collection,
   query,
@@ -12,10 +12,10 @@ import {
 import Sidebar from "../components/Sidebar";
 import { db } from "../firebase";
 
-
 const RequestMedicine = () => {
   const [scannedData, setScannedData] = useState("");
   const [isScannerActive, setIsScannerActive] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [userData, setUserData] = useState(null);
   const [formVisible, setFormVisible] = useState(false);
   const [complaint, setComplaint] = useState("");
@@ -25,10 +25,11 @@ const RequestMedicine = () => {
   const [medicines, setMedicines] = useState([]);
   const [filteredMedicines, setFilteredMedicines] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [employeeIDs, setEmployeeIDs] = useState([]);
   const bufferRef = useRef("");
   const timeoutRef = useRef(null);
 
-  // Fetch complaints and medicines from Firestore
+  // Fetch complaints, medicines, and employee IDs from Firestore
   useEffect(() => {
     const fetchComplaints = async () => {
       setIsLoading(true);
@@ -61,8 +62,20 @@ const RequestMedicine = () => {
       }
     };
 
+    const fetchEmployeeIDs = async () => {
+      try {
+        const usersRef = collection(db, "users");
+        const querySnapshot = await getDocs(usersRef);
+        const ids = querySnapshot.docs.map((doc) => doc.data().employeeID);
+        setEmployeeIDs(ids);
+      } catch (error) {
+        console.error("Error fetching employee IDs:", error);
+      }
+    };
+
     fetchComplaints();
     fetchMedicines();
+    fetchEmployeeIDs();
   }, []);
 
   // Filter medicines when complaint changes
@@ -79,11 +92,55 @@ const RequestMedicine = () => {
     setMedicine("");
   }, [complaint, medicines]);
 
-  const processScannedData = (data) => {
-    return data.replace(/Shift/g, "").trim();
+  // Extract employee ID from scanned barcode data
+  const processScannedData = (rawData) => {
+    // Clean up the data by removing 'Shift' and extra spaces
+    const data = rawData.replace(/Shift/g, "").trim();
+
+    // Find the matching employee ID within the scanned data
+    const matchedID = findEmployeeIDInScan(data);
+
+    if (matchedID) {
+      return matchedID;
+    }
+
+    // If no match found, return cleaned data
+    return data;
+  };
+
+  // Function to find employee ID within scanned data
+  const findEmployeeIDInScan = (scanData) => {
+    // Sort employee IDs by length (descending) to check longer IDs first
+    // This helps when one ID might be a subset of another
+    const sortedIDs = [...employeeIDs].sort((a, b) => b.length - a.length);
+
+    for (const id of sortedIDs) {
+      // Case 1: Direct match
+      if (scanData === id) {
+        return id;
+      }
+
+      // Case 2: ID is contained within the scan data
+      if (scanData.includes(id)) {
+        return id;
+      }
+
+      // Case 3: Special handling for alphanumeric IDs - more flexible matching
+      if (id.length > 2) {
+        // Create a regex that allows for numbers/letters before or after the core ID
+        // Example: For ID "2CORNMV", match "02CORNMVPMH"
+        const idRegex = new RegExp(id.split("").join("\\s*"), "i");
+        if (idRegex.test(scanData)) {
+          return id;
+        }
+      }
+    }
+
+    return null;
   };
 
   const fetchUserData = async (employeeID) => {
+    setIsSearching(true);
     try {
       const usersRef = collection(db, "users");
       const q = query(usersRef, where("employeeID", "==", employeeID));
@@ -92,6 +149,7 @@ const RequestMedicine = () => {
       if (!querySnapshot.empty) {
         const userDoc = querySnapshot.docs[0];
         setUserData(userDoc.data());
+        toast.success("Employee found!");
       } else {
         console.log("No user found with this employeeID.");
         setUserData(null);
@@ -100,6 +158,8 @@ const RequestMedicine = () => {
     } catch (error) {
       console.error("Error fetching user data:", error);
       toast.error("Error fetching user data");
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -107,18 +167,28 @@ const RequestMedicine = () => {
     if (!formVisible) return; // Only scan when form is visible
 
     const handleKeyDown = (e) => {
+      // Don't process new scans if we're currently searching
+      if (isSearching) {
+        return;
+      }
+
       if (e.key === "Enter") {
         const processedData = processScannedData(bufferRef.current);
         setScannedData(processedData);
         bufferRef.current = "";
 
-        fetchUserData(processedData);
-        setIsScannerActive(true);
+        if (processedData) {
+          fetchUserData(processedData);
+          setIsScannerActive(true);
 
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        timeoutRef.current = setTimeout(() => {
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          timeoutRef.current = setTimeout(() => {
+            setIsScannerActive(false);
+          }, 5000);
+        } else {
+          toast.warn("Could not identify a valid Employee ID from scan");
           setIsScannerActive(false);
-        }, 5000);
+        }
       } else {
         bufferRef.current += e.key;
       }
@@ -129,7 +199,7 @@ const RequestMedicine = () => {
       window.removeEventListener("keydown", handleKeyDown);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [formVisible]);
+  }, [formVisible, employeeIDs, isSearching]);
 
   const handleRequestClick = () => {
     setFormVisible(true);
@@ -144,15 +214,11 @@ const RequestMedicine = () => {
 
     setIsSubmitting(true);
     try {
-      if(
-        !window.confirm(
-          "Proceed?"
-        )
-      ) {
+      if (!window.confirm("Proceed?")) {
         setIsSubmitting(false);
         return;
       }
-      
+
       // Save the medicine request to Firestore
       const medicineRequestRef = collection(db, "medicineRequests");
       await addDoc(medicineRequestRef, {
@@ -167,17 +233,16 @@ const RequestMedicine = () => {
       });
 
       toast.success("Medicine request submitted successfully!");
-      
+
       // Reset form for next scan but keep form visible
       resetUserSelection();
-      
+
       // Set scanner to active state again for the next scan
       setIsScannerActive(true);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => {
         setIsScannerActive(false);
       }, 5000);
-      
     } catch (error) {
       console.error("Error saving medicine request:", error);
       toast.error("Error submitting request. Please try again.");
@@ -223,17 +288,30 @@ const RequestMedicine = () => {
               <div
                 style={{
                   ...styles.statusCircle,
-                  backgroundColor: isScannerActive ? "limegreen" : "lightgray",
+                  backgroundColor: isSearching
+                    ? "orange"
+                    : isScannerActive
+                    ? "limegreen"
+                    : "lightgray",
                 }}
               />
               <span style={styles.statusText}>
-                {isScannerActive ? "Scanner Active" : "Waiting for scan..."}
+                {isSearching
+                  ? "Searching..."
+                  : isScannerActive
+                  ? "Scanner Active"
+                  : "Waiting for scan..."}
               </span>
             </div>
 
             <div style={styles.resultBox}>
               <h2>Employee Information</h2>
-              {userData ? (
+              {isSearching ? (
+                <div style={styles.searchingMessage}>
+                  <p>Searching for employee data...</p>
+                  <div style={styles.loadingSpinner}></div>
+                </div>
+              ) : userData ? (
                 <div style={styles.userInfo}>
                   <p>
                     <strong>Employee ID:</strong> {scannedData}
@@ -255,7 +333,7 @@ const RequestMedicine = () => {
                 <p>Scan employee ID to fetch data.</p>
               )}
 
-              {userData && (
+              {userData && !isSearching && (
                 <>
                   <div style={styles.dropdownContainer}>
                     <label>
@@ -266,7 +344,9 @@ const RequestMedicine = () => {
                         style={styles.dropdown}
                         disabled={isLoading}
                       >
-                        <option value="" disabled hidden>Select Complaint</option>
+                        <option value="" disabled hidden>
+                          Select Complaint
+                        </option>
                         {complaints.map((item) => (
                           <option key={item.id} value={item.name}>
                             {item.name}
@@ -283,7 +363,9 @@ const RequestMedicine = () => {
                         style={styles.dropdown}
                         disabled={!complaint || isLoading}
                       >
-                        <option value="" disabled hidden>Select Medicine</option>
+                        <option value="" disabled hidden>
+                          Select Medicine
+                        </option>
                         {filteredMedicines.map((item) => (
                           <option key={item.id} value={item.name}>
                             {item.name}
@@ -404,6 +486,23 @@ const styles = {
     borderRadius: "6px",
     cursor: "pointer",
     flex: "1",
+  },
+  searchingMessage: {
+    textAlign: "center",
+    padding: "15px 0",
+  },
+  loadingSpinner: {
+    borderTop: "3px solid #3498db",
+    borderRight: "3px solid transparent",
+    borderRadius: "50%",
+    width: "30px",
+    height: "30px",
+    animation: "spin 1s linear infinite",
+    margin: "10px auto",
+  },
+  "@keyframes spin": {
+    "0%": { transform: "rotate(0deg)" },
+    "100%": { transform: "rotate(360deg)" },
   },
 };
 
