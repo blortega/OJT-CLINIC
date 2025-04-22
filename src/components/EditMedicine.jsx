@@ -3,8 +3,6 @@ import { getFirestore, updateDoc, doc, serverTimestamp, Timestamp } from "fireba
 import { app } from "../firebase";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import FetchDosageForm from "../hooks/FetchDosageForm";
-import FetchMedicineType from "../hooks/FetchMedicineType";
 import FetchComplaints from "../hooks/FetchComplaints";
 import {
   FormControl,
@@ -32,17 +30,12 @@ const formatForInput = (date) => {
 const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
   if (!isOpen) return null;
 
-  const { dosageForms } = FetchDosageForm();
-  const { medicineType } = FetchMedicineType();
   const { complaints } = FetchComplaints(); // Fetch complaints
   const [selectedComplaints, setSelectedComplaints] = useState(medicine?.complaints || []); 
 
 
   const [editedMedicine, setEditedMedicine] = useState({
     name: medicine?.name || "",
-    dosage: medicine?.dosage || "",
-    dosageform: medicine?.dosageform || "",
-    type: medicine?.type || "",
     stock: medicine?.stock || 0,
     expiryDate: formatForInput(medicine?.expiryDate),
   });
@@ -55,9 +48,6 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
     if (medicine) {
       setEditedMedicine({
         name: medicine.name || "",
-        dosage: medicine.dosage || "",
-        dosageform: medicine.dosageform || "",
-        type: medicine.type || "",
         stock: medicine.stock || 0,
         expiryDate: formatForInput(medicine.expiryDate),
       });
@@ -115,9 +105,6 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
 
     if (
       !editedMedicine.name ||
-      !editedMedicine.dosage ||
-      !editedMedicine.dosageform ||
-      !editedMedicine.type ||
       editedMedicine.stock < 0 ||
       !editedMedicine.expiryDate
     ) {
@@ -138,9 +125,6 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
 
       await updateDoc(medicineRef, {
         name: editedMedicine.name,
-        dosage: editedMedicine.dosage,
-        dosageform: editedMedicine.dosageform,
-        type: editedMedicine.type,
         stock: editedMedicine.stock,
         status: stockStatus,
         updatedAt: serverTimestamp(),
@@ -167,8 +151,6 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
   const handleClose = () => {
     setEditedMedicine({
       name: medicine?.name || "",
-      dosage: medicine?.dosage || "",
-      dosageform: medicine?.dosageform || "",
       stock: medicine?.stock || 0,
       expiryDate: formatForInput(medicine?.expiryDate),
     });
@@ -204,48 +186,6 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
               style={styles.inputField}
               placeholder="Enter Medicine Name"
             />
-          </label>
-
-          <label style={styles.label}>
-            Dosage:
-            <input
-              type="text"
-              name="dosage"
-              value={editedMedicine.dosage}
-              onChange={handleInputChange}
-              style={styles.inputField}
-              placeholder="Enter Dosage"
-            />
-          </label>
-
-          <label style={styles.label}>
-            Dosage Form:
-            <select
-              name="dosageform"
-              value={editedMedicine.dosageform}
-              onChange={handleInputChange}
-              style={styles.inputField}
-            >
-              <option value="" disabled hidden>-- Select Form --</option>
-              {dosageForms.map((form) => (
-                <option key={form.id} value={form.name}>{form.name}</option>
-              ))}
-            </select>
-          </label>
-
-          <label style={styles.label}>
-            Type:
-            <select
-              name="type"
-              value={editedMedicine.type}
-              onChange={handleInputChange}
-              style={styles.inputField}
-            >
-              <option value="" disabled hidden>-- Select Type --</option>
-              {medicineType.map((item) => (
-                <option key={item.id} value={item.name}>{item.name}</option>
-              ))}
-            </select>
           </label>
 
           <div style={styles.inputGroup}>

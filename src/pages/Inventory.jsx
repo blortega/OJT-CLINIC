@@ -9,7 +9,6 @@ import { FiPlus, FiEdit, FiTrash } from "react-icons/fi";
 import EditModal from "../components/EditMedicine";
 import AddMedicineForm from "../components/AddMedicineForm";
 import InventoryAlert from "../components/InventoryAlert";
-import FetchDosageForm from "../hooks/FetchDosageForm";
 import FetchComplaints from "../hooks/FetchComplaints";
 import AddComplaints from "../components/AddComplaints";
 const formatDate = (date) => {
@@ -37,7 +36,7 @@ const formatDate = (date) => {
 
 const Inventory = () => {
   const [medicines, setMedicines] = useState([]);
-  const {complaints} = FetchComplaints();
+  const {complaints, loading: loadingComplaints} = FetchComplaints();
   const [search, setSearch] = useState("");
   const [isComplaintModalOpen, setIsComplaintModalOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -59,10 +58,23 @@ const Inventory = () => {
         const db = getFirestore(app);
         const medicineCollection = collection(db, "medicine");
         const snapshot = await getDocs(medicineCollection);
-        const medicineLists = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const medicineLists = snapshot.docs.map((doc) => {
+          // Get basic medicine data
+          const medicineData = {
+            id: doc.id,
+            ...doc.data(),
+          };
+          
+          // Associate relevant complaints with this medicine
+          // Complaints should be associated with a medicine based on some key, e.g., medicineId
+          const medicineComplaints = complaints
+            .filter((complaint) => complaint.medicineId === medicineData.id)
+            .map((complaint) => complaint.name);
+
+          medicineData.medication = medicineComplaints;
+
+          return medicineData;
+        });
         setMedicines(medicineLists);
       } catch (error) {
         toast.error("Failed to fetch Medicines!");
@@ -70,8 +82,11 @@ const Inventory = () => {
       }
     };
 
-    fetchMedicines();
-  }, []);
+    // Only fetch medicines when complaints data is available
+    if (!loadingComplaints) {
+      fetchMedicines();
+    }
+  }, [complaints, loadingComplaints]);  // Re-run effect when complaints or loadingComplaints change
 
   const filterMedicines = (medicine) => {
     const searchLower = search.toLowerCase();
@@ -81,21 +96,16 @@ const Inventory = () => {
     }
 
     const medicationString = Array.isArray(medicine.medication)
-    ? medicine.medication.join(" ")
-    : medicine.medication || "";
+      ? medicine.medication.join(" ")
+      : medicine.medication || "";
 
     const fieldToSearch = [
       medicine.name,
-      medicine.dosage,
-      medicine.dosageform,
-      medicine.type,
-      
       medicationString,
       medicine.status,
       medicine.expiryDate ? medicine.expiryDate.toString() : "",
       medicine.createdAt ? medicine.createdAt.toDate().toLocaleDateString('en-US', { month: 'long', year: 'numeric', day: 'numeric' })
-      : "",
-      
+        : "",
     ];
 
     return fieldToSearch.some((field) =>
@@ -108,8 +118,12 @@ const Inventory = () => {
       console.log("adding medicine:", newMedicine);
       // Adding the new medicine to Firestore
       const db = getFirestore(app);
+
+      const { medication = [], ...medicineData } = newMedicine;
+
       const docRef = await addDoc(collection(db, "medicine"), {
-        ...newMedicine,
+        ...medicineData,
+        medication: newMedicine.medication,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         expiryDate: newMedicine.expiryDate || "",
@@ -122,19 +136,19 @@ const Inventory = () => {
       if (docSnap.exists()) {
         const addedMedicine = { id: docRef.id, ...docSnap.data() };
 
+        // Update the local state with the new medicine
+        setMedicines((prevMedicines) => [...prevMedicines, addedMedicine]);
 
-      // Update the local state with the new medicine
-      setMedicines((prevMedicines) => [...prevMedicines, addedMedicine]);
-
-      toast.success("Medicine added successfully!");
-    } else {
-      toast.error("Failed to retrieve added medicines")
-    }
-   } catch (error) {
-     toast.error("Failed to add medicine!");
-     console.error("Error adding medicine:", error);
+        toast.success("Medicine added successfully!");
+      } else {
+        toast.error("Failed to retrieve added medicines");
+      }
+    } catch (error) {
+      toast.error("Failed to add medicine!");
+      console.error("Error adding medicine:", error);
     }
   };
+
 
   const handleAddComplaint = async (complaintText) => {
     // Logic for adding the complaint
@@ -346,9 +360,6 @@ const Inventory = () => {
               <thead>
                 <tr>
                   <th style={styles.thead}>Medicine</th>
-                  <th style={styles.thead}>Dosage</th>
-                  <th style={styles.thead}>Dosage Form</th>
-                  <th style={styles.thead}>Type</th>
                   <th style={styles.thead}>Medication</th>
                   <th style={styles.thead}>Stocks</th>
                   <th style={styles.thead}>Status</th>
@@ -365,19 +376,16 @@ const Inventory = () => {
                   return (
                   <tr key={index}>
                     <td style={styles.tdata}>{medicine.name}</td>
-                    <td style={styles.tdata}>{medicine.dosage}</td>
-                    <td style={styles.tdata}>{medicine.dosageform}</td>
-                    <td style={styles.tdata}>{medicine.type}</td>
                     <td style={styles.tdata}>
-                      {Array.isArray(medicine.medication) && medicine.medication.length > 0 ? (
-                        <ul style={styles.bulletList}>
-                          {medicine.medication.map((item, index) => (
-                            <li key={index}>{item}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <span style={{ fontStyle: "italic", color: "#888" }}>None</span>
-                      )}
+                    {Array.isArray(medicine.medication) && medicine.medication.length > 0 ? (
+                  <ul style={styles.bulletList}>
+                    {medicine.medication.map((complaint, index) => (
+                    <li key={index}>{complaint}</li>
+                    ))}
+                  </ul>
+                  ) : (
+                    <span style={{ fontStyle: "italic", color: "#888" }}>No complaints</span>
+                  )}
                     </td>
                     <td style={styles.tdata}>{medicine.stock}</td>
                     <td style={styles.tdata}>{getStockStatus(medicine.stock)}</td>
