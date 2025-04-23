@@ -8,6 +8,8 @@ import {
   getDocs,
   addDoc,
   serverTimestamp,
+  doc,
+  updateDoc,
 } from "firebase/firestore";
 import Sidebar from "../components/Sidebar";
 import { db } from "../firebase";
@@ -20,6 +22,7 @@ const RequestMedicine = () => {
   const [formVisible, setFormVisible] = useState(false);
   const [complaint, setComplaint] = useState("");
   const [medicine, setMedicine] = useState("");
+  const [quantityDispensed, setQuantityDispensed] = useState(1); // Default quantity is 1
   const [isLoading, setIsLoading] = useState(false);
   const [complaints, setComplaints] = useState([]);
   const [medicines, setMedicines] = useState([]);
@@ -82,9 +85,14 @@ const RequestMedicine = () => {
   // Filter medicines when complaint changes
   useEffect(() => {
     if (complaint) {
-      const relevantMedicines = medicines.filter(
-        (med) => med.medication && med.medication.includes(complaint)
-      );
+      // Look for medicines that have this complaint in their medication array
+      const relevantMedicines = medicines.filter((med) => {
+        return (
+          med.medication &&
+          Array.isArray(med.medication) &&
+          med.medication.includes(complaint)
+        );
+      });
       setFilteredMedicines(relevantMedicines);
     } else {
       setFilteredMedicines([]);
@@ -253,9 +261,29 @@ const RequestMedicine = () => {
       return;
     }
 
+    // Validate quantity
+    if (quantityDispensed <= 0) {
+      toast.warn("Quantity must be greater than zero");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       if (!window.confirm("Proceed?")) {
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Get the selected medicine document
+      const selectedMedicine = filteredMedicines.find(
+        (med) => med.name === medicine
+      );
+
+      // Check if there's enough stock
+      if (selectedMedicine && selectedMedicine.stock < quantityDispensed) {
+        toast.error(
+          `Sorry, not enough stock! Only ${selectedMedicine.stock} available.`
+        );
         setIsSubmitting(false);
         return;
       }
@@ -270,9 +298,24 @@ const RequestMedicine = () => {
         department: userData.department,
         complaint: complaint,
         medicine: medicine,
+        quantityDispensed: quantityDispensed, // Add quantity field to the document
         status: "Completed",
         timestamp: serverTimestamp(),
       });
+
+      // Update the stock count in the medicine collection
+      if (selectedMedicine) {
+        const medicineDocRef = doc(db, "medicine", selectedMedicine.id);
+        const newStock = selectedMedicine.stock - quantityDispensed;
+        const newStatus =
+          newStock <= 10 ? "Low Stock" : selectedMedicine.status;
+
+        await updateDoc(medicineDocRef, {
+          stock: newStock,
+          status: newStatus,
+          updatedAt: serverTimestamp(),
+        });
+      }
 
       toast.success("Medicine request submitted successfully!");
 
@@ -309,6 +352,7 @@ const RequestMedicine = () => {
     setScannedData("");
     setComplaint("");
     setMedicine("");
+    setQuantityDispensed(1); // Reset to default quantity
     bufferRef.current = "";
   };
 
@@ -364,7 +408,6 @@ const RequestMedicine = () => {
                   <p>
                     <strong>Middle Initial:</strong> {userData.middleInitial}
                   </p>
-                  <p></p>
                   <p>
                     <strong>Last Name:</strong> {userData.lastname}
                   </p>
@@ -414,11 +457,55 @@ const RequestMedicine = () => {
                         </option>
                         {filteredMedicines.map((item) => (
                           <option key={item.id} value={item.name}>
-                            {item.name}
+                            {item.name} - Stock: {item.stock}{" "}
+                            {item.status && `(${item.status})`}
                           </option>
                         ))}
                       </select>
                     </label>
+
+                    {medicine && (
+                      <div style={styles.medicineInfo}>
+                        <h3>Medicine Information</h3>
+                        {filteredMedicines
+                          .filter((med) => med.name === medicine)
+                          .map((med) => (
+                            <div key={med.id}>
+                              <p>
+                                <strong>Available Stock:</strong> {med.stock}
+                              </p>
+                              <p>
+                                <strong>Status:</strong>{" "}
+                                {med.status || "Regular"}
+                              </p>
+                              {med.stock <= 10 && (
+                                <p style={styles.lowStockWarning}>
+                                  ⚠️ Low stock warning! Only {med.stock}{" "}
+                                  remaining.
+                                </p>
+                              )}
+
+                              <div style={styles.quantityContainer}>
+                                <label>
+                                  <strong>Quantity to Dispense:</strong>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max={med.stock}
+                                    value={quantityDispensed}
+                                    onChange={(e) =>
+                                      setQuantityDispensed(
+                                        parseInt(e.target.value) || 0
+                                      )
+                                    }
+                                    style={styles.quantityInput}
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    )}
                   </div>
 
                   <div style={styles.buttonContainer}>
@@ -426,7 +513,13 @@ const RequestMedicine = () => {
                       style={styles.saveButton}
                       onClick={handleSave}
                       disabled={
-                        !userData || !complaint || !medicine || isSubmitting
+                        !userData ||
+                        !complaint ||
+                        !medicine ||
+                        isSubmitting ||
+                        quantityDispensed <= 0 ||
+                        filteredMedicines.find((med) => med.name === medicine)
+                          ?.stock < quantityDispensed
                       }
                     >
                       {isSubmitting ? "Saving..." : "Save Request"}
@@ -545,6 +638,28 @@ const styles = {
     height: "30px",
     animation: "spin 1s linear infinite",
     margin: "10px auto",
+  },
+  medicineInfo: {
+    backgroundColor: "#f0f8ff",
+    padding: "15px",
+    borderRadius: "5px",
+    marginTop: "15px",
+    marginBottom: "15px",
+    textAlign: "left",
+  },
+  lowStockWarning: {
+    color: "#d32f2f",
+    fontWeight: "bold",
+  },
+  quantityContainer: {
+    marginTop: "15px",
+  },
+  quantityInput: {
+    width: "80px",
+    padding: "8px",
+    margin: "0 10px",
+    borderRadius: "4px",
+    border: "1px solid #ccc",
   },
   "@keyframes spin": {
     "0%": { transform: "rotate(0deg)" },
