@@ -127,11 +127,11 @@ const Inventory = () => {
   const handleAddMedicine = async (newMedicine) => {
     try {
       console.log("adding medicine:", newMedicine);
-      // Adding the new medicine to Firestore
+  
       const db = getFirestore(app);
-
       const { medication = [], ...medicineData } = newMedicine;
-
+      console.log("newMedicine.medication:", medication);
+      // Add medicine to Firestore
       const docRef = await addDoc(collection(db, "medicine"), {
         ...medicineData,
         medication: newMedicine.medication,
@@ -139,17 +139,34 @@ const Inventory = () => {
         updatedAt: serverTimestamp(),
         expiryDate: newMedicine.expiryDate || "",
       });
-
+  
       console.log("Document added with ID:", docRef.id);
+  
+      // ✅ Check and add new complaints to the 'complaints' collection
+      const complaintsRef = collection(db, "complaints");
+      const existingComplaintsSnap = await getDocs(complaintsRef);
+      const existingComplaintNames = existingComplaintsSnap.docs.map(doc => doc.data().name);
+      console.log("existingComplaintNames:", existingComplaintNames);
+      const newComplaints = medication.filter(name => !existingComplaintNames.includes(name));
 
+      
+      
+      console.log("New Complaints to Add:", newComplaints);
+
+  
+      for (const complaint of newComplaints) {
+        await addDoc(complaintsRef, {
+          name: complaint,
+          medicineName: newMedicine.name,
+          createdAt: serverTimestamp(),
+        });
+      }
+  
+      // ✅ Fetch and update local state
       const docSnap = await getDoc(docRef);
-
       if (docSnap.exists()) {
         const addedMedicine = { id: docRef.id, ...docSnap.data() };
-
-        // Update the local state with the new medicine
         setMedicines((prevMedicines) => [...prevMedicines, addedMedicine]);
-
         toast.success("Medicine added successfully!");
       } else {
         toast.error("Failed to retrieve added medicines");
@@ -158,8 +175,10 @@ const Inventory = () => {
       toast.error("Failed to add medicine!");
       console.error("Error adding medicine:", error);
     }
+  
     fetchMedicines();
   };
+  
 
   const handleAddComplaint = async (complaintText, selectedMedicineId) => {
     try {
@@ -176,7 +195,6 @@ const Inventory = () => {
       const complaintsRef = collection(db, "complaints");
       await addDoc(complaintsRef, {
         name: complaintText,
-        medicineId: selectedMedicineId,
         medicineName: selectedMed.name, // ✅ store actual medicine name
         createdAt: serverTimestamp(),
       });
