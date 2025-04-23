@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { app } from "../firebase"; // Adjust path based on your project
+
 
 const AddComplaints = ({ onClose, onAddComplaint, medicines }) => {
   const [complaintText, setComplaintText] = useState("");
@@ -77,62 +76,91 @@ const styles = {
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
+      zIndex: 1000,
     },
     modalContent: {
-      background: "#fff",
+      background: "#ffffff",
       padding: "30px",
       borderRadius: "12px",
-      textAlign: "center",
       width: "100%",
-      maxWidth: "400px",
-      boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.2)",
+      maxWidth: "480px",
+      boxShadow: "0px 8px 24px rgba(0, 0, 0, 0.15)",
+      border: "1px solid #e0e0e0",
     },
     modalTitle: {
-      fontSize: "24px",
+      fontSize: "22px",
       fontWeight: "bold",
-      color: "#333",
-      marginBottom: "20px",
+      color: "#2563eb", // Medical blue
+      marginBottom: "24px",
+      textAlign: "center",
+      borderBottom: "1px solid #e5e7eb",
+      paddingBottom: "12px",
     },
     inputGroup: {
-      marginBottom: "20px",
-    },
-    inputField: {
-      width: "100%",
-      padding: "10px",
-      fontSize: "16px",
-      borderRadius: "8px",
-      border: "1px solid #ccc",
+      marginBottom: "22px",
     },
     label: {
-        color: "black",
+      display: "block",
+      fontSize: "16px",
+      color: "#374151",
+      marginBottom: "8px",
+      fontWeight: "bold",
+    },
+    inputField: {
+      width: "80%",
+      padding: "12px 14px",
+      fontSize: "16px",
+      borderRadius: "8px",
+      border: "1px solid #d1d5db",
+      backgroundColor: "#f9fafb",
+      boxShadow: "0px 1px 2px rgba(0, 0, 0, 0.05)",
+      transition: "border-color 0.2s, box-shadow 0.2s",
+      outline: "none",
+      color: "black",
     },
     modalButtonContainer: {
       display: "flex",
       justifyContent: "space-between",
-      gap: "10px",
+      gap: "14px",
+      marginTop: "30px",
     },
     modalButton: {
-      backgroundColor: "#28a745",
+      backgroundColor: "#2563eb", // Medical blue
       color: "white",
       padding: "12px 20px",
       borderRadius: "8px",
       border: "none",
       fontSize: "16px",
+      fontWeight: "500",
       cursor: "pointer",
       flex: 1,
       transition: "background-color 0.3s",
+      boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.1)",
     },
-    cancelButton: {
-      backgroundColor: "#dc3545",
+    modalButtonDisabled: {
+      backgroundColor: "#93c5fd", // Lighter blue
       color: "white",
       padding: "12px 20px",
       borderRadius: "8px",
       border: "none",
       fontSize: "16px",
+      fontWeight: "500",
+      cursor: "not-allowed",
+      flex: 1,
+      boxShadow: "none",
+    },
+    cancelButton: {
+      backgroundColor: "#f3f4f6",
+      color: "#4b5563",
+      padding: "12px 20px",
+      borderRadius: "8px",
+      border: "1px solid #d1d5db",
+      fontSize: "16px",
+      fontWeight: "500",
       cursor: "pointer",
       flex: 1,
       transition: "background-color 0.3s",
     },
   };
-
-export default AddComplaints;
+  
+  export default AddComplaints;
