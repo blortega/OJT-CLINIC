@@ -287,12 +287,13 @@ const styles = {
   },
   modalTitle: {
     fontSize: "24px",
-    fontWeight: "600",
-    color: "#2c4f7c", // Medical blue shade
+    fontWeight: "bold",
+    color: "#2563eb", // Medical blue shade
     marginBottom: "24px",
     textAlign: "center",
     borderBottom: "1px solid #e5e7eb",
     paddingBottom: "14px",
+  
   },
   modalDescription: {
     fontSize: "16px",
@@ -306,7 +307,7 @@ const styles = {
     marginBottom: "8px",
     display: "block",
     textAlign: "left",
-    fontWeight: "500",
+    fontWeight: "bold",
   },
   inputField: {
     fontSize: "16px",
@@ -320,6 +321,7 @@ const styles = {
     backgroundColor: "#f9fafb",
     boxShadow: "0px 1px 2px rgba(0, 0, 0, 0.05)",
     transition: "border-color 0.2s, box-shadow 0.2s",
+    color: "black",
   },
   stockContainer: {
     display: "flex",
@@ -337,6 +339,7 @@ const styles = {
     textAlign: "center",
     backgroundColor: "#f9fafb",
     boxShadow: "0px 1px 2px rgba(0, 0, 0, 0.05)",
+    color: "black",
   },
   decreaseButton: {
     backgroundColor: "#ef4444", // Red

@@ -119,20 +119,52 @@ const AddMedicineForm = ({ onClose, onAddMedicine }) => {
           <FormControl fullWidth style={{ marginBottom: "20px" }}>
   <InputLabel>Indicated Medication/s</InputLabel>
   <Select
-    multiple
-    value={selectedComplaints}
-    onChange={(e) => setSelectedComplaints(e.target.value)}
-    input={<OutlinedInput label="Indicated Complaints" />}
-    renderValue={(selected) => selected.join(', ')}
+  multiple
+  value={selectedComplaints}
+  onChange={(e) => {
+    const value = e.target.value;
+
+    // prevent "__custom__" from being stored
+    if (value.includes("__custom__")) return;
+
+    setSelectedComplaints(value);
+  }}
+  input={<OutlinedInput label="Indicated Complaints" />}
+  renderValue={(selected) => selected.join(", ")}
+>
+  {complaints.map((complaint) => (
+    <MenuItem key={complaint.id} value={complaint.name}>
+      <Checkbox checked={selectedComplaints.includes(complaint.name)} />
+      <ListItemText primary={complaint.name} />
+    </MenuItem>
+  ))}
+
+  <MenuItem
+    value="__custom__"
+    onClick={() => {
+      const input = prompt("Enter new complaint(s), separated by commas:");
+      if (input) {
+        const newEntries = input
+          .split(",")
+          .map((item) => item.trim())
+          .filter(
+            (item) => item.length > 0 && !selectedComplaints.includes(item)
+          );
+
+        if (newEntries.length > 0) {
+          setSelectedComplaints((prev) => [...prev, ...newEntries]);
+        } else {
+          toast.info("No new unique complaints added.");
+        }
+      }
+    }}
   >
-    {complaints.map((complaint) => (
-      <MenuItem key={complaint.id} value={complaint.name}>
-        <Checkbox checked={selectedComplaints.includes(complaint.name)} />
-        <ListItemText primary={complaint.name} />
-      </MenuItem>
-    ))}
-  </Select>
+    ➕ Add a new complaint
+  </MenuItem>
+</Select>
+
 </FormControl>
+
 </div>
 
           <div style={styles.inputGroup}>
