@@ -1,16 +1,25 @@
 import React, { useState } from "react";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { app } from "../firebase"; // Adjust path based on your project
 
-const AddComplaints = ({ onClose, onAddComplaint }) => {
+const AddComplaints = ({ onClose, onAddComplaint, medicines }) => {
   const [complaintText, setComplaintText] = useState("");
+  const [selectedMedicine, setSelectedMedicine] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    setIsSubmitting(true);
-    await onAddComplaint(complaintText);
-    setIsSubmitting(false);
-    onClose(); // Close the modal after submitting
-  }; 
+    if (!complaintText || !selectedMedicine) {
+        toast.error("Please fill in all fields.");
+        return;
+      }
+  
+      setIsSubmitting(true);
+      await onAddComplaint(complaintText, selectedMedicine);
+      setIsSubmitting(false);
+      onClose();
+    };
 
   return (
     <div style={styles.modalOverlay}>
@@ -26,6 +35,21 @@ const AddComplaints = ({ onClose, onAddComplaint }) => {
             placeholder="Complaint"
             style={styles.inputField}
           />
+        </div>
+        <div style={styles.inputGroup}>
+          <label style={styles.label}>Medicine:</label>
+          <select
+            value={selectedMedicine}
+            onChange={(e) => setSelectedMedicine(e.target.value)}
+            style={styles.inputField}
+          >
+            <option value="">Select a medicine</option>
+            {medicines.map((med) => (
+              <option key={med.id} value={med.id}>
+                {med.name}
+              </option>
+            ))}
+          </select>
         </div>
         <div style={styles.modalButtonContainer}>
           <button
