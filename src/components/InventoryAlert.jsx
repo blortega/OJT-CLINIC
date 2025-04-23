@@ -15,7 +15,7 @@ const InventoryAlert = ({ medicines }) => {
     if (lowStockItems.length > 0) {
       toast.warning(`${lowStockItems.length} medicine(s) are running low on stock!`, {
         
-        autoClose: 5000,
+        autoClose: 3000,
       });
     }
 
@@ -23,7 +23,7 @@ const InventoryAlert = ({ medicines }) => {
     if (outOfStockItems.length > 0) {
       toast.error(`${outOfStockItems.length} medicine(s) are out of stock!`, {
        
-        autoClose: 5000,
+        autoClose: 3000,
       });
     }
 
