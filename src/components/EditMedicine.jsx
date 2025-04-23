@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getFirestore, updateDoc, doc, serverTimestamp, Timestamp } from "firebase/firestore";
+import { getFirestore, collection, updateDoc, doc, serverTimestamp, Timestamp, addDoc, getDocs } from "firebase/firestore";
 import { app } from "../firebase";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -123,6 +123,26 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
       const expiry = new Date(editedMedicine.expiryDate);
       expiry.setHours(0, 0, 0, 0);
 
+      const complaintsRef = collection(db, "complaints");
+      const existingComplaintsSnap = await getDocs(complaintsRef);
+      const existingComplaintNames = existingComplaintsSnap.docs.map(doc => doc.data().name);
+  
+      const newComplaints = selectedComplaints.filter(name => !existingComplaintNames.includes(name));
+  
+      // Add new complaints to the 'complaints' collection
+      for (const complaint of newComplaints) {
+        try {
+          await addDoc(complaintsRef, {
+            name: complaint,
+            medicineName: editedMedicine.name,
+            createdAt: serverTimestamp(),
+          });
+          console.log(`✅ Complaint "${complaint}" added to Firestore`);
+        } catch (err) {
+          console.error(`❌ Failed to add complaint "${complaint}":`, err);
+        }
+      }
+
       await updateDoc(medicineRef, {
         name: editedMedicine.name,
         stock: editedMedicine.stock,
@@ -189,22 +209,53 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
           </label>
 
           <div style={styles.inputGroup}>
-          <FormControl fullWidth style={{ marginBottom: "20px" }}>
+           <FormControl fullWidth style={{ marginBottom: "20px" }}>
             <InputLabel>Indicated Medication/s</InputLabel>
             <Select
-              multiple
-              value={selectedComplaints}
-              onChange={(e) => setSelectedComplaints(e.target.value)}
-              input={<OutlinedInput label="Indicated Complaints" />}
-              renderValue={(selected) => selected.join(', ')}
+            multiple
+            value={selectedComplaints}
+            onChange={(e) => {
+              const value = e.target.value;
+          
+              // prevent "__custom__" from being stored
+              if (value.includes("__custom__")) return;
+          
+              setSelectedComplaints(value);
+            }}
+            input={<OutlinedInput label="Indicated Complaints" />}
+            renderValue={(selected) => selected.join(", ")}
+          >
+            {complaints.map((complaint) => (
+              <MenuItem key={complaint.id} value={complaint.name}>
+                <Checkbox checked={selectedComplaints.includes(complaint.name)} />
+                <ListItemText primary={complaint.name} />
+              </MenuItem>
+            ))}
+          
+            <MenuItem
+              value="__custom__"
+              onClick={() => {
+                const input = prompt("Enter new complaint(s), separated by commas:");
+                if (input) {
+                  const newEntries = input
+                    .split(",")
+                    .map((item) => item.trim())
+                    .filter(
+                      (item) => item.length > 0 && !selectedComplaints.includes(item)
+                    );
+          
+                  if (newEntries.length > 0) {
+                    setSelectedComplaints((prev) => [...prev, ...newEntries]);
+                  } else {
+                    toast.info("No new unique complaints added.");
+                  }
+                }
+              }}
             >
-              {complaints.map((complaint) => (
-                <MenuItem key={complaint.id} value={complaint.name}>
-                  <Checkbox checked={selectedComplaints.includes(complaint.name)} />
-                  <ListItemText primary={complaint.name} />
-                </MenuItem>
-              ))}
-            </Select>
+              ➕ Add a new complaint
+            </MenuItem>
+          </Select>
+          
           </FormControl>
         </div>
 
