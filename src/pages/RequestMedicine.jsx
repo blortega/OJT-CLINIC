@@ -10,9 +10,14 @@ import {
   serverTimestamp,
   doc,
   updateDoc,
+  writeBatch,
+  getDoc,
 } from "firebase/firestore";
 import Sidebar from "../components/Sidebar";
 import { db } from "../firebase";
+
+// Cache duration in milliseconds (e.g., 1 hour)
+const CACHE_DURATION = 60 * 60 * 1000;
 
 const RequestMedicine = () => {
   const [scannedData, setScannedData] = useState("");
@@ -33,56 +38,103 @@ const RequestMedicine = () => {
   const timeoutRef = useRef(null);
   const [debugInfo, setDebugInfo] = useState({});
 
-  // Fetch complaints, medicines, and employee IDs from Firestore
-  useEffect(() => {
-    const fetchComplaints = async () => {
-      setIsLoading(true);
-      try {
-        const complaintsRef = collection(db, "complaints");
-        const querySnapshot = await getDocs(complaintsRef);
-        const complaintsData = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setComplaints(complaintsData);
-      } catch (error) {
-        console.error("Error fetching complaints:", error);
-      }
-    };
+  // User cache for reducing employee ID lookups
+  const [userCache, setUserCache] = useState({});
 
-    const fetchMedicines = async () => {
+  // Function to get data from cache
+  const getFromCache = (key) => {
+    const cachedData = localStorage.getItem(key);
+    if (!cachedData) return null;
+
+    try {
+      const { data, timestamp } = JSON.parse(cachedData);
+      // Check if cache is still valid
+      if (Date.now() - timestamp < CACHE_DURATION) {
+        return data;
+      }
+    } catch (error) {
+      console.error("Error parsing cached data:", error);
+    }
+    return null;
+  };
+
+  // Function to save data to cache
+  const saveToCache = (key, data) => {
+    try {
+      const cacheObject = {
+        data,
+        timestamp: Date.now(),
+      };
+      localStorage.setItem(key, JSON.stringify(cacheObject));
+    } catch (error) {
+      console.error("Error saving to cache:", error);
+    }
+  };
+
+  // Batch fetch and cache complaints, medicines, and employee IDs
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+
+      // Try to get data from cache first
+      const cachedComplaints = getFromCache("complaints");
+      const cachedMedicines = getFromCache("medicines");
+      const cachedEmployeeIDs = getFromCache("employeeIDs");
+
+      let complaintsData = cachedComplaints;
+      let medicinesData = cachedMedicines;
+      let employeeIDsData = cachedEmployeeIDs;
+
       try {
-        const medicinesRef = collection(db, "medicine");
-        const querySnapshot = await getDocs(medicinesRef);
-        const medicinesData = querySnapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
+        // If not in cache, fetch from Firestore
+        if (!complaintsData) {
+          const complaintsRef = collection(db, "complaints");
+          const querySnapshot = await getDocs(complaintsRef);
+          complaintsData = querySnapshot.docs.map((doc) => ({
             id: doc.id,
-            ...data,
-          };
-        });
+            ...doc.data(),
+          }));
+          saveToCache("complaints", complaintsData);
+        }
+
+        if (!medicinesData) {
+          const medicinesRef = collection(db, "medicine");
+          const querySnapshot = await getDocs(medicinesRef);
+          medicinesData = querySnapshot.docs.map((doc) => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+            };
+          });
+          saveToCache("medicines", medicinesData);
+        }
+
+        if (!employeeIDsData) {
+          const usersRef = collection(db, "users");
+          const querySnapshot = await getDocs(usersRef);
+          employeeIDsData = querySnapshot.docs.map(
+            (doc) => doc.data().employeeID
+          );
+          saveToCache("employeeIDs", employeeIDsData);
+        }
+
+        setComplaints(complaintsData);
         setMedicines(medicinesData);
+        setEmployeeIDs(employeeIDsData);
       } catch (error) {
-        console.error("Error fetching medicines:", error);
+        console.error("Error fetching data:", error);
+        // Fallback to cached data if available
+        if (cachedComplaints) setComplaints(cachedComplaints);
+        if (cachedMedicines) setMedicines(cachedMedicines);
+        if (cachedEmployeeIDs) setEmployeeIDs(cachedEmployeeIDs);
+        toast.error("Error fetching data. Some information may be outdated.");
       } finally {
         setIsLoading(false);
       }
     };
 
-    const fetchEmployeeIDs = async () => {
-      try {
-        const usersRef = collection(db, "users");
-        const querySnapshot = await getDocs(usersRef);
-        const ids = querySnapshot.docs.map((doc) => doc.data().employeeID);
-        setEmployeeIDs(ids);
-      } catch (error) {
-        console.error("Error fetching employee IDs:", error);
-      }
-    };
-
-    fetchComplaints();
-    fetchMedicines();
-    fetchEmployeeIDs();
+    fetchData();
   }, []);
 
   // Filter medicines when complaint changes
@@ -171,16 +223,44 @@ const RequestMedicine = () => {
     return null;
   };
 
+  // Check user cache before fetching from Firestore
   const fetchUserData = async (employeeID) => {
     setIsSearching(true);
+
     try {
+      // Check if user data is in the in-memory cache
+      if (userCache[employeeID]) {
+        setUserData(userCache[employeeID]);
+        toast.success("Employee found!");
+        setIsSearching(false);
+        return;
+      }
+
+      // Check if user data is in local storage
+      const cachedUser = getFromCache(`user_${employeeID}`);
+      if (cachedUser) {
+        setUserData(cachedUser);
+        // Also update in-memory cache
+        setUserCache((prev) => ({ ...prev, [employeeID]: cachedUser }));
+        toast.success("Employee found!");
+        setIsSearching(false);
+        return;
+      }
+
+      // If not in cache, fetch from Firestore
       const usersRef = collection(db, "users");
       const q = query(usersRef, where("employeeID", "==", employeeID));
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
         const userDoc = querySnapshot.docs[0];
-        setUserData(userDoc.data());
+        const userData = userDoc.data();
+
+        // Update both caches
+        setUserData(userData);
+        setUserCache((prev) => ({ ...prev, [employeeID]: userData }));
+        saveToCache(`user_${employeeID}`, userData);
+
         toast.success("Employee found!");
       } else {
         console.log("No user found with this employeeID.");
@@ -237,6 +317,7 @@ const RequestMedicine = () => {
     resetUserSelection();
   };
 
+  // Use batch writes to reduce write operations
   const handleSave = async () => {
     if (!userData || !complaint || !medicine) {
       toast.warn("Please fill all required fields");
@@ -267,8 +348,42 @@ const RequestMedicine = () => {
         return;
       }
 
-      const medicineRequestRef = collection(db, "medicineRequests");
-      await addDoc(medicineRequestRef, {
+      // Get the most up-to-date medicine stock
+      const medicineDocRef = doc(db, "medicine", selectedMedicine.id);
+      const medicineDoc = await getDoc(medicineDocRef);
+      const currentMedicineData = medicineDoc.data();
+
+      // Double-check stock levels with fresh data
+      if (currentMedicineData.stock < quantityDispensed) {
+        toast.error(
+          `Sorry, stock level has changed! Only ${currentMedicineData.stock} available now.`
+        );
+
+        // Update local cache with current data
+        setMedicines((prevMedicines) => {
+          const updatedMedicines = [...prevMedicines];
+          const index = updatedMedicines.findIndex(
+            (m) => m.id === selectedMedicine.id
+          );
+          if (index !== -1) {
+            updatedMedicines[index] = {
+              ...updatedMedicines[index],
+              ...currentMedicineData,
+            };
+          }
+          return updatedMedicines;
+        });
+
+        saveToCache("medicines", medicines);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Start a batch
+      const batch = writeBatch(db);
+
+      // Create medicine request data
+      const requestData = {
         employeeID: scannedData,
         firstname: userData.firstname,
         lastname: userData.lastname,
@@ -279,28 +394,51 @@ const RequestMedicine = () => {
         quantityDispensed: quantityDispensed,
         status: "Completed",
         timestamp: serverTimestamp(),
+      };
+
+      // Add medicine request
+      const medicineRequestRef = collection(db, "medicineRequests");
+      const newRequestRef = doc(medicineRequestRef);
+      batch.set(newRequestRef, requestData);
+
+      // Update medicine stock
+      const newStock = currentMedicineData.stock - quantityDispensed;
+      let newStatus = currentMedicineData.status;
+
+      if (newStock === 0) {
+        newStatus = "Out of Stock";
+      } else if (newStock <= 20) {
+        newStatus = "Low Stock";
+      } else {
+        newStatus = "In Stock";
+      }
+
+      batch.update(medicineDocRef, {
+        stock: newStock,
+        status: newStatus,
+        updatedAt: serverTimestamp(),
       });
 
-      if (selectedMedicine) {
-        const medicineDocRef = doc(db, "medicine", selectedMedicine.id);
-        const newStock = selectedMedicine.stock - quantityDispensed;
+      // Commit the batch
+      await batch.commit();
 
-        let newStatus = selectedMedicine.status;
-
-        if (newStock === 0) {
-          newStatus = "Out of Stock";
-        } else if (newStock <= 20) {
-          newStatus = "Low Stock";
-        } else {
-          newStatus = "In Stock";
+      // Update local cache
+      setMedicines((prevMedicines) => {
+        const updatedMedicines = [...prevMedicines];
+        const index = updatedMedicines.findIndex(
+          (m) => m.id === selectedMedicine.id
+        );
+        if (index !== -1) {
+          updatedMedicines[index] = {
+            ...updatedMedicines[index],
+            stock: newStock,
+            status: newStatus,
+          };
         }
+        return updatedMedicines;
+      });
 
-        await updateDoc(medicineDocRef, {
-          stock: newStock,
-          status: newStatus,
-          updatedAt: serverTimestamp(),
-        });
-      }
+      saveToCache("medicines", medicines);
 
       toast.success("Medicine request submitted successfully!");
       resetUserSelection();
@@ -366,6 +504,7 @@ const RequestMedicine = () => {
     }
   };
 
+  // The rest of your JSX remains the same
   return (
     <Sidebar>
       <ToastContainer position="top-right" autoClose={3000} />
