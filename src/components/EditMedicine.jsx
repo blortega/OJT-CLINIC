@@ -22,8 +22,16 @@ const formatDate = (date) => {
 // New helper to convert to YYYY-MM-DD
 const formatForInput = (date) => {
   if (!date) return "";
-  const d = new Date(date.seconds ? date.seconds * 1000 : date);
-  return d.toISOString().split("T")[0]; // Format for input[type="date"]
+  
+  // Handle Firestore Timestamp
+  const d = date.seconds ? new Date(date.seconds * 1000) : new Date(date);
+  
+  // Format as YYYY-MM-DD but ensure we're using local date parts, not UTC
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
 };
 
 
@@ -120,7 +128,8 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
       const db = getFirestore(app);
       const medicineRef = doc(db, "medicine", medicine.id);
 
-      const expiry = new Date(editedMedicine.expiryDate);
+      const [year, month, day] = editedMedicine.expiryDate.split('-').map(Number);
+      const expiry = new Date(year, month - 1, day);
       expiry.setHours(0, 0, 0, 0);
 
       const complaintsRef = collection(db, "complaints");
