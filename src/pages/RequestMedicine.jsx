@@ -27,6 +27,7 @@ const RequestMedicine = () => {
   const [formVisible, setFormVisible] = useState(false);
   const [complaint, setComplaint] = useState("");
   const [medicine, setMedicine] = useState("");
+  const [quantityDispensed, setQuantityDispensed] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [complaints, setComplaints] = useState([]);
   const [medicines, setMedicines] = useState([]);
@@ -323,8 +324,10 @@ const RequestMedicine = () => {
       return;
     }
 
-    // Fixed quantity to always be 1
-    const quantityDispensed = 1;
+    if (quantityDispensed <= 0) {
+      toast.warn("Quantity must be greater than zero");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -368,11 +371,10 @@ const RequestMedicine = () => {
               ...currentMedicineData,
             };
           }
-          // Save updated medicines to cache inside the state update function
-          saveToCache("medicines", updatedMedicines);
           return updatedMedicines;
         });
 
+        saveToCache("medicines", medicines);
         setIsSubmitting(false);
         return;
       }
@@ -389,7 +391,7 @@ const RequestMedicine = () => {
         department: userData.department,
         complaint: complaint,
         medicine: medicine,
-        quantityDispensed: quantityDispensed, // Always 1
+        quantityDispensed: quantityDispensed,
         status: "Completed",
         timestamp: serverTimestamp(),
       };
@@ -433,10 +435,10 @@ const RequestMedicine = () => {
             status: newStatus,
           };
         }
-        // Save updated medicines to cache inside the state update function
-        saveToCache("medicines", updatedMedicines);
         return updatedMedicines;
       });
+
+      saveToCache("medicines", medicines);
 
       toast.success("Medicine request submitted successfully!");
       resetUserSelection();
@@ -468,6 +470,7 @@ const RequestMedicine = () => {
     setScannedData("");
     setComplaint("");
     setMedicine("");
+    setQuantityDispensed(1);
     bufferRef.current = "";
   };
 
@@ -501,6 +504,7 @@ const RequestMedicine = () => {
     }
   };
 
+  // The rest of your JSX remains the same
   return (
     <Sidebar>
       <ToastContainer position="top-right" autoClose={3000} />
@@ -696,12 +700,51 @@ const RequestMedicine = () => {
                                 )}
 
                                 {med.stock > 0 && (
-                                  <div style={styles.quantityNote}>
-                                    <span style={styles.infoIcon}>ℹ️</span>
-                                    <span>
-                                      Only 1 quantity will be dispensed per
-                                      request
-                                    </span>
+                                  <div style={styles.quantityContainer}>
+                                    <label style={styles.quantityLabel}>
+                                      Quantity to Dispense:
+                                      <div style={styles.quantityControls}>
+                                        <button
+                                          style={styles.quantityButton}
+                                          onClick={() =>
+                                            setQuantityDispensed(
+                                              Math.max(1, quantityDispensed - 1)
+                                            )
+                                          }
+                                          disabled={quantityDispensed <= 1}
+                                        >
+                                          -
+                                        </button>
+                                        <input
+                                          type="number"
+                                          min="1"
+                                          max={med.stock}
+                                          value={quantityDispensed}
+                                          onChange={(e) =>
+                                            setQuantityDispensed(
+                                              parseInt(e.target.value) || 0
+                                            )
+                                          }
+                                          style={styles.quantityInput}
+                                        />
+                                        <button
+                                          style={styles.quantityButton}
+                                          onClick={() =>
+                                            setQuantityDispensed(
+                                              Math.min(
+                                                med.stock,
+                                                quantityDispensed + 1
+                                              )
+                                            )
+                                          }
+                                          disabled={
+                                            quantityDispensed >= med.stock
+                                          }
+                                        >
+                                          +
+                                        </button>
+                                      </div>
+                                    </label>
                                   </div>
                                 )}
                               </div>
@@ -720,8 +763,11 @@ const RequestMedicine = () => {
                           !complaint ||
                           !medicine ||
                           isSubmitting ||
+                          quantityDispensed <= 0 ||
                           filteredMedicines.find((med) => med.name === medicine)
-                            ?.stock === 0
+                            ?.stock === 0 ||
+                          filteredMedicines.find((med) => med.name === medicine)
+                            ?.stock < quantityDispensed
                             ? 0.6
                             : 1,
                       }}
@@ -731,8 +777,11 @@ const RequestMedicine = () => {
                         !complaint ||
                         !medicine ||
                         isSubmitting ||
+                        quantityDispensed <= 0 ||
                         filteredMedicines.find((med) => med.name === medicine)
-                          ?.stock === 0
+                          ?.stock === 0 ||
+                        filteredMedicines.find((med) => med.name === medicine)
+                          ?.stock < quantityDispensed
                       }
                     >
                       {isSubmitting ? (

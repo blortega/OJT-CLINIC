@@ -37,6 +37,8 @@ const Dashboard = () => {
 
   const [topConditions, setTopConditions] = useState([]);
 
+  const [topMedicines, setTopMedicines] = useState([]);
+
   useEffect(() => {
     const fetchGenderData = async () => {
       try {
@@ -91,6 +93,34 @@ const Dashboard = () => {
 
     fetchConditions();
   }, []);
+
+  useEffect(() => {
+    const fetchTopRequestedMedicines = async () => {
+      try {
+        const requestsSnapshot = await getDocs(collection(db, "medicineRequests"));
+        const countMap = {};
+  
+        requestsSnapshot.forEach((doc) => {
+          const medicine = doc.data().medicine;
+          if (medicine) {
+            countMap[medicine] = (countMap[medicine] || 0) + 1;
+          }
+        });
+  
+        const sortedTopMedicines = Object.entries(countMap)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 5);
+  
+        setTopMedicines(sortedTopMedicines);
+      } catch (error) {
+        console.error("Error fetching top requested medicines:", error);
+      }
+    };
+  
+    fetchTopRequestedMedicines();
+  }, []);
+  
 
   useEffect(() => {
     const fetchMedicines = async () => {
@@ -153,10 +183,10 @@ const Dashboard = () => {
           <InventoryAlert medicines={medicines} />
 
           <div className="chart-container">
-            <h2 className="dashboard-text">Top 5 Conditions</h2>
+            <h2 className="dashboard-text">Top 5 Most Requested Medicine</h2>
             <ResponsiveContainer width="100%" minWidth={400} height={300}>
               <BarChart
-                data={topConditions}
+                data={topMedicines}
                 margin={{ top: 20, right: 30, left: 20, bottom: 50 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
@@ -178,7 +208,7 @@ const Dashboard = () => {
                 />
                 {/* <Legend /> <-- removed to prevent "value" label under chart */}
                 <Bar dataKey="value" fill="#8884d8">
-                  {topConditions.map((entry, index) => (
+                  {topMedicines.map((entry, index) => (
                     <Cell
                       key={`cell-bar-${index}`}
                       fill={CONDITION_COLORS[index % CONDITION_COLORS.length]}
