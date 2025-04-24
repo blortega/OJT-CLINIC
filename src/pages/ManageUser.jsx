@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import Sidebar from "../components/Sidebar";
 import {
   getFirestore,
   collection,
   getDocs,
   doc,
-  addDoc,
   updateDoc,
   deleteDoc,
   Timestamp,
@@ -21,13 +20,19 @@ import {
   FiUserX,
   FiUpload,
   FiTrash2,
+  FiAlertCircle,
+  FiRefreshCw,
 } from "react-icons/fi";
-import { FaUserCheck, FaEdit } from "react-icons/fa";
+import { FaUserCheck } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "../styles/ManageUser.css";
-import { FiAlertCircle } from "react-icons/fi";
 import * as XLSX from "xlsx";
+
+// Cache key for localStorage
+const USERS_CACHE_KEY = "manage_users_cache";
+const CACHE_EXPIRY_KEY = "manage_users_cache_expiry";
+const CACHE_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 const ManageUser = () => {
   const [users, setUsers] = useState([]);
@@ -42,6 +47,8 @@ const ManageUser = () => {
   const [isEditable, setIsEditable] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastFetchTime, setLastFetchTime] = useState(null);
   const [userForm, setUserForm] = useState({
     firstname: "",
     middleInitial: "",
@@ -65,14 +72,115 @@ const ManageUser = () => {
     dob: "",
   });
 
-  useEffect(() => {
-    /**
-     * Fetches all users from Firestore database
-     * Sorts users alphabetically by last name
-     */
-    const fetchUsers = async () => {
+  // Helper function to check if cache is expired
+  const isCacheExpired = useCallback(() => {
+    const expiryTime = localStorage.getItem(CACHE_EXPIRY_KEY);
+    return !expiryTime || Date.now() > parseInt(expiryTime);
+  }, []);
+
+  // Helper function to save data to cache
+  const saveToCache = useCallback((data) => {
+    try {
+      // Process Timestamp objects before saving to localStorage
+      const processedData = data.map((user) => ({
+        ...user,
+        // Convert Firestore Timestamp to serializable format
+        dob: user.dob
+          ? {
+              seconds: user.dob.seconds,
+              nanoseconds: user.dob.nanoseconds,
+            }
+          : null,
+        createdAt: user.createdAt
+          ? {
+              seconds: user.createdAt.seconds,
+              nanoseconds: user.createdAt.nanoseconds,
+            }
+          : null,
+      }));
+
+      localStorage.setItem(USERS_CACHE_KEY, JSON.stringify(processedData));
+      localStorage.setItem(
+        CACHE_EXPIRY_KEY,
+        (Date.now() + CACHE_EXPIRY_TIME).toString()
+      );
+      setLastFetchTime(new Date());
+    } catch (error) {
+      console.error("Error saving to cache:", error);
+      // If local storage fails (e.g., quota exceeded), attempt to clear it and try again
+      try {
+        localStorage.removeItem(USERS_CACHE_KEY);
+        localStorage.removeItem(CACHE_EXPIRY_KEY);
+        localStorage.setItem(USERS_CACHE_KEY, JSON.stringify(data));
+        localStorage.setItem(
+          CACHE_EXPIRY_KEY,
+          (Date.now() + CACHE_EXPIRY_TIME).toString()
+        );
+      } catch (retryError) {
+        console.error("Failed to save to cache even after retry:", retryError);
+        toast.warning(
+          "Failed to cache user data locally. Some features may be slower."
+        );
+      }
+    }
+  }, []);
+
+  // Helper function to load data from cache
+  const loadFromCache = useCallback(() => {
+    try {
+      const cachedData = localStorage.getItem(USERS_CACHE_KEY);
+      if (cachedData) {
+        const parsedData = JSON.parse(cachedData);
+
+        // Convert serialized timestamps back to Firestore Timestamp objects
+        const processedData = parsedData.map((user) => ({
+          ...user,
+          // Convert serialized timestamp back to a Firestore Timestamp-like object with toDate method
+          dob: user.dob
+            ? {
+                ...user.dob,
+                toDate: () => new Date(user.dob.seconds * 1000),
+              }
+            : null,
+          createdAt: user.createdAt
+            ? {
+                ...user.createdAt,
+                toDate: () => new Date(user.createdAt.seconds * 1000),
+              }
+            : null,
+        }));
+
+        return processedData;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error loading from cache:", error);
+      return null;
+    }
+  }, []);
+
+  // Function to fetch users from Firestore
+  const fetchUsersFromFirestore = useCallback(
+    async (force = false) => {
       try {
         setLoading(true);
+
+        // Check if we can use cached data
+        if (!force && !isCacheExpired()) {
+          const cachedUsers = loadFromCache();
+          if (cachedUsers && cachedUsers.length > 0) {
+            setUsers(cachedUsers);
+            setLoading(false);
+            const cacheTime = new Date(
+              parseInt(localStorage.getItem(CACHE_EXPIRY_KEY)) -
+                CACHE_EXPIRY_TIME
+            );
+            setLastFetchTime(cacheTime);
+            return;
+          }
+        }
+
+        // Fetch from Firestore if cache is expired or forced refresh
         const db = getFirestore(app);
         const usersCollection = collection(db, "users");
         const snapshot = await getDocs(usersCollection);
@@ -82,22 +190,32 @@ const ManageUser = () => {
             ...doc.data(),
           }))
           .sort((a, b) => a.lastname?.localeCompare(b.lastname));
+
         setUsers(usersList);
+        saveToCache(usersList);
+        setLastFetchTime(new Date());
       } catch (error) {
         console.error("Failed to fetch users:", error);
+        toast.error("Failed to fetch users data");
       } finally {
         setLoading(false);
+        setIsRefreshing(false);
       }
-    };
+    },
+    [saveToCache, loadFromCache, isCacheExpired]
+  );
 
-    fetchUsers();
-  }, []);
+  // Initial data load
+  useEffect(() => {
+    fetchUsersFromFirestore();
+  }, [fetchUsersFromFirestore]);
 
-  /**
-   * Handles Excel file upload for bulk user import
-   * Processes first 10 rows of employee data from specific columns
-   * Extracts employee details and saves to Firestore
-   */
+  // Force refresh data from Firestore
+  const handleRefreshData = () => {
+    setIsRefreshing(true);
+    fetchUsersFromFirestore(true);
+  };
+
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -275,11 +393,6 @@ const ManageUser = () => {
     e.target.value = null;
   };
 
-  /**
-   * Saves imported employee data to Firestore
-   * Removes employees not in the imported list (except admin)
-   * Updates UI with results
-   */
   const saveEmployeesToFirestore = async (users) => {
     const db = getFirestore(app);
     let successCount = 0;
@@ -305,6 +418,9 @@ const ManageUser = () => {
         (user) => !importedEmployeeIDs.has(user.employeeID?.toUpperCase())
       );
 
+      // Update in-memory state to track what's being deleted
+      const currentUserIds = new Set(existingUsers.map((user) => user.id));
+
       for (const user of usersToDelete) {
         try {
           await deleteDoc(doc(db, "users", user.id));
@@ -317,6 +433,7 @@ const ManageUser = () => {
 
       let batch = writeBatch(db);
       let batchCount = 0;
+      let updatedUsers = [...users]; // Create a new array for tracking updates
 
       for (const user of users) {
         try {
@@ -356,6 +473,7 @@ const ManageUser = () => {
         successCount += batchCount;
       }
 
+      // Update the in-memory cache
       const snapshot = await getDocs(collection(db, "users"));
       const updatedUsersList = snapshot.docs
         .map((doc) => ({
@@ -363,7 +481,9 @@ const ManageUser = () => {
           ...doc.data(),
         }))
         .sort((a, b) => a.lastname?.localeCompare(b.lastname));
+
       setUsers(updatedUsersList);
+      saveToCache(updatedUsersList); // Update the local storage cache too
 
       if (errorCount === 0) {
         toast.success(
@@ -380,11 +500,6 @@ const ManageUser = () => {
     }
   };
 
-  /**
-   * Filters users based on search input
-   * Searches across multiple fields including name, role, department, etc.
-   * Special case handling for searching by gender
-   */
   const filterUsers = (user) => {
     if (!search || search.trim() === "") return true;
 
@@ -428,10 +543,11 @@ const ManageUser = () => {
     );
   };
 
-  /**
-   * Prepares the modal for adding a new user
-   * Resets form fields and sets modal state
-   */
+  // Memoize filtered users for performance
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => user.employeeID?.trim()).filter(filterUsers);
+  }, [users, search]);
+
   const handleAddUser = () => {
     setCurrentUser(null);
     setIsEditable(true);
@@ -448,10 +564,6 @@ const ManageUser = () => {
     setModalVisible(true);
   };
 
-  /**
-   * Prepares the modal for editing an existing user
-   * Populates form with user data
-   */
   const handleEdit = (user) => {
     setCurrentUser(user);
     setIsEditable(false);
@@ -466,14 +578,9 @@ const ManageUser = () => {
       employeeID: user.employeeID || "",
       dob: user.dob ? user.dob.toDate().toISOString().split("T")[0] : "",
     });
-    setIsEditable(false);
     setModalVisible(true);
   };
 
-  /**
-   * Toggles user status between Active and Suspended
-   * Updates Firestore and refreshes user list
-   */
   const handleSuspend = async (user) => {
     if (
       !window.confirm(
@@ -488,32 +595,31 @@ const ManageUser = () => {
     const userRef = doc(db, "users", user.id);
 
     try {
-      if (user.status === "Active") {
-        await updateDoc(userRef, { status: "Suspended" });
-        toast.warn(`User ${user.firstname} ${user.lastname} is now Suspended.`);
-      } else {
-        await updateDoc(userRef, { status: "Active" });
-        toast.success(`User ${user.firstname} ${user.lastname} is now Active.`);
-      }
+      const newStatus = user.status === "Active" ? "Suspended" : "Active";
+      await updateDoc(userRef, { status: newStatus });
 
-      const snapshot = await getDocs(collection(db, "users"));
-      const updatedUsersList = snapshot.docs
-        .map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-        .sort((a, b) => a.lastname?.localeCompare(b.lastname));
-      setUsers(updatedUsersList);
+      // Update local state immediately without refetching
+      const updatedUsers = users.map((u) => {
+        if (u.id === user.id) {
+          return { ...u, status: newStatus };
+        }
+        return u;
+      });
+
+      setUsers(updatedUsers);
+      saveToCache(updatedUsers);
+
+      if (newStatus === "Active") {
+        toast.success(`User ${user.firstname} ${user.lastname} is now Active.`);
+      } else {
+        toast.warn(`User ${user.firstname} ${user.lastname} is now Suspended.`);
+      }
     } catch (error) {
       console.error("Failed to update status:", error);
       toast.error("Failed to update status.");
     }
   };
 
-  /**
-   * Deletes a single user from Firestore
-   * Confirms with user before deletion
-   */
   const handleDelete = async (user) => {
     if (
       !window.confirm(
@@ -527,20 +633,21 @@ const ManageUser = () => {
 
     try {
       await deleteDoc(userRef);
+
+      // Update local state immediately
+      const updatedUsers = users.filter((u) => u.id !== user.id);
+      setUsers(updatedUsers);
+      saveToCache(updatedUsers);
+
       toast.success(
         `User ${user.firstname} ${user.lastname} deleted successfully!`
       );
-      setUsers(users.filter((u) => u.id !== user.id));
     } catch (error) {
       console.error("Failed to delete user:", error);
       toast.error("Failed to delete user.");
     }
   };
 
-  /**
-   * Deletes all users except the one with employeeID 'T6N'
-   * Used for admin reset functionality
-   */
   const handleDeleteAll = async () => {
     if (
       !window.confirm(
@@ -584,9 +691,12 @@ const ManageUser = () => {
         await batch.commit();
       }
 
-      toast.success("All users except T6N have been deleted.");
+      // Update local state
+      const preservedUsers = users.filter((u) => u.employeeID === "T6N");
+      setUsers(preservedUsers);
+      saveToCache(preservedUsers);
 
-      setUsers((prevUsers) => prevUsers.filter((u) => u.employeeID === "T6N"));
+      toast.success("All users except T6N have been deleted.");
     } catch (error) {
       console.error("Failed to delete users:", error);
       toast.error("Failed to delete users.");
@@ -595,10 +705,6 @@ const ManageUser = () => {
     }
   };
 
-  /**
-   * Helper function to capitalize each word in a string
-   * Used for formatting department names consistently
-   */
   const capitalizeWords = (str) => {
     return str
       .toLowerCase()
@@ -607,10 +713,6 @@ const ManageUser = () => {
       .join(" ");
   };
 
-  /**
-   * Handles form field changes with appropriate formatting
-   * Applies specific formatting rules based on field type
-   */
   const handleFormChange = (e) => {
     const { name, value } = e.target;
 
@@ -644,11 +746,6 @@ const ManageUser = () => {
     }
   };
 
-  /**
-   * Validates user form before saving
-   * Checks required fields and data format
-   * Prevents duplicate employee IDs
-   */
   const validateForm = () => {
     const errors = {};
     let isValid = true;
@@ -713,21 +810,17 @@ const ManageUser = () => {
     return isValid;
   };
 
-  /**
-   * Saves user data to Firestore
-   * Handles both new user creation and existing user updates
-   * Validates form before saving
-   */
   const handleSaveUser = async () => {
     if (!validateForm()) {
       return;
     }
 
+    setIsSaving(true);
     const db = getFirestore(app);
     try {
       if (currentUser) {
         const userRef = doc(db, "users", currentUser.id);
-        await updateDoc(userRef, {
+        const updatedUserData = {
           firstname: userForm.firstname
             .toUpperCase()
             .trim()
@@ -739,7 +832,31 @@ const ManageUser = () => {
           gender: userForm.gender,
           employeeID: userForm.employeeID || "Not Available",
           dob: userForm.dob ? Timestamp.fromDate(new Date(userForm.dob)) : null,
+        };
+
+        await updateDoc(userRef, updatedUserData);
+
+        // Update local state
+        const updatedUsers = users.map((u) => {
+          if (u.id === currentUser.id) {
+            return {
+              ...u,
+              ...updatedUserData,
+              // Convert to the same format as our cached objects
+              dob: updatedUserData.dob
+                ? {
+                    seconds: updatedUserData.dob.seconds,
+                    nanoseconds: updatedUserData.dob.nanoseconds,
+                    toDate: () => new Date(updatedUserData.dob.seconds * 1000),
+                  }
+                : null,
+            };
+          }
+          return u;
         });
+
+        setUsers(updatedUsers);
+        saveToCache(updatedUsers);
 
         toast.success("User updated successfully!");
       } else {
@@ -763,6 +880,32 @@ const ManageUser = () => {
         const userRef = doc(db, "users", userForm.employeeID);
         await setDoc(userRef, newUserData);
 
+        // Add to local state
+        const newUser = {
+          id: userForm.employeeID,
+          ...newUserData,
+          // Convert to the same format as our cached objects
+          dob: newUserData.dob
+            ? {
+                seconds: newUserData.dob.seconds,
+                nanoseconds: newUserData.dob.nanoseconds,
+                toDate: () => new Date(newUserData.dob.seconds * 1000),
+              }
+            : null,
+          createdAt: {
+            seconds: Math.floor(Date.now() / 1000),
+            nanoseconds: 0,
+            toDate: () => new Date(),
+          },
+        };
+
+        const updatedUsers = [...users, newUser].sort((a, b) =>
+          a.lastname?.localeCompare(b.lastname)
+        );
+
+        setUsers(updatedUsers);
+        saveToCache(updatedUsers);
+
         toast.success(
           `${
             userForm.role.charAt(0).toUpperCase() + userForm.role.slice(1)
@@ -783,24 +926,13 @@ const ManageUser = () => {
       });
       setCurrentUser(null);
       setIsEditable(false);
-
-      const snapshot = await getDocs(collection(db, "users"));
-      const updatedUsersList = snapshot.docs
-        .map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-        .sort((a, b) => a.lastname?.localeCompare(b.lastname));
-      setUsers(updatedUsersList);
     } catch (error) {
       console.error("Failed to save user:", error);
       toast.error("Failed to save user");
+    } finally {
+      setIsSaving(false);
     }
   };
-
-  const filteredUsers = users
-    .filter((user) => user.employeeID?.trim())
-    .filter(filterUsers);
 
   return (
     <Sidebar>
