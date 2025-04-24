@@ -811,10 +811,9 @@ const styles = {
     margin: "0 auto",
   },
   heading: {
-    color: "#1e3a8a",
+    color: "#2563eb",
     marginBottom: "24px",
-    fontSize: "28px",
-    fontWeight: "600",
+    fontSize: "45px",
     textAlign: "center",
   },
   requestButton: {

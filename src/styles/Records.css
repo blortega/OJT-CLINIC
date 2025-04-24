@@ -7,8 +7,8 @@
 }
 
 .records-heading {
-  font-size: 32px;
-  color: #333;
+  font-size: 45px;
+  color: #2563eb;
   margin-bottom: 20px;
 }
 
@@ -62,7 +62,7 @@
 /* Table Head */
 .table-head {
   padding: 12px;
-  background: #1e3a8a;
+  background: #2563eb;
   color: #fff;
   border-bottom: 2px solid #ddd;
   text-align: center;
