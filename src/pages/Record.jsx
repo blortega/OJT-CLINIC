@@ -1,122 +1,370 @@
-import React, { useEffect, useState, useRef } from "react";
-import { collection, getFirestore, getDocs } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import { collection, getDocs } from "firebase/firestore";
 import Sidebar from "../components/Sidebar";
-import {  app, db } from "../firebase"; // Import Firestore instance
+import { db } from "../firebase";
 import { FaTrash, FaEye } from "react-icons/fa";
+import { FiAlertCircle } from "react-icons/fi";
+import "../styles/Records.css";
 
 const Record = () => {
   const [records, setRecords] = useState([]);
+  const [hoveredRecord, setHoveredRecord] = useState(null);
+  const [hoveredIcon, setHoveredIcon] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   useEffect(() => {
     const fetchRecords = async () => {
-      const snapshot = await getDocs(collection(db, "medicineRequests"));
-      const recordList = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          employeeID: data.employeeID,
-          fullName: `${data.firstname} ${data.middleInitial}. ${data.lastname}`,
-          department: data.department,
-          medicine: data.medicine,
-          complaint: data.complaint,
-          quantity: data.quantityDispensed,
-          status: data.status,
-          date: data.timestamp?.toDate().toLocaleString() || "N/A"
-        };
-      });
-      setRecords(recordList);
+      try {
+        const snapshot = await getDocs(collection(db, "medicineRequests"));
+        const recordList = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            employeeID: data.employeeID || "Not Available",
+            firstname: data.firstname || "",
+            middleInitial: data.middleInitial || "",
+            lastname: data.lastname || "",
+            fullName: data.firstname
+              ? `${data.firstname} ${
+                  data.middleInitial ? data.middleInitial + ". " : ""
+                }${data.lastname || ""}`
+              : "Not Available",
+            department: data.department || "Not Available",
+            medicine: data.medicine || "Not Available",
+            complaint: data.complaint || "Not Available",
+            quantity: data.quantityDispensed || "N/A",
+            status: data.status || "Pending",
+            date: data.timestamp?.toDate().toLocaleString() || "N/A",
+            // Store other fields that might be needed in the modal
+            timestamp: data.timestamp,
+            additionalNotes: data.additionalNotes || "None",
+          };
+        });
+        setRecords(recordList);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching records:", error);
+        setLoading(false);
+      }
     };
-  
+
     fetchRecords();
   }, []);
 
+  const handleView = (record) => {
+    setSelectedRecord(record);
+    setModalVisible(true);
+  };
+
+  const handleDelete = (record) => {
+    console.log("Deleting record:", record);
+    // Implement your delete functionality here
+  };
+
   return (
     <Sidebar>
-    <div style={{ display: "flex" }}>
-      
+      <div className="records-container">
+        <h1 className="records-heading">Medicine Request Records</h1>
 
-      <div style={{ flex: 1, padding: "24px" }}>
-        <div style={{
-          background: "#fff",
-          padding: "20px",
-          borderRadius: "12px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-          border: "1px solid #ddd"
-        }}>
-          <h2 style={{
-            marginBottom: "20px",
-            fontSize: "20px",
-            fontWeight: "bold",
-            color: "#2563eb"
-          }}>Records</h2>
-
-          <div style={{ overflowX: "auto" }}>
-            <table style={{
-              width: "100%",
-              borderCollapse: "collapse"
-            }}>
+        <div className="card">
+          {loading ? (
+            <div className="loading">Loading...</div>
+          ) : (
+            <table className="records-table">
               <thead>
-  <tr style={{ backgroundColor: "#2563eb", color: "white" }}>
-    {["Employee ID", "Name", "Department", "Medicine", "Quantity", "Complaint", "Status", "Date", "Actions"].map((header) => (
-      <th key={header} style={headerStyle}>{header}</th>
-    ))}
-  </tr>
-</thead>
-<tbody>
-  {records.map((record, index) => (
-    <tr key={record.id} style={index % 2 === 0 ? rowEvenStyle : rowOddStyle}>
-      <td style={cellStyle}>{record.employeeID}</td>
-      <td style={cellStyle}>{record.fullName}</td>
-      <td style={cellStyle}>{record.department}</td>
-      <td style={cellStyle}>{record.medicine}</td>
-      <td style={cellStyle}>{record.quantity}</td>
-      <td style={cellStyle}>{record.complaint}</td>
-      <td style={cellStyle}>{record.status}</td>
-      <td style={cellStyle}>{record.date}</td>
-      <td style={cellStyle}>
-        <FaEye style={iconStyle} />
-        <FaTrash style={iconStyle} />
-      </td>
-    </tr>
-  ))}
-</tbody>
+                <tr>
+                  <th className="table-head" style={{ width: "100px" }}>
+                    Employee ID
+                  </th>
+                  <th className="table-head" style={{ width: "150px" }}>
+                    Name
+                  </th>
+                  <th className="table-head" style={{ width: "120px" }}>
+                    Department
+                  </th>
+                  <th className="table-head" style={{ width: "120px" }}>
+                    Medicine
+                  </th>
+                  <th className="table-head" style={{ width: "80px" }}>
+                    Quantity
+                  </th>
+                  <th className="table-head" style={{ width: "150px" }}>
+                    Complaint
+                  </th>
+                  <th className="table-head" style={{ width: "100px" }}>
+                    Status
+                  </th>
+                  <th className="table-head" style={{ width: "150px" }}>
+                    Date
+                  </th>
+                  <th className="table-head" style={{ width: "100px" }}>
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {records.map((record, index) => (
+                  <tr
+                    key={record.id}
+                    className={`table-row ${
+                      index % 2 === 0 ? "even-row" : "odd-row"
+                    }`}
+                  >
+                    <td className="table-cell">{record.employeeID}</td>
+                    <td className="table-cell">{record.fullName}</td>
+                    <td className="table-cell">{record.department}</td>
+                    <td className="table-cell">{record.medicine}</td>
+                    <td className="table-cell">{record.quantity}</td>
+                    <td className="table-cell">{record.complaint}</td>
+                    <td className="table-cell">
+                      <span
+                        className="status-badge"
+                        style={{
+                          backgroundColor:
+                            record.status === "Approved"
+                              ? "#10b981"
+                              : record.status === "Completed"
+                              ? "#10b981"
+                              : record.status === "Rejected"
+                              ? "#ef4444"
+                              : record.status === "Pending"
+                              ? "#f59e0b"
+                              : "#6b7280",
+                        }}
+                      >
+                        {record.status}
+                      </span>
+                    </td>
+                    <td className="table-cell">{record.date}</td>
+                    <td className="action-cell">
+                      <button
+                        className={`icon-button ${
+                          hoveredRecord === record.id && hoveredIcon === "view"
+                            ? "button-hover"
+                            : ""
+                        }`}
+                        onMouseEnter={() => {
+                          setHoveredRecord(record.id);
+                          setHoveredIcon("view");
+                        }}
+                        onMouseLeave={() => setHoveredIcon(null)}
+                        onClick={() => handleView(record)}
+                        title="View Details"
+                      >
+                        <FaEye />
+                      </button>
 
+                      <button
+                        className={`icon-button ${
+                          hoveredRecord === record.id &&
+                          hoveredIcon === "delete"
+                            ? "button-hover"
+                            : ""
+                        }`}
+                        onMouseEnter={() => {
+                          setHoveredRecord(record.id);
+                          setHoveredIcon("delete");
+                        }}
+                        onMouseLeave={() => setHoveredIcon(null)}
+                        onClick={() => handleDelete(record)}
+                        title="Delete"
+                      >
+                        <FaTrash />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
-          </div>
+          )}
         </div>
       </div>
-    </div>
+
+      {/* Details Modal */}
+      {modalVisible && selectedRecord && (
+        <div className="record-modal" onClick={() => setModalVisible(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Medicine Request Details</h2>
+
+            <div className="form-row">
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Employee ID:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.employeeID}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Department:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.department}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="half-width">
+                <div className="form-group">
+                  <label>First Name:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.firstname}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Middle Initial:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.middleInitial}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Last Name:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.lastname}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Status:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.status}
+                    className="record-input status-input"
+                    style={{
+                      backgroundColor:
+                        selectedRecord.status === "Approved"
+                          ? "#dcfce7"
+                          : selectedRecord.status === "Completed"
+                          ? "#dcfce7"
+                          : selectedRecord.status === "Rejected"
+                          ? "#fee2e2"
+                          : selectedRecord.status === "Pending"
+                          ? "#fef3c7"
+                          : "#f3f4f6",
+                      color:
+                        selectedRecord.status === "Approved"
+                          ? "#166534"
+                          : selectedRecord.status === "Completed"
+                          ? "#166534"
+                          : selectedRecord.status === "Rejected"
+                          ? "#991b1b"
+                          : selectedRecord.status === "Pending"
+                          ? "#92400e"
+                          : "#374151",
+                    }}
+                    disabled
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Medicine:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.medicine}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Quantity:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.quantity}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="full-width">
+                <div className="form-group">
+                  <label>Complaint:</label>
+                  <textarea
+                    value={selectedRecord.complaint}
+                    className="record-textarea"
+                    disabled
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="full-width">
+                <div className="form-group">
+                  <label>Additional Notes:</label>
+                  <textarea
+                    value={selectedRecord.additionalNotes}
+                    className="record-textarea"
+                    disabled
+                    rows={2}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="full-width">
+                <div className="form-group">
+                  <label>Date Submitted:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.date}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="button-container">
+              <button
+                onClick={() => setModalVisible(false)}
+                className="close-button"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Sidebar>
   );
 };
-
-const cellStyle = {
-  padding: "14px 16px",
-  textAlign: "center",
-  border: "1px solid #ddd",
-  color: "black",
-};
-
-const iconStyle = {
-  margin: "0 6px",
-  cursor: "pointer",
-  transition: "transform 0.2s",
-  color: "#888"
-};
-const headerStyle = {
-  padding: "14px 16px",
-  textAlign: "center",
-  border: "1px solid #ddd",
-  fontWeight: "bold",
-};
-const rowEvenStyle = {
-  backgroundColor: "#f9f9f9"
-};
-
-const rowOddStyle = {
-  backgroundColor: "#ffffff"
-};
-
-
 
 export default Record;
