@@ -110,6 +110,15 @@ const Inventory = () => {
       medicationString,
       medicine.status,
       medicine.expiryDate ? medicine.expiryDate.toString() : "",
+      medicine.expiryDate ? 
+    (medicine.expiryDate.seconds ? 
+      new Date(medicine.expiryDate.seconds * 1000) : 
+      new Date(medicine.expiryDate)
+    ).toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+      day: "numeric"
+    }) : "",
       medicine.createdAt
         ? medicine.createdAt.toDate().toLocaleDateString("en-US", {
             month: "long",
