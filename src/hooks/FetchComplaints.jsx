@@ -22,7 +22,7 @@ const FetchComplaints = () => {
     fetchData();
   }, [fetchData]);
 
-  return { complaints, loading, refetchComplaints: fetchData };
+  return { complaints, loading, refetchComplaints: fetchData,};
 };
 
 export default FetchComplaints;
