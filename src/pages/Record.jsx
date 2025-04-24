@@ -42,7 +42,18 @@ const Record = () => {
             additionalNotes: data.additionalNotes || "None",
           };
         });
-        setRecords(recordList);
+
+        // Sort records by timestamp in descending order (latest first)
+        const sortedRecords = recordList.sort((a, b) => {
+          // Handle cases where timestamp might be missing
+          if (!a.timestamp) return 1; // Push items without timestamp to the end
+          if (!b.timestamp) return -1;
+
+          // Compare timestamps (newer dates first)
+          return b.timestamp - a.timestamp;
+        });
+
+        setRecords(sortedRecords);
         setLoading(false);
       } catch (error) {
         console.error("Error fetching records:", error);
