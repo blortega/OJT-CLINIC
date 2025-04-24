@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { getFirestore, collection, updateDoc, doc, serverTimestamp, Timestamp, addDoc, getDocs } from "firebase/firestore";
-import { app } from "../firebase";
+import { getFirestore, collection, updateDoc, doc, serverTimestamp, Timestamp, addDoc, getDocs, deleteDoc } from "firebase/firestore";
+import { app, db } from "../firebase";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import FetchComplaints from "../hooks/FetchComplaints";
@@ -12,7 +12,9 @@ import {
   Checkbox,
   ListItemText,
   OutlinedInput,
+  IconButton,
 } from "@mui/material";
+import DeleteIcon from '@mui/icons-material/Delete';
 // You can still use this if needed elsewhere
 const formatDate = (date) => {
   const options = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -22,15 +24,24 @@ const formatDate = (date) => {
 // New helper to convert to YYYY-MM-DD
 const formatForInput = (date) => {
   if (!date) return "";
-  const d = new Date(date.seconds ? date.seconds * 1000 : date);
-  return d.toISOString().split("T")[0]; // Format for input[type="date"]
+  
+  // Handle Firestore Timestamp
+  const d = date.seconds ? new Date(date.seconds * 1000) : new Date(date);
+  
+  // Format as YYYY-MM-DD but ensure we're using local date parts, not UTC
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
 };
 
 
 const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
   if (!isOpen) return null;
 
-  const { complaints } = FetchComplaints(); // Fetch complaints
+  const { complaints} = FetchComplaints(); // Fetch complaints
+   
   const [selectedComplaints, setSelectedComplaints] = useState(medicine?.complaints || []); 
 
 
@@ -42,8 +53,6 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
 
   const [isEdit, setisEdit] = useState(false)
 
-  
-
   useEffect(() => {
     if (medicine) {
       setEditedMedicine({
@@ -53,7 +62,7 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
       });
       setSelectedComplaints(medicine?.medication || []);
     }
-  }, [medicine]);
+   }, [medicine]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -80,6 +89,9 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
       }));
     }
   };
+
+ 
+  
 
   const handleStockChange = (change) => {
     setEditedMedicine((prevState) => {
@@ -120,6 +132,7 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
       const db = getFirestore(app);
       const medicineRef = doc(db, "medicine", medicine.id);
 
+      const [year, month, day] = editedMedicine.expiryDate.split('-').map(Number);
       const expiry = new Date(editedMedicine.expiryDate);
       expiry.setHours(0, 0, 0, 0);
 
@@ -224,13 +237,33 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
             }}
             input={<OutlinedInput label="Indicated Complaints" />}
             renderValue={(selected) => selected.join(", ")}
+            MenuProps={{
+              PaperProps: {
+                style: {
+                  mmaxHeight: 400,
+                  width: 700,
+                  padding: 10,
+                },
+              },
+              MenuListProps: {
+                style: {
+                  display: "flex",
+        flexWrap: "wrap",
+        gap: "10px",
+        padding: 0,
+                },
+              },
+            }}
           >
             {complaints.map((complaint) => (
-              <MenuItem key={complaint.id} value={complaint.name}>
-                <Checkbox checked={selectedComplaints.includes(complaint.name)} />
-                <ListItemText primary={complaint.name} />
-              </MenuItem>
-            ))}
+  <MenuItem key={complaint.id} value={complaint.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div style={{ display: "flex", alignItems: "center" }}>
+      <Checkbox checked={selectedComplaints.includes(complaint.name)} />
+      <ListItemText primary={complaint.name} />
+    </div>
+  </MenuItem>
+))}
+
           
             <MenuItem
               value="__custom__"
@@ -251,6 +284,13 @@ const EditMedicine = ({ isOpen, onClose, medicine, onUpdate }) => {
                   }
                 }
               }}
+              style={{
+                width: "100%",
+                fontWeight: 500,
+                color: "purple",
+                justifyContent: "flex-start",
+                paddingTop: 16,
+              }}          
             >
               ➕ Add a new complaint
             </MenuItem>

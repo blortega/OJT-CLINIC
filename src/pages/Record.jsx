@@ -1,158 +1,381 @@
-import React, { useEffect, useState, useRef } from "react";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import { collection, getDocs } from "firebase/firestore";
 import Sidebar from "../components/Sidebar";
-import { db } from "../firebase"; // Import Firestore instance
+import { db } from "../firebase";
+import { FaTrash, FaEye } from "react-icons/fa";
+import { FiAlertCircle } from "react-icons/fi";
+import "../styles/Records.css";
 
 const Record = () => {
-  const [scannedData, setScannedData] = useState("");
-  const [isScannerActive, setIsScannerActive] = useState(false);
-  const [userData, setUserData] = useState(null); // Store user data
-  const bufferRef = useRef("");
-  const timeoutRef = useRef(null);
-
-  // Function to process and clean up the scanned employee ID
-  const processScannedData = (data) => {
-    return data.replace(/Shift/g, "").trim(); // Clean up "Shift"
-  };
-
-  // Function to fetch user data from Firestore based on employeeID field
-  const fetchUserData = async (employeeID) => {
-    try {
-      // Query Firestore for users where employeeID matches the scanned value
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("employeeID", "==", employeeID));
-
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
-        // Get the first matching document
-        const userDoc = querySnapshot.docs[0];
-        setUserData(userDoc.data()); // Set the user data to state
-      } else {
-        console.log("No user found with this employeeID.");
-        setUserData(null); // If no user is found, set userData to null
-      }
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-    }
-  };
+  const [records, setRecords] = useState([]);
+  const [hoveredRecord, setHoveredRecord] = useState(null);
+  const [hoveredIcon, setHoveredIcon] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Enter") {
-        const processedData = processScannedData(bufferRef.current);
-        setScannedData(processedData);
-        bufferRef.current = "";
+    const fetchRecords = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "medicineRequests"));
+        const recordList = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            employeeID: data.employeeID || "Not Available",
+            firstname: data.firstname || "",
+            middleInitial: data.middleInitial || "",
+            lastname: data.lastname || "",
+            fullName: data.firstname
+              ? `${data.firstname} ${
+                  data.middleInitial ? data.middleInitial + ". " : ""
+                }${data.lastname || ""}`
+              : "Not Available",
+            department: data.department || "Not Available",
+            medicine: data.medicine || "Not Available",
+            complaint: data.complaint || "Not Available",
+            quantity: data.quantityDispensed || "N/A",
+            status: data.status || "Pending",
+            date: data.timestamp?.toDate().toLocaleString() || "N/A",
+            // Store other fields that might be needed in the modal
+            timestamp: data.timestamp,
+            additionalNotes: data.additionalNotes || "None",
+          };
+        });
 
-        // Fetch user data from Firestore once the scan is complete
-        fetchUserData(processedData);
+        // Sort records by timestamp in descending order (latest first)
+        const sortedRecords = recordList.sort((a, b) => {
+          // Handle cases where timestamp might be missing
+          if (!a.timestamp) return 1; // Push items without timestamp to the end
+          if (!b.timestamp) return -1;
 
-        setIsScannerActive(true);
+          // Compare timestamps (newer dates first)
+          return b.timestamp - a.timestamp;
+        });
 
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        timeoutRef.current = setTimeout(() => {
-          setIsScannerActive(false);
-        }, 5000); // Active for 5 seconds after scan
-      } else {
-        bufferRef.current += e.key;
+        setRecords(sortedRecords);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching records:", error);
+        setLoading(false);
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
+    fetchRecords();
   }, []);
+
+  const handleView = (record) => {
+    setSelectedRecord(record);
+    setModalVisible(true);
+  };
+
+  const handleDelete = (record) => {
+    console.log("Deleting record:", record);
+    // Implement your delete functionality here
+  };
 
   return (
     <Sidebar>
-      <div style={styles.container}>
-        <h1 style={styles.heading}>ID Scanner</h1>
+      <div className="records-container">
+        <h1 className="records-heading">Medicine Request Records</h1>
 
-        <div style={styles.statusContainer}>
-          <div
-            style={{
-              ...styles.statusCircle,
-              backgroundColor: isScannerActive ? "limegreen" : "lightgray",
-            }}
-          />
-          <span style={styles.statusText}>
-            {isScannerActive ? "Scanner Active" : "Waiting for scan..."}
-          </span>
-        </div>
-
-        <div style={styles.resultBox}>
-          <h2>Scanned Data:</h2>
-          <pre>{scannedData || "No data scanned yet."}</pre>
-
-          {/* Display employee ID and user data if available */}
-          {userData ? (
-            <div style={styles.userInfo}>
-              <p>
-                <strong>Employee ID:</strong> {scannedData}
-              </p>{" "}
-              {/* Display the scanned employee ID */}
-              <p>
-                <strong>Firstname:</strong> {userData.firstname}
-              </p>
-              <p>
-                <strong>Lastname:</strong> {userData.lastname}
-              </p>
-              <p>
-                <strong>Gender:</strong> {userData.gender}
-              </p>
-              <p>
-                <strong>Department:</strong> {userData.department}
-              </p>
-            </div>
+        <div className="card">
+          {loading ? (
+            <div className="loading">Loading...</div>
           ) : (
-            <p>User not found or error fetching data.</p>
+            <table className="records-table">
+              <thead>
+                <tr>
+                  <th className="table-head" style={{ width: "100px" }}>
+                    Employee ID
+                  </th>
+                  <th className="table-head" style={{ width: "150px" }}>
+                    Name
+                  </th>
+                  <th className="table-head" style={{ width: "120px" }}>
+                    Department
+                  </th>
+                  <th className="table-head" style={{ width: "120px" }}>
+                    Medicine
+                  </th>
+                  <th className="table-head" style={{ width: "80px" }}>
+                    Quantity
+                  </th>
+                  <th className="table-head" style={{ width: "150px" }}>
+                    Complaint
+                  </th>
+                  <th className="table-head" style={{ width: "100px" }}>
+                    Status
+                  </th>
+                  <th className="table-head" style={{ width: "150px" }}>
+                    Date
+                  </th>
+                  <th className="table-head" style={{ width: "100px" }}>
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {records.map((record, index) => (
+                  <tr
+                    key={record.id}
+                    className={`table-row ${
+                      index % 2 === 0 ? "even-row" : "odd-row"
+                    }`}
+                  >
+                    <td className="table-cell">{record.employeeID}</td>
+                    <td className="table-cell">{record.fullName}</td>
+                    <td className="table-cell">{record.department}</td>
+                    <td className="table-cell">{record.medicine}</td>
+                    <td className="table-cell">{record.quantity}</td>
+                    <td className="table-cell">{record.complaint}</td>
+                    <td className="table-cell">
+                      <span
+                        className="status-badge"
+                        style={{
+                          backgroundColor:
+                            record.status === "Approved"
+                              ? "#10b981"
+                              : record.status === "Completed"
+                              ? "#10b981"
+                              : record.status === "Rejected"
+                              ? "#ef4444"
+                              : record.status === "Pending"
+                              ? "#f59e0b"
+                              : "#6b7280",
+                        }}
+                      >
+                        {record.status}
+                      </span>
+                    </td>
+                    <td className="table-cell">{record.date}</td>
+                    <td className="action-cell">
+                      <button
+                        className={`icon-button ${
+                          hoveredRecord === record.id && hoveredIcon === "view"
+                            ? "button-hover"
+                            : ""
+                        }`}
+                        onMouseEnter={() => {
+                          setHoveredRecord(record.id);
+                          setHoveredIcon("view");
+                        }}
+                        onMouseLeave={() => setHoveredIcon(null)}
+                        onClick={() => handleView(record)}
+                        title="View Details"
+                      >
+                        <FaEye />
+                      </button>
+
+                      <button
+                        className={`icon-button ${
+                          hoveredRecord === record.id &&
+                          hoveredIcon === "delete"
+                            ? "button-hover"
+                            : ""
+                        }`}
+                        onMouseEnter={() => {
+                          setHoveredRecord(record.id);
+                          setHoveredIcon("delete");
+                        }}
+                        onMouseLeave={() => setHoveredIcon(null)}
+                        onClick={() => handleDelete(record)}
+                        title="Delete"
+                      >
+                        <FaTrash />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
       </div>
+
+      {/* Details Modal */}
+      {modalVisible && selectedRecord && (
+        <div className="record-modal" onClick={() => setModalVisible(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Medicine Request Details</h2>
+
+            <div className="form-row">
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Employee ID:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.employeeID}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Department:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.department}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="half-width">
+                <div className="form-group">
+                  <label>First Name:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.firstname}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Middle Initial:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.middleInitial}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Last Name:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.lastname}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Status:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.status}
+                    className="record-input status-input"
+                    style={{
+                      backgroundColor:
+                        selectedRecord.status === "Approved"
+                          ? "#dcfce7"
+                          : selectedRecord.status === "Completed"
+                          ? "#dcfce7"
+                          : selectedRecord.status === "Rejected"
+                          ? "#fee2e2"
+                          : selectedRecord.status === "Pending"
+                          ? "#fef3c7"
+                          : "#f3f4f6",
+                      color:
+                        selectedRecord.status === "Approved"
+                          ? "#166534"
+                          : selectedRecord.status === "Completed"
+                          ? "#166534"
+                          : selectedRecord.status === "Rejected"
+                          ? "#991b1b"
+                          : selectedRecord.status === "Pending"
+                          ? "#92400e"
+                          : "#374151",
+                    }}
+                    disabled
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Medicine:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.medicine}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+              <div className="half-width">
+                <div className="form-group">
+                  <label>Quantity:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.quantity}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="full-width">
+                <div className="form-group">
+                  <label>Complaint:</label>
+                  <textarea
+                    value={selectedRecord.complaint}
+                    className="record-textarea"
+                    disabled
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="full-width">
+                <div className="form-group">
+                  <label>Additional Notes:</label>
+                  <textarea
+                    value={selectedRecord.additionalNotes}
+                    className="record-textarea"
+                    disabled
+                    rows={2}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="full-width">
+                <div className="form-group">
+                  <label>Date Submitted:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.date}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="button-container">
+              <button
+                onClick={() => setModalVisible(false)}
+                className="close-button"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Sidebar>
   );
-};
-
-const styles = {
-  container: {
-    padding: "40px",
-    textAlign: "center",
-  },
-  heading: {
-    color: "#1e3a8a",
-  },
-  statusContainer: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "10px",
-    marginBottom: "30px",
-  },
-  statusCircle: {
-    width: "20px",
-    height: "20px",
-    borderRadius: "50%",
-    transition: "background-color 0.3s ease",
-  },
-  statusText: {
-    fontSize: "16px",
-    fontWeight: "500",
-  },
-  resultBox: {
-    backgroundColor: "#f9f9f9",
-    border: "1px solid #ccc",
-    padding: "20px",
-    borderRadius: "8px",
-    maxWidth: "600px",
-    margin: "0 auto",
-  },
-  userInfo: {
-    marginTop: "20px",
-    textAlign: "left",
-    fontSize: "16px",
-  },
 };
 
 export default Record;
