@@ -938,7 +938,10 @@ const ManageUser = () => {
     <Sidebar>
       <ToastContainer position="top-right" autoClose={2000} />
       <div className="user-container">
-        <h1 className="user-heading">Manage User Page</h1>
+        <div className="dashboard-header">
+          <h1>Manage User Page</h1>
+          <p className="dashboard-date">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        </div>
         <div className="search-container">
           <input
             className="search-bar"

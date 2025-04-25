@@ -6,12 +6,12 @@ import {
   query,
   where,
   getDocs,
-  addDoc,
-  serverTimestamp,
   doc,
-  updateDoc,
-  writeBatch,
   getDoc,
+  writeBatch,
+  serverTimestamp,
+  orderBy,
+  limit,
 } from "firebase/firestore";
 import Sidebar from "../components/Sidebar";
 import { db } from "../firebase";
@@ -36,6 +36,7 @@ const RequestMedicine = () => {
   const bufferRef = useRef("");
   const timeoutRef = useRef(null);
   const [debugInfo, setDebugInfo] = useState({});
+  const [lastVisitInfo, setLastVisitInfo] = useState(null);
 
   // User cache for reducing employee ID lookups
   const [userCache, setUserCache] = useState({});
@@ -70,45 +71,37 @@ const RequestMedicine = () => {
     }
   };
 
-  // Batch fetch and cache complaints, medicines, and employee IDs
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
 
-      // Try to get data from cache first
-      const cachedComplaints = getFromCache("complaints");
-      const cachedMedicines = getFromCache("medicines");
+      // Try to get employeeIDs from cache first
       const cachedEmployeeIDs = getFromCache("employeeIDs");
-
-      let complaintsData = cachedComplaints;
-      let medicinesData = cachedMedicines;
       let employeeIDsData = cachedEmployeeIDs;
 
       try {
-        // If not in cache, fetch from Firestore
-        if (!complaintsData) {
-          const complaintsRef = collection(db, "complaints");
-          const querySnapshot = await getDocs(complaintsRef);
-          complaintsData = querySnapshot.docs.map((doc) => ({
+        // Fetch complaints directly from Firestore (no caching)
+        const complaintsRef = collection(db, "complaints");
+        const complaintsSnapshot = await getDocs(complaintsRef);
+        const complaintsData = complaintsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setComplaints(complaintsData);
+
+        // Fetch medicines directly from Firestore (no caching)
+        const medicinesRef = collection(db, "medicine");
+        const medicinesSnapshot = await getDocs(medicinesRef);
+        const medicinesData = medicinesSnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
             id: doc.id,
-            ...doc.data(),
-          }));
-          saveToCache("complaints", complaintsData);
-        }
+            ...data,
+          };
+        });
+        setMedicines(medicinesData);
 
-        if (!medicinesData) {
-          const medicinesRef = collection(db, "medicine");
-          const querySnapshot = await getDocs(medicinesRef);
-          medicinesData = querySnapshot.docs.map((doc) => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              ...data,
-            };
-          });
-          saveToCache("medicines", medicinesData);
-        }
-
+        // Only keep caching for employeeIDs
         if (!employeeIDsData) {
           const usersRef = collection(db, "users");
           const querySnapshot = await getDocs(usersRef);
@@ -118,16 +111,12 @@ const RequestMedicine = () => {
           saveToCache("employeeIDs", employeeIDsData);
         }
 
-        setComplaints(complaintsData);
-        setMedicines(medicinesData);
         setEmployeeIDs(employeeIDsData);
       } catch (error) {
         console.error("Error fetching data:", error);
-        // Fallback to cached data if available
-        if (cachedComplaints) setComplaints(cachedComplaints);
-        if (cachedMedicines) setMedicines(cachedMedicines);
+        // Only fallback to cached employeeIDs if available
         if (cachedEmployeeIDs) setEmployeeIDs(cachedEmployeeIDs);
-        toast.error("Error fetching data. Some information may be outdated.");
+        toast.error("Error fetching data");
       } finally {
         setIsLoading(false);
       }
@@ -230,6 +219,8 @@ const RequestMedicine = () => {
       // Check if user data is in the in-memory cache
       if (userCache[employeeID]) {
         setUserData(userCache[employeeID]);
+        // Fetch last visit data even for cached users
+        await fetchLastVisitInfo(employeeID);
         toast.success("Employee found!");
         setIsSearching(false);
         return;
@@ -241,6 +232,8 @@ const RequestMedicine = () => {
         setUserData(cachedUser);
         // Also update in-memory cache
         setUserCache((prev) => ({ ...prev, [employeeID]: cachedUser }));
+        // Fetch last visit data even for cached users
+        await fetchLastVisitInfo(employeeID);
         toast.success("Employee found!");
         setIsSearching(false);
         return;
@@ -255,10 +248,13 @@ const RequestMedicine = () => {
         const userDoc = querySnapshot.docs[0];
         const userData = userDoc.data();
 
-        // Update both caches
+        // Update caches
         setUserData(userData);
         setUserCache((prev) => ({ ...prev, [employeeID]: userData }));
         saveToCache(`user_${employeeID}`, userData);
+
+        // Fetch last visit data
+        await fetchLastVisitInfo(employeeID);
 
         toast.success("Employee found!");
       } else {
@@ -272,6 +268,120 @@ const RequestMedicine = () => {
     } finally {
       setIsSearching(false);
     }
+  };
+
+  const fetchLastVisitInfo = async (employeeID) => {
+    try {
+      // Clear previous last visit info
+      setLastVisitInfo(null);
+
+      const medicineRequestsRef = collection(db, "medicineRequests");
+
+      // Create query to find the most recent visit
+      const q = query(
+        medicineRequestsRef,
+        where("employeeID", "==", employeeID),
+        orderBy("dateVisit", "desc"),
+        limit(1)
+      );
+
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs[0];
+        const data = doc.data();
+
+        // Convert timestamp to Date object if it exists and is a timestamp
+        let visitDate = null;
+
+        if (data.dateVisit) {
+          // Handle both Firestore Timestamp objects and string dates
+          if (typeof data.dateVisit.toDate === "function") {
+            visitDate = data.dateVisit.toDate();
+          } else if (data.dateVisit instanceof Date) {
+            visitDate = data.dateVisit;
+          } else if (typeof data.dateVisit === "string") {
+            visitDate = new Date(data.dateVisit);
+          }
+        }
+
+        // Set the last visit info with proper date handling
+        setLastVisitInfo({
+          id: doc.id,
+          ...data,
+          dateVisit: visitDate || new Date(),
+        });
+
+        console.log("Last visit found:", {
+          id: doc.id,
+          ...data,
+          dateVisit: visitDate || new Date(),
+        });
+      } else {
+        console.log("No previous visits found for this employee");
+        setLastVisitInfo(null);
+      }
+    } catch (error) {
+      console.error("Error fetching last visit info:", error);
+      setLastVisitInfo(null);
+    }
+  };
+  const checkRecentMedicineRequest = async (employeeID, selectedMedicine) => {
+    try {
+      const medicineRequestsRef = collection(db, "medicineRequests");
+      const fourHoursAgo = new Date();
+      fourHoursAgo.setHours(fourHoursAgo.getHours() - 4);
+
+      // Create query to find medicine requests in the last 4 hours with same medicine
+      const q = query(
+        medicineRequestsRef,
+        where("employeeID", "==", employeeID),
+        where("medicine", "==", selectedMedicine),
+        where("dateVisit", ">=", fourHoursAgo),
+        orderBy("dateVisit", "desc")
+      );
+
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        // Found recent request with same medicine
+        const doc = querySnapshot.docs[0];
+        const data = doc.data();
+
+        let requestDate = null;
+        if (data.dateVisit) {
+          if (typeof data.dateVisit.toDate === "function") {
+            requestDate = data.dateVisit.toDate();
+          } else if (data.dateVisit instanceof Date) {
+            requestDate = data.dateVisit;
+          } else if (typeof data.dateVisit === "string") {
+            requestDate = new Date(data.dateVisit);
+          }
+        }
+
+        return {
+          recentRequestExists: true,
+          requestData: {
+            ...data,
+            dateVisit: requestDate || new Date(),
+          },
+        };
+      }
+
+      return { recentRequestExists: false };
+    } catch (error) {
+      console.error("Error checking recent medicine requests:", error);
+      return { recentRequestExists: false, error };
+    }
+  };
+  const isMedicineLocked = () => {
+    if (!lastVisitInfo || !medicine || lastVisitInfo.medicine !== medicine) {
+      return false;
+    }
+
+    const hoursSinceLastRequest =
+      (new Date() - lastVisitInfo.dateVisit) / (1000 * 60 * 60);
+    return hoursSinceLastRequest < 4;
   };
 
   useEffect(() => {
@@ -345,6 +455,23 @@ const RequestMedicine = () => {
         return;
       }
 
+      const recentRequestCheck = await checkRecentMedicineRequest(
+        scannedData,
+        medicine
+      );
+      if (recentRequestCheck.recentRequestExists) {
+        const requestTime = recentRequestCheck.requestData.dateVisit;
+        const currentTime = new Date();
+        const hoursDifference = (currentTime - requestTime) / (1000 * 60 * 60);
+        const hoursRemaining = Math.ceil(4 - hoursDifference);
+
+        toast.error(
+          `This employee requested the same medicine within the last 4 hours. Please wait ${hoursRemaining} more hour(s) before requesting again.`
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
       // Get the most up-to-date medicine stock
       const medicineDocRef = doc(db, "medicine", selectedMedicine.id);
       const medicineDoc = await getDoc(medicineDocRef);
@@ -368,8 +495,6 @@ const RequestMedicine = () => {
               ...currentMedicineData,
             };
           }
-          // Save updated medicines to cache inside the state update function
-          saveToCache("medicines", updatedMedicines);
           return updatedMedicines;
         });
 
@@ -386,12 +511,13 @@ const RequestMedicine = () => {
         firstname: userData.firstname,
         lastname: userData.lastname,
         middleInitial: userData.middleInitial,
+        gender: userData.gender,
         department: userData.department,
         complaint: complaint,
         medicine: medicine,
         quantityDispensed: quantityDispensed, // Always 1
         status: "Completed",
-        timestamp: serverTimestamp(),
+        dateVisit: serverTimestamp(),
       };
 
       // Add medicine request
@@ -433,12 +559,14 @@ const RequestMedicine = () => {
             status: newStatus,
           };
         }
-        // Save updated medicines to cache inside the state update function
-        saveToCache("medicines", updatedMedicines);
         return updatedMedicines;
       });
 
       toast.success("Medicine request submitted successfully!");
+
+      // Refetch last visit info to show the new request
+      await fetchLastVisitInfo(scannedData);
+
       resetUserSelection();
 
       setIsScannerActive(true);
@@ -468,6 +596,7 @@ const RequestMedicine = () => {
     setScannedData("");
     setComplaint("");
     setMedicine("");
+    setLastVisitInfo(null);
     bufferRef.current = "";
   };
 
@@ -501,11 +630,32 @@ const RequestMedicine = () => {
     }
   };
 
+  const formatDateTime = (date) => {
+    if (!date || !(date instanceof Date) || isNaN(date)) return "Unknown date";
+
+    return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`;
+  };
+
   return (
     <Sidebar>
       <ToastContainer position="top-right" autoClose={3000} />
       <div style={styles.container}>
-        <h1 style={styles.heading}>Clinic Medicine Request</h1>
+      <div style={styles.dashboardContainer}>
+  <div style={styles.dashboardHeader}>
+    <h1 style={styles.dashboardTitle}>Clinic Medicine Request</h1>
+    <p style={styles.dashboardDate}>
+      {new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })}
+    </p>
+  </div>
+</div>
 
         {!formVisible && (
           <button style={styles.requestButton} onClick={handleRequestClick}>
@@ -543,31 +693,68 @@ const RequestMedicine = () => {
                   <div style={styles.loadingSpinner}></div>
                 </div>
               ) : userData ? (
-                <div style={styles.userInfo}>
-                  <div style={styles.infoGrid}>
-                    <div style={styles.infoItem}>
-                      <span style={styles.infoLabel}>Employee ID:</span>
-                      <span style={styles.infoValue}>{scannedData}</span>
-                    </div>
-                    <div style={styles.infoItem}>
-                      <span style={styles.infoLabel}>Name:</span>
-                      <span style={styles.infoValue}>
-                        {userData.firstname} {userData.middleInitial}.{" "}
-                        {userData.lastname}
-                      </span>
-                    </div>
-                    <div style={styles.infoItem}>
-                      <span style={styles.infoLabel}>Gender:</span>
-                      <span style={styles.infoValue}>{userData.gender}</span>
-                    </div>
-                    <div style={styles.infoItem}>
-                      <span style={styles.infoLabel}>Department:</span>
-                      <span style={styles.infoValue}>
-                        {userData.department}
-                      </span>
+                <>
+                  <div style={styles.userInfo}>
+                    <div style={styles.infoGrid}>
+                      <div style={styles.infoItem}>
+                        <span style={styles.infoLabel}>Employee ID:</span>
+                        <span style={styles.infoValue}>{scannedData}</span>
+                      </div>
+                      <div style={styles.infoItem}>
+                        <span style={styles.infoLabel}>Name:</span>
+                        <span style={styles.infoValue}>
+                          {userData.firstname} {userData.middleInitial}.{" "}
+                          {userData.lastname}
+                        </span>
+                      </div>
+                      <div style={styles.infoItem}>
+                        <span style={styles.infoLabel}>Gender:</span>
+                        <span style={styles.infoValue}>{userData.gender}</span>
+                      </div>
+                      <div style={styles.infoItem}>
+                        <span style={styles.infoLabel}>Department:</span>
+                        <span style={styles.infoValue}>
+                          {userData.department}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
+
+                  {/* Last Visit Information Section */}
+                  <div style={styles.lastVisitSection}>
+                    <h3 style={styles.subsectionHeading}>
+                      Last Visit Information
+                    </h3>
+                    {lastVisitInfo ? (
+                      <div style={styles.lastVisitInfo}>
+                        <div style={styles.infoGrid}>
+                          <div style={styles.infoItem}>
+                            <span style={styles.infoLabel}>Date:</span>
+                            <span style={styles.infoValue}>
+                              {formatDateTime(lastVisitInfo.dateVisit)}
+                            </span>
+                          </div>
+                          <div style={styles.infoItem}>
+                            <span style={styles.infoLabel}>Complaint:</span>
+                            <span style={styles.infoValue}>
+                              {lastVisitInfo.complaint}
+                            </span>
+                          </div>
+                          <div style={styles.infoItem}>
+                            <span style={styles.infoLabel}>Medicine:</span>
+                            <span style={styles.infoValue}>
+                              {lastVisitInfo.medicine}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={styles.noVisitInfo}>
+                        <p>No previous visits found</p>
+                      </div>
+                    )}
+                  </div>
+                </>
               ) : (
                 <div style={styles.scanPrompt}>
                   <p>Scan employee ID to fetch data</p>
@@ -695,6 +882,29 @@ const RequestMedicine = () => {
                                   </div>
                                 )}
 
+                                {/* Add the lock period warning here, after the other warnings */}
+                                {lastVisitInfo &&
+                                  lastVisitInfo.medicine === medicine &&
+                                  (new Date() - lastVisitInfo.dateVisit) /
+                                    (1000 * 60 * 60) <
+                                    4 && (
+                                    <div style={styles.lockWarning}>
+                                      <span style={styles.warningIcon}>🔒</span>
+                                      <span>
+                                        This medicine was already dispensed
+                                        within the last 4 hours.{" "}
+                                        {Math.ceil(
+                                          4 -
+                                            (new Date() -
+                                              lastVisitInfo.dateVisit) /
+                                              (1000 * 60 * 60)
+                                        )}{" "}
+                                        hour(s) remaining before it can be
+                                        requested again.
+                                      </span>
+                                    </div>
+                                  )}
+
                                 {med.stock > 0 && (
                                   <div style={styles.quantityNote}>
                                     <span style={styles.infoIcon}>ℹ️</span>
@@ -721,7 +931,8 @@ const RequestMedicine = () => {
                           !medicine ||
                           isSubmitting ||
                           filteredMedicines.find((med) => med.name === medicine)
-                            ?.stock === 0
+                            ?.stock === 0 ||
+                          isMedicineLocked()
                             ? 0.6
                             : 1,
                       }}
@@ -732,7 +943,8 @@ const RequestMedicine = () => {
                         !medicine ||
                         isSubmitting ||
                         filteredMedicines.find((med) => med.name === medicine)
-                          ?.stock === 0
+                          ?.stock === 0 ||
+                        isMedicineLocked()
                       }
                     >
                       {isSubmitting ? (
@@ -758,14 +970,29 @@ const RequestMedicine = () => {
 const styles = {
   container: {
     padding: "32px",
-    maxWidth: "960px",
-    margin: "0 auto",
+    minHeight: '100vh',
+    
   },
-  heading: {
-    color: "#2563eb",
-    marginBottom: "24px",
-    fontSize: "45px",
-    textAlign: "center",
+  dashboardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '24px',
+    paddingBottom: '12px',
+    borderBottom: '1px solid #e0e4e8',
+
+  },
+  dashboardTitle: {
+    fontSize: '24px',
+    fontWeight: 600,
+    color: '#2563eb',
+    margin: 0,
+  },
+  dashboardDate: {
+    color: '#7f8c8d',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    margin: 0,
   },
   requestButton: {
     padding: "12px 28px",
@@ -1045,6 +1272,40 @@ const styles = {
     width: "18px",
     height: "18px",
     animation: "spin 1s linear infinite",
+  },
+  lastVisitSection: {
+    marginTop: "1rem",
+    backgroundColor: "#f8f9fa",
+    padding: "1rem",
+    borderRadius: "0.5rem",
+    borderLeft: "4px solid #3b82f6",
+  },
+  subsectionHeading: {
+    fontSize: "1.1rem",
+    fontWeight: "600",
+    color: "#1e40af",
+    marginBottom: "0.75rem",
+  },
+  lastVisitInfo: {
+    backgroundColor: "#ffffff",
+    padding: "0.75rem",
+    borderRadius: "0.375rem",
+    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+  },
+  noVisitInfo: {
+    padding: "0.75rem",
+    color: "#6b7280",
+    fontStyle: "italic",
+  },
+  lockWarning: {
+    backgroundColor: "#fee2e2",
+    color: "#b91c1c",
+    padding: "8px 12px",
+    borderRadius: "4px",
+    marginTop: "12px",
+    display: "flex",
+    alignItems: "center",
+    fontSize: "14px",
   },
   "@keyframes spin": {
     "0%": { transform: "rotate(0deg)" },
