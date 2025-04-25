@@ -18,13 +18,14 @@
 .dashboard-header h1 {
   font-size: 24px;
   font-weight: 600;
-  color: #2c3e50;
+  color: #2563eb;
   margin: 0;
 }
 
 .dashboard-date {
   color: #7f8c8d;
   font-size: 14px;
+  font-weight: bold;
   margin: 0;
 }
 

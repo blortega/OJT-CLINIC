@@ -569,7 +569,19 @@ const RequestMedicine = () => {
     <Sidebar>
       <ToastContainer position="top-right" autoClose={3000} />
       <div style={styles.container}>
-        <h1 style={styles.heading}>Clinic Medicine Request</h1>
+      <div style={styles.dashboardContainer}>
+  <div style={styles.dashboardHeader}>
+    <h1 style={styles.dashboardTitle}>Clinic Medicine Request</h1>
+    <p style={styles.dashboardDate}>
+      {new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })}
+    </p>
+  </div>
+</div>
 
         {!formVisible && (
           <button style={styles.requestButton} onClick={handleRequestClick}>
@@ -859,14 +871,29 @@ const RequestMedicine = () => {
 const styles = {
   container: {
     padding: "32px",
-    maxWidth: "960px",
-    margin: "0 auto",
+    minHeight: '100vh',
+    
   },
-  heading: {
-    color: "#2563eb",
-    marginBottom: "24px",
-    fontSize: "45px",
-    textAlign: "center",
+  dashboardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '24px',
+    paddingBottom: '12px',
+    borderBottom: '1px solid #e0e4e8',
+
+  },
+  dashboardTitle: {
+    fontSize: '24px',
+    fontWeight: 600,
+    color: '#2563eb',
+    margin: 0,
+  },
+  dashboardDate: {
+    color: '#7f8c8d',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    margin: 0,
   },
   requestButton: {
     padding: "12px 28px",

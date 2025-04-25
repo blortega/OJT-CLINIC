@@ -387,7 +387,19 @@ const Inventory = () => {
     <Sidebar>
       <div style={styles.container}>
         <ToastContainer position="top-right" autoClose={2000} />
-        <h1 style={styles.text}>Inventory Page</h1>
+        <div style={styles.dashboardContainer}>
+  <div style={styles.dashboardHeader}>
+    <h1 style={styles.dashboardTitle}>Inventory Page</h1>
+    <p style={styles.dashboardDate}>
+      {new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })}
+    </p>
+  </div>
+</div>
         {/* Add Medicine Button */}
         <div style={styles.searchContainer}>
           <input
@@ -724,11 +736,31 @@ const styles = {
     padding: "24px",
     textAlign: "center",
     backgroundColor: "#f8fafc",
+    minHeight: '100vh',
   },
   text: {
     color: "#2563eb",
     fontSize: "45px",
-
+  },
+  dashboardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '24px',
+    paddingBottom: '12px',
+    borderBottom: '1px solid #e0e4e8',
+  },
+  dashboardTitle: {
+    fontSize: '24px',
+    fontWeight: 600,
+    color: '#2563eb',
+    margin: 0,
+  },
+  dashboardDate: {
+    color: '#7f8c8d',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    margin: 0,
   },
   searchContainer: {
     display: "flex",

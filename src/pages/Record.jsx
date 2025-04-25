@@ -91,7 +91,10 @@ const Record = () => {
     <Sidebar>
       <ToastContainer position="top-right" autoClose={3000} />
       <div className="records-container">
-        <h1 className="records-heading">Medicine Request Records</h1>
+      <div className="dashboard-header">
+          <h1>Medicine Request Records</h1>
+          <p className="dashboard-date">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        </div>
 
         <div className="card">
           {loading ? (
