@@ -2,25 +2,181 @@
 
 .dashboard-container {
   padding: 20px;
-  text-align: center;
-  max-width: 100%;
-  overflow-x: hidden;
+  background-color: #f5f7fb;
+  min-height: 100vh;
 }
 
-.chart-wrapper {
+.dashboard-header {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  gap: 20px;
-  width: 100%;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0e4e8;
 }
 
-.chart-container {
-  max-width: 100%;
-  min-width: 320px;
+.dashboard-header h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
 }
 
-.dashboard-text {
-  color: black;
+.dashboard-date {
+  color: #7f8c8d;
+  font-size: 14px;
+  margin: 0;
+}
+
+.alert-section {
+  margin-bottom: 24px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+  gap: 24px;
+}
+
+.dashboard-card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  padding: 16px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  height: auto;
+  min-height: 220px;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.card-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #34495e;
+  margin: 0;
+  margin-left: 8px;
+}
+
+.card-icon {
+  font-size: 20px;
+  margin-right: 6px;
+}
+
+.card-content {
+  height: 220px;
+}
+
+/* Specific styles for pie chart to ensure labels are visible */
+.pie-chart-content {
+  height: 260px; /* Increased height for pie chart */
+}
+
+/* Ensure the recharts labels are visible */
+.recharts-pie-label-text {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Fix long label text wrapping issues */
+.recharts-text.recharts-label {
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.custom-tooltip {
+  background-color: #fff;
+  border: 1px solid #e0e4e8;
+  border-radius: 4px;
+  padding: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tooltip-label {
+  color: #2c3e50;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+}
+
+.tooltip-value {
+  color: #7f8c8d;
+  margin: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1100px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Inventory Alert styling */
+.inventory-alert {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  padding: 16px;
+}
+
+.inventory-alert h2 {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  color: #e74c3c;
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.alert-icon {
+  margin-right: 8px;
+  font-size: 18px;
+}
+
+.inventory-alert.inventory-ok h2 {
+  color: #2ecc71;
+}
+
+.alert-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.alert-item {
+  background-color: #fff3f3;
+  border-left: 4px solid #e74c3c;
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.alert-item p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.alert-item .medicine-name {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.alert-item .medicine-count {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.alert-item .medicine-status {
+  font-size: 12px;
+  color: #7f8c8d;
+  margin-top: 4px;
 }

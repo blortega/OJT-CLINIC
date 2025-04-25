@@ -13,19 +13,15 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { db, app } from "../firebase";
-import { collection, getDocs,  getFirestore } from "firebase/firestore";
+import { collection, getDocs, getFirestore } from "firebase/firestore";
 import Sidebar from "../components/Sidebar";
-import "../styles/Dashboard.css"; // ✅ Importing the new CSS file
+import "../styles/Dashboard.css";
 import InventoryAlert from "../components/InventoryAlert";
 
 const GENDER_COLORS = ["#0088FE", "#FF69B4"];
-const CONDITION_COLORS = [
-  "#0088FE",
-  "#FF69B4",
-  "#FFBB28",
-  "#00C49F",
-  "#FF8042",
-];
+const CONDITION_COLORS = ["#4285F4", "#EA4335", "#FBBC05", "#34A853", "#8543E0"];
+const MEDICINE_COLORS = ["#00C49F", "#0088FE", "#FFBB28", "#FF8042", "#8884d8"];
+const COMPLAINT_COLORS = ["#8884d8", "#83a6ed", "#8dd1e1", "#82ca9d", "#a4de6c"];
 
 const Dashboard = () => {
   const [genderData, setGenderData] = useState([
@@ -34,190 +30,296 @@ const Dashboard = () => {
   ]);
 
   const [medicines, setMedicines] = useState([]);
-
   const [topConditions, setTopConditions] = useState([]);
-
   const [topMedicines, setTopMedicines] = useState([]);
+  const [topComplaints, setTopComplaints] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [topVisitors, setTopVisitors] = useState([]);
+
 
   useEffect(() => {
-    const fetchGenderData = async () => {
+    const fetchData = async () => {
       try {
-        const usersSnapshot = await getDocs(collection(db, "users"));
-        let maleCount = 0;
-        let femaleCount = 0;
-
-        usersSnapshot.forEach((doc) => {
-          const gender = doc.data().gender;
-          if (gender === "Male") {
-            maleCount += 1;
-          } else if (gender === "Female") {
-            femaleCount += 1;
-          }
-        });
-
-        setGenderData([
-          { name: "Male", value: maleCount },
-          { name: "Female", value: femaleCount },
+        setLoading(true);
+        await Promise.all([
+          fetchGenderData(),
+          fetchConditions(),
+          fetchTopRequestedMedicines(),
+          fetchTopComplaints(),
+          fetchMedicines(),
+          fetchTopVisitors(),
         ]);
+        setLoading(false);
       } catch (error) {
-        console.error("Error fetching gender data:", error);
+        console.error("Error fetching dashboard data:", error);
+        setLoading(false);
       }
     };
 
-    fetchGenderData();
+    fetchData();
   }, []);
 
-  useEffect(() => {
-    const fetchConditions = async () => {
-      try {
-        const usersSnapshot = await getDocs(collection(db, "users"));
-        let conditionCounts = {};
-
-        usersSnapshot.forEach((doc) => {
-          const userConditions = doc.data().conditions || [];
-          userConditions.forEach((condition) => {
-            conditionCounts[condition] = (conditionCounts[condition] || 0) + 1;
-          });
-        });
-
-        const sortedConditions = Object.entries(conditionCounts)
-          .map(([name, value]) => ({ name, value }))
-          .sort((a, b) => b.value - a.value)
-          .slice(0, 5);
-
-        setTopConditions(sortedConditions);
-      } catch (error) {
-        console.error("Error fetching conditions:", error);
-      }
-    };
-
-    fetchConditions();
-  }, []);
-
-  useEffect(() => {
-    const fetchTopRequestedMedicines = async () => {
-      try {
-        const requestsSnapshot = await getDocs(collection(db, "medicineRequests"));
-        const countMap = {};
+  const fetchTopVisitors = async () => {
+    try {
+      const requestsSnapshot = await getDocs(collection(db, "medicineRequests"));
+      const userMap = {};
   
-        requestsSnapshot.forEach((doc) => {
-          const medicine = doc.data().medicine;
-          if (medicine) {
-            countMap[medicine] = (countMap[medicine] || 0) + 1;
-          }
-        });
+      requestsSnapshot.forEach((doc) => {
+        const { firstname, middleInitial, lastname } = doc.data();
+        const fullName = `${firstname} ${middleInitial}. ${lastname}`;
   
-        const sortedTopMedicines = Object.entries(countMap)
-          .map(([name, value]) => ({ name, value }))
-          .sort((a, b) => b.value - a.value)
-          .slice(0, 5);
+        if (fullName) {
+          userMap[fullName] = (userMap[fullName] || 0) + 1;
+        }
+      });
   
-        setTopMedicines(sortedTopMedicines);
-      } catch (error) {
-        console.error("Error fetching top requested medicines:", error);
-      }
-    };
+      const sortedVisitors = Object.entries(userMap)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5);
   
-    fetchTopRequestedMedicines();
-  }, []);
-  
-
-  useEffect(() => {
-    const fetchMedicines = async () => {
-      try {
-        const db = getFirestore(app);
-        const medicineCollection = collection(db, "medicine");
-        const snapshot = await getDocs(medicineCollection);
-        const medicineLists = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setMedicines(medicineLists);
-      } catch (error) {
-        toast.error("Failed to fetch Medicines!");
-        console.error("Failed to fetch Medicines: ", error);
-      }
-    };
-
-    fetchMedicines();
-  }, []);
-
-  const areValuesEqual = (data) => {
-    if (data.length === 0) return false;
-    const firstValue = data[0].value;
-    return data.every((item) => item.value === firstValue);
+      setTopVisitors(sortedVisitors);
+    } catch (error) {
+      console.error("Error fetching top visitors:", error);
+    }
   };
+  
+
+  const fetchGenderData = async () => {
+    try {
+      const usersSnapshot = await getDocs(collection(db, "users"));
+      let maleCount = 0;
+      let femaleCount = 0;
+
+      usersSnapshot.forEach((doc) => {
+        const gender = doc.data().gender;
+        if (gender === "Male") {
+          maleCount += 1;
+        } else if (gender === "Female") {
+          femaleCount += 1;
+        }
+      });
+
+      setGenderData([
+        { name: "Male", value: maleCount },
+        { name: "Female", value: femaleCount },
+      ]);
+    } catch (error) {
+      console.error("Error fetching gender data:", error);
+    }
+  };
+
+  const fetchConditions = async () => {
+    try {
+      const usersSnapshot = await getDocs(collection(db, "users"));
+      let conditionCounts = {};
+
+      usersSnapshot.forEach((doc) => {
+        const userConditions = doc.data().conditions || [];
+        userConditions.forEach((condition) => {
+          conditionCounts[condition] = (conditionCounts[condition] || 0) + 1;
+        });
+      });
+
+      const sortedConditions = Object.entries(conditionCounts)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5);
+
+      setTopConditions(sortedConditions);
+    } catch (error) {
+      console.error("Error fetching conditions:", error);
+    }
+  };
+
+  const fetchTopRequestedMedicines = async () => {
+    try {
+      const requestsSnapshot = await getDocs(collection(db, "medicineRequests"));
+      const countMap = {};
+
+      requestsSnapshot.forEach((doc) => {
+        const medicine = doc.data().medicine;
+        if (medicine) {
+          countMap[medicine] = (countMap[medicine] || 0) + 1;
+        }
+      });
+
+      const sortedTopMedicines = Object.entries(countMap)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5);
+
+      setTopMedicines(sortedTopMedicines);
+    } catch (error) {
+      console.error("Error fetching top requested medicines:", error);
+    }
+  };
+
+  const fetchTopComplaints = async () => {
+    try {
+      const requestsSnapshot = await getDocs(collection(db, "medicineRequests"));
+      const complaintMap = {};
+
+      requestsSnapshot.forEach((doc) => {
+        const complaint = doc.data().complaint;
+        if (complaint) {
+          complaintMap[complaint] = (complaintMap[complaint] || 0) + 1;
+        }
+      });
+
+      const sortedComplaints = Object.entries(complaintMap)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10);
+
+      setTopComplaints(sortedComplaints);
+    } catch (error) {
+      console.error("Error fetching top complaints:", error);
+    }
+  };
+
+  const fetchMedicines = async () => {
+    try {
+      const db = getFirestore(app);
+      const medicineCollection = collection(db, "medicine");
+      const snapshot = await getDocs(medicineCollection);
+      const medicineLists = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setMedicines(medicineLists);
+    } catch (error) {
+      console.error("Failed to fetch Medicines: ", error);
+    }
+  };
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="custom-tooltip">
+          <p className="tooltip-label">{`${payload[0].payload.name}`}</p>
+          <p className="tooltip-value">{`Count: ${payload[0].value}`}</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Modified PieChartCard with adjusted height and positioning
+  const PieChartCard = ({ title, data, colors, icon }) => (
+    <div className="dashboard-card">
+      <div className="card-header">
+        <span className="card-icon">{icon}</span>
+        <h2>{title}</h2>
+      </div>
+      <div className="card-content pie-chart-content">
+        <ResponsiveContainer width="100%" height={260}>
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="45%"  // Moved up slightly to give more room for labels
+              outerRadius={80}  // Reduced slightly to provide more space
+              dataKey="value"
+              labelLine={true}  // Enable label lines
+              label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+            >
+              {data.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={colors[index % colors.length]}
+                />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend layout="horizontal" verticalAlign="bottom" align="center" />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+
+  const BarChartCard = ({ title, data, colors, icon }) => (
+    <div className="dashboard-card">
+      <div className="card-header">
+        <span className="card-icon">{icon}</span>
+        <h2>{title}</h2>
+      </div>
+      <div className="card-content">
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart
+            data={data}
+            margin={{ top: 10, right: 10, left: 10, bottom: 40 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              dataKey="name"
+              interval={0}
+              angle={-45}
+              textAnchor="end"
+              height={60}
+              tickFormatter={(value) =>
+                value.length > 12 ? `${value.slice(0, 12)}...` : value
+              }
+            />
+            <YAxis allowDecimals={false} />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar dataKey="value" name="Count">
+              {data.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={colors[index % colors.length]}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
 
   return (
     <Sidebar>
       <div className="dashboard-container">
-        <h1 className="dashboard-text">Dashboard</h1>
-        <p className="dashboard-text">
-          This is a test page to check if navigation is working properly.
-        </p>
+        <div className="dashboard-header">
+          <h1>Clinic Dashboard</h1>
+          <p className="dashboard-date">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        </div>
 
-        <div className="chart-wrapper">
-          <div className="chart-container">
-            <h2 className="dashboard-text">Gender Distribution</h2>
-            <PieChart width={300} height={300}>
-              <Pie
-                data={genderData}
-                cx="50%"
-                cy="50%"
-                outerRadius={100}
-                dataKey="value"
-                label
-              >
-                {genderData.map((entry, index) => (
-                  <Cell
-                    key={`cell-gender-${index}`}
-                    fill={GENDER_COLORS[index % GENDER_COLORS.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </div>
-
+        <div className="alert-section">
           <InventoryAlert medicines={medicines} />
+        </div>
 
-          <div className="chart-container">
-            <h2 className="dashboard-text">Top 5 Most Requested Medicine</h2>
-            <ResponsiveContainer width="100%" minWidth={400} height={300}>
-              <BarChart
-                data={topMedicines}
-                margin={{ top: 20, right: 30, left: 20, bottom: 50 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="name"
-                  interval={0}
-                  angle={-30}
-                  textAnchor="end"
-                  tickFormatter={(value) =>
-                    value.length > 10 ? `${value.slice(0, 10)}...` : value
-                  }
-                />
-                <YAxis allowDecimals={false} />
-                <Tooltip
-                  formatter={(value, name, props) => [
-                    value,
-                    props.payload.name,
-                  ]}
-                />
-                {/* <Legend /> <-- removed to prevent "value" label under chart */}
-                <Bar dataKey="value" fill="#8884d8">
-                  {topMedicines.map((entry, index) => (
-                    <Cell
-                      key={`cell-bar-${index}`}
-                      fill={CONDITION_COLORS[index % CONDITION_COLORS.length]}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        <div className="dashboard-grid">
+          <PieChartCard 
+            title="Patient Gender Distribution" 
+            data={genderData} 
+            colors={GENDER_COLORS} 
+            icon="👥" 
+          />
+          
+    
+          <BarChartCard 
+            title="Most Requested Medicines" 
+            data={topMedicines} 
+            colors={MEDICINE_COLORS} 
+            icon="💊" 
+          />
+          
+          <BarChartCard 
+            title="Common Patient Complaints" 
+            data={topComplaints} 
+            colors={COMPLAINT_COLORS} 
+            icon="📊" 
+          />
+
+<BarChartCard 
+  title="Top 5 Frequent Clinic Visitors" 
+  data={topVisitors} 
+  colors={["#5C7AEA", "#82ca9d", "#8884d8", "#ffc658", "#ff8a65"]} 
+  icon="🧍" 
+/>
+
         </div>
       </div>
     </Sidebar>
