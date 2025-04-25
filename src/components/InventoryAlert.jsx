@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css"; // Import toast styles
+import "react-toastify/dist/ReactToastify.css";
 
 const InventoryAlert = ({ medicines }) => {
   useEffect(() => {
@@ -11,30 +11,29 @@ const InventoryAlert = ({ medicines }) => {
       (medicine) => medicine.stock === 0
     );
 
-    // Show toast notification for low stock
+    const speak = (text) => {
+      const msg = new SpeechSynthesisUtterance(text);
+      msg.pitch = 1.2;
+      msg.rate = 1;
+      msg.volume = 1;
+      msg.lang = "en-US";
+      window.speechSynthesis.speak(msg);
+    };
+
     if (lowStockItems.length > 0) {
-      toast.warning(`${lowStockItems.length} medicine(s) are running low on stock!`, {
-        
-        autoClose: 3000,
-      });
+      const message = `${lowStockItems.length} medicine${lowStockItems.length > 1 ? "s are" : " is"} low stock.`;
+      toast.warning(message, { autoClose: 3000 });
+      speak(message);
     }
 
-    // Show toast notification for out of stock
     if (outOfStockItems.length > 0) {
-      toast.error(`${outOfStockItems.length} medicine(s) are out of stock!`, {
-       
-        autoClose: 3000,
-      });
+      const message = `${outOfStockItems.length} medicine${outOfStockItems.length > 1 ? "s are" : " is"} out of stock.`;
+      toast.error(message, { autoClose: 3000 });
+      speak(message);
     }
+  }, [medicines]);
 
-  }, [medicines]); // Re-run when medicines list changes
-
-  return (
-    <div>
-      {/* Toast container */}
-      <ToastContainer />
-    </div>
-  );
+  return <ToastContainer />;
 };
 
 export default InventoryAlert;
