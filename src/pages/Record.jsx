@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import Sidebar from "../components/Sidebar";
 import { db } from "../firebase";
 import { FaTrash, FaEye } from "react-icons/fa";
-import { FiAlertCircle } from "react-icons/fi";
 import "../styles/Records.css";
 
 const Record = () => {
@@ -13,54 +14,52 @@ const Record = () => {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+
+  const fetchRecords = async () => {
+    setLoading(true);
+    try {
+      const snapshot = await getDocs(collection(db, "medicineRequests"));
+      const recordList = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          employeeID: data.employeeID || "Not Available",
+          firstname: data.firstname || "",
+          middleInitial: data.middleInitial || "",
+          lastname: data.lastname || "",
+          fullName: data.firstname
+            ? `${data.firstname} ${
+                data.middleInitial ? data.middleInitial + ". " : ""
+              }${data.lastname || ""}`
+            : "Not Available",
+          gender: data.gender || "Not Available",
+          medicine: data.medicine || "Not Available",
+          complaint: data.complaint || "Not Available",
+          status: data.status || "Pending",
+          date: data.dateVisit?.toDate().toLocaleString() || "N/A",
+          rawDate: data.dateVisit,
+          dateVisit: data.dateVisit,
+          additionalNotes: data.additionalNotes || "None",
+        };
+      });
+
+      recordList.sort((a, b) => {
+        if (!a.rawDate) return 1;
+        if (!b.rawDate) return -1;
+        return b.rawDate.seconds - a.rawDate.seconds;
+      });
+
+      setRecords(recordList);
+    } catch (error) {
+      console.error("Error fetching records:", error);
+      toast.error("Failed to load records.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchRecords = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "medicineRequests"));
-        const recordList = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            employeeID: data.employeeID || "Not Available",
-            firstname: data.firstname || "",
-            middleInitial: data.middleInitial || "",
-            lastname: data.lastname || "",
-            fullName: data.firstname
-              ? `${data.firstname} ${
-                  data.middleInitial ? data.middleInitial + ". " : ""
-                }${data.lastname || ""}`
-              : "Not Available",
-            department: data.department || "Not Available",
-            medicine: data.medicine || "Not Available",
-            complaint: data.complaint || "Not Available",
-            quantity: data.quantityDispensed || "N/A",
-            status: data.status || "Pending",
-            date: data.timestamp?.toDate().toLocaleString() || "N/A",
-            // Store other fields that might be needed in the modal
-            timestamp: data.timestamp,
-            additionalNotes: data.additionalNotes || "None",
-          };
-        });
-
-        // Sort records by timestamp in descending order (latest first)
-        const sortedRecords = recordList.sort((a, b) => {
-          // Handle cases where timestamp might be missing
-          if (!a.timestamp) return 1; // Push items without timestamp to the end
-          if (!b.timestamp) return -1;
-
-          // Compare timestamps (newer dates first)
-          return b.timestamp - a.timestamp;
-        });
-
-        setRecords(sortedRecords);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching records:", error);
-        setLoading(false);
-      }
-    };
-
     fetchRecords();
   }, []);
 
@@ -69,15 +68,33 @@ const Record = () => {
     setModalVisible(true);
   };
 
-  const handleDelete = (record) => {
-    console.log("Deleting record:", record);
-    // Implement your delete functionality here
+  const handleDelete = async (record) => {
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete the record for ${record.fullName}?`
+    );
+    if (!confirmDelete) return;
+
+    setDeletingId(record.id);
+    try {
+      await deleteDoc(doc(db, "medicineRequests", record.id));
+      toast.success("Record deleted successfully!");
+      await fetchRecords();
+    } catch (error) {
+      console.error("Error deleting record:", error);
+      toast.error("Failed to delete record.");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
     <Sidebar>
+      <ToastContainer position="top-right" autoClose={3000} />
       <div className="records-container">
-        <h1 className="records-heading">Medicine Request Records</h1>
+      <div className="dashboard-header">
+          <h1>Medicine Request Records</h1>
+          <p className="dashboard-date">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        </div>
 
         <div className="card">
           {loading ? (
@@ -93,13 +110,10 @@ const Record = () => {
                     Name
                   </th>
                   <th className="table-head" style={{ width: "120px" }}>
-                    Department
+                    Gender
                   </th>
                   <th className="table-head" style={{ width: "120px" }}>
                     Medicine
-                  </th>
-                  <th className="table-head" style={{ width: "80px" }}>
-                    Quantity
                   </th>
                   <th className="table-head" style={{ width: "150px" }}>
                     Complaint
@@ -125,9 +139,8 @@ const Record = () => {
                   >
                     <td className="table-cell">{record.employeeID}</td>
                     <td className="table-cell">{record.fullName}</td>
-                    <td className="table-cell">{record.department}</td>
+                    <td className="table-cell">{record.gender}</td>
                     <td className="table-cell">{record.medicine}</td>
-                    <td className="table-cell">{record.quantity}</td>
                     <td className="table-cell">{record.complaint}</td>
                     <td className="table-cell">
                       <span
@@ -199,6 +212,44 @@ const Record = () => {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h2>Medicine Request Details</h2>
 
+            {/* Name Row */}
+            <div className="form-row">
+              <div className="third-width">
+                <div className="form-group">
+                  <label>First Name:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.firstname}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+              <div className="third-width">
+                <div className="form-group">
+                  <label>Middle Initial:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.middleInitial}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+              <div className="third-width">
+                <div className="form-group">
+                  <label>Last Name:</label>
+                  <input
+                    type="text"
+                    value={selectedRecord.lastname}
+                    className="record-input"
+                    disabled
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Employee ID & Gender */}
             <div className="form-row">
               <div className="half-width">
                 <div className="form-group">
@@ -213,10 +264,10 @@ const Record = () => {
               </div>
               <div className="half-width">
                 <div className="form-group">
-                  <label>Department:</label>
+                  <label>Gender:</label>
                   <input
                     type="text"
-                    value={selectedRecord.department}
+                    value={selectedRecord.gender}
                     className="record-input"
                     disabled
                   />
@@ -224,13 +275,14 @@ const Record = () => {
               </div>
             </div>
 
+            {/* Medicine & Complaint */}
             <div className="form-row">
               <div className="half-width">
                 <div className="form-group">
-                  <label>First Name:</label>
+                  <label>Medicine:</label>
                   <input
                     type="text"
-                    value={selectedRecord.firstname}
+                    value={selectedRecord.medicine}
                     className="record-input"
                     disabled
                   />
@@ -238,10 +290,10 @@ const Record = () => {
               </div>
               <div className="half-width">
                 <div className="form-group">
-                  <label>Middle Initial:</label>
+                  <label>Complaint:</label>
                   <input
                     type="text"
-                    value={selectedRecord.middleInitial}
+                    value={selectedRecord.complaint}
                     className="record-input"
                     disabled
                   />
@@ -249,18 +301,8 @@ const Record = () => {
               </div>
             </div>
 
+            {/* Status & Date Submitted */}
             <div className="form-row">
-              <div className="half-width">
-                <div className="form-group">
-                  <label>Last Name:</label>
-                  <input
-                    type="text"
-                    value={selectedRecord.lastname}
-                    className="record-input"
-                    disabled
-                  />
-                </div>
-              </div>
               <div className="half-width">
                 <div className="form-group">
                   <label>Status:</label>
@@ -294,26 +336,12 @@ const Record = () => {
                   />
                 </div>
               </div>
-            </div>
-
-            <div className="form-row">
               <div className="half-width">
                 <div className="form-group">
-                  <label>Medicine:</label>
+                  <label>Date Submitted:</label>
                   <input
                     type="text"
-                    value={selectedRecord.medicine}
-                    className="record-input"
-                    disabled
-                  />
-                </div>
-              </div>
-              <div className="half-width">
-                <div className="form-group">
-                  <label>Quantity:</label>
-                  <input
-                    type="text"
-                    value={selectedRecord.quantity}
+                    value={selectedRecord.date}
                     className="record-input"
                     disabled
                   />
@@ -321,20 +349,7 @@ const Record = () => {
               </div>
             </div>
 
-            <div className="form-row">
-              <div className="full-width">
-                <div className="form-group">
-                  <label>Complaint:</label>
-                  <textarea
-                    value={selectedRecord.complaint}
-                    className="record-textarea"
-                    disabled
-                    rows={3}
-                  />
-                </div>
-              </div>
-            </div>
-
+            {/* Additional Notes */}
             <div className="form-row">
               <div className="full-width">
                 <div className="form-group">
@@ -344,20 +359,6 @@ const Record = () => {
                     className="record-textarea"
                     disabled
                     rows={2}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="full-width">
-                <div className="form-group">
-                  <label>Date Submitted:</label>
-                  <input
-                    type="text"
-                    value={selectedRecord.date}
-                    className="record-input"
-                    disabled
                   />
                 </div>
               </div>
