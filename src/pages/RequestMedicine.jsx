@@ -374,6 +374,7 @@ const RequestMedicine = () => {
         firstname: userData.firstname,
         lastname: userData.lastname,
         middleInitial: userData.middleInitial,
+        gender: userData.gender,
         department: userData.department,
         complaint: complaint,
         medicine: medicine,
