@@ -36,12 +36,24 @@ const Record = () => {
             complaint: data.complaint || "Not Available",
             quantity: data.quantityDispensed || "N/A",
             status: data.status || "Pending",
-            date: data.timestamp?.toDate().toLocaleString() || "N/A",
+            date: data.dateVisit?.toDate().toLocaleString() || "N/A",
+            // Store raw dateVisit for sorting
+            rawDate: data.dateVisit,
             // Store other fields that might be needed in the modal
-            timestamp: data.timestamp,
+            dateVisit: data.dateVisit,
             additionalNotes: data.additionalNotes || "None",
           };
         });
+
+        // Sort records by date in descending order (newest first)
+        recordList.sort((a, b) => {
+          // Handle null/undefined dates
+          if (!a.rawDate) return 1;
+          if (!b.rawDate) return -1;
+
+          return b.rawDate.seconds - a.rawDate.seconds;
+        });
+
         setRecords(recordList);
         setLoading(false);
       } catch (error) {

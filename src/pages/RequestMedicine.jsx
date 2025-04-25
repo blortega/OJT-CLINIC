@@ -27,7 +27,6 @@ const RequestMedicine = () => {
   const [formVisible, setFormVisible] = useState(false);
   const [complaint, setComplaint] = useState("");
   const [medicine, setMedicine] = useState("");
-  const [quantityDispensed, setQuantityDispensed] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [complaints, setComplaints] = useState([]);
   const [medicines, setMedicines] = useState([]);
@@ -71,45 +70,37 @@ const RequestMedicine = () => {
     }
   };
 
-  // Batch fetch and cache complaints, medicines, and employee IDs
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
 
-      // Try to get data from cache first
-      const cachedComplaints = getFromCache("complaints");
-      const cachedMedicines = getFromCache("medicines");
+      // Try to get employeeIDs from cache first
       const cachedEmployeeIDs = getFromCache("employeeIDs");
-
-      let complaintsData = cachedComplaints;
-      let medicinesData = cachedMedicines;
       let employeeIDsData = cachedEmployeeIDs;
 
       try {
-        // If not in cache, fetch from Firestore
-        if (!complaintsData) {
-          const complaintsRef = collection(db, "complaints");
-          const querySnapshot = await getDocs(complaintsRef);
-          complaintsData = querySnapshot.docs.map((doc) => ({
+        // Fetch complaints directly from Firestore (no caching)
+        const complaintsRef = collection(db, "complaints");
+        const complaintsSnapshot = await getDocs(complaintsRef);
+        const complaintsData = complaintsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setComplaints(complaintsData);
+
+        // Fetch medicines directly from Firestore (no caching)
+        const medicinesRef = collection(db, "medicine");
+        const medicinesSnapshot = await getDocs(medicinesRef);
+        const medicinesData = medicinesSnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
             id: doc.id,
-            ...doc.data(),
-          }));
-          saveToCache("complaints", complaintsData);
-        }
+            ...data,
+          };
+        });
+        setMedicines(medicinesData);
 
-        if (!medicinesData) {
-          const medicinesRef = collection(db, "medicine");
-          const querySnapshot = await getDocs(medicinesRef);
-          medicinesData = querySnapshot.docs.map((doc) => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              ...data,
-            };
-          });
-          saveToCache("medicines", medicinesData);
-        }
-
+        // Only keep caching for employeeIDs
         if (!employeeIDsData) {
           const usersRef = collection(db, "users");
           const querySnapshot = await getDocs(usersRef);
@@ -119,16 +110,12 @@ const RequestMedicine = () => {
           saveToCache("employeeIDs", employeeIDsData);
         }
 
-        setComplaints(complaintsData);
-        setMedicines(medicinesData);
         setEmployeeIDs(employeeIDsData);
       } catch (error) {
         console.error("Error fetching data:", error);
-        // Fallback to cached data if available
-        if (cachedComplaints) setComplaints(cachedComplaints);
-        if (cachedMedicines) setMedicines(cachedMedicines);
+        // Only fallback to cached employeeIDs if available
         if (cachedEmployeeIDs) setEmployeeIDs(cachedEmployeeIDs);
-        toast.error("Error fetching data. Some information may be outdated.");
+        toast.error("Error fetching data");
       } finally {
         setIsLoading(false);
       }
@@ -324,10 +311,8 @@ const RequestMedicine = () => {
       return;
     }
 
-    if (quantityDispensed <= 0) {
-      toast.warn("Quantity must be greater than zero");
-      return;
-    }
+    // Fixed quantity to always be 1
+    const quantityDispensed = 1;
 
     setIsSubmitting(true);
     try {
@@ -371,10 +356,11 @@ const RequestMedicine = () => {
               ...currentMedicineData,
             };
           }
+          // Save updated medicines to cache inside the state update function
+          saveToCache("medicines", updatedMedicines);
           return updatedMedicines;
         });
 
-        saveToCache("medicines", medicines);
         setIsSubmitting(false);
         return;
       }
@@ -391,9 +377,9 @@ const RequestMedicine = () => {
         department: userData.department,
         complaint: complaint,
         medicine: medicine,
-        quantityDispensed: quantityDispensed,
+        quantityDispensed: quantityDispensed, // Always 1
         status: "Completed",
-        timestamp: serverTimestamp(),
+        dateVisit: serverTimestamp(),
       };
 
       // Add medicine request
@@ -435,10 +421,10 @@ const RequestMedicine = () => {
             status: newStatus,
           };
         }
+        // Save updated medicines to cache inside the state update function
+        saveToCache("medicines", updatedMedicines);
         return updatedMedicines;
       });
-
-      saveToCache("medicines", medicines);
 
       toast.success("Medicine request submitted successfully!");
       resetUserSelection();
@@ -470,7 +456,6 @@ const RequestMedicine = () => {
     setScannedData("");
     setComplaint("");
     setMedicine("");
-    setQuantityDispensed(1);
     bufferRef.current = "";
   };
 
@@ -504,7 +489,6 @@ const RequestMedicine = () => {
     }
   };
 
-  // The rest of your JSX remains the same
   return (
     <Sidebar>
       <ToastContainer position="top-right" autoClose={3000} />
@@ -700,51 +684,12 @@ const RequestMedicine = () => {
                                 )}
 
                                 {med.stock > 0 && (
-                                  <div style={styles.quantityContainer}>
-                                    <label style={styles.quantityLabel}>
-                                      Quantity to Dispense:
-                                      <div style={styles.quantityControls}>
-                                        <button
-                                          style={styles.quantityButton}
-                                          onClick={() =>
-                                            setQuantityDispensed(
-                                              Math.max(1, quantityDispensed - 1)
-                                            )
-                                          }
-                                          disabled={quantityDispensed <= 1}
-                                        >
-                                          -
-                                        </button>
-                                        <input
-                                          type="number"
-                                          min="1"
-                                          max={med.stock}
-                                          value={quantityDispensed}
-                                          onChange={(e) =>
-                                            setQuantityDispensed(
-                                              parseInt(e.target.value) || 0
-                                            )
-                                          }
-                                          style={styles.quantityInput}
-                                        />
-                                        <button
-                                          style={styles.quantityButton}
-                                          onClick={() =>
-                                            setQuantityDispensed(
-                                              Math.min(
-                                                med.stock,
-                                                quantityDispensed + 1
-                                              )
-                                            )
-                                          }
-                                          disabled={
-                                            quantityDispensed >= med.stock
-                                          }
-                                        >
-                                          +
-                                        </button>
-                                      </div>
-                                    </label>
+                                  <div style={styles.quantityNote}>
+                                    <span style={styles.infoIcon}>ℹ️</span>
+                                    <span>
+                                      Only 1 quantity will be dispensed per
+                                      request
+                                    </span>
                                   </div>
                                 )}
                               </div>
@@ -763,11 +708,8 @@ const RequestMedicine = () => {
                           !complaint ||
                           !medicine ||
                           isSubmitting ||
-                          quantityDispensed <= 0 ||
                           filteredMedicines.find((med) => med.name === medicine)
-                            ?.stock === 0 ||
-                          filteredMedicines.find((med) => med.name === medicine)
-                            ?.stock < quantityDispensed
+                            ?.stock === 0
                             ? 0.6
                             : 1,
                       }}
@@ -777,11 +719,8 @@ const RequestMedicine = () => {
                         !complaint ||
                         !medicine ||
                         isSubmitting ||
-                        quantityDispensed <= 0 ||
                         filteredMedicines.find((med) => med.name === medicine)
-                          ?.stock === 0 ||
-                        filteredMedicines.find((med) => med.name === medicine)
-                          ?.stock < quantityDispensed
+                          ?.stock === 0
                       }
                     >
                       {isSubmitting ? (
