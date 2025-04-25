@@ -5,7 +5,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import ladydoctor from "../assets/lady-doctor.png";
+import ladydoctor from "../assets/nurse-removebg-preview.png";
 import doctorpatient from "../assets/doctor-patient-vector.png";
 import "../styles/Login.css"; // Import the external stylesheet
 
