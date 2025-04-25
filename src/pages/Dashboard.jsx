@@ -18,10 +18,14 @@ import Sidebar from "../components/Sidebar";
 import "../styles/Dashboard.css";
 import InventoryAlert from "../components/InventoryAlert";
 
+
 const GENDER_COLORS = ["#0088FE", "#FF69B4"];
 const CONDITION_COLORS = ["#4285F4", "#EA4335", "#FBBC05", "#34A853", "#8543E0"];
 const MEDICINE_COLORS = ["#00C49F", "#0088FE", "#FFBB28", "#FF8042", "#8884d8"];
 const COMPLAINT_COLORS = ["#8884d8", "#83a6ed", "#8dd1e1", "#82ca9d", "#a4de6c"];
+const MALE_COLORS = ["#0088FE", "#4285F4", "#00B2FF", "#0070FF", "#5C7AEA"];
+const FEMALE_COLORS = ["#FF69B4", "#FF8FAB", "#FF5C8D", "#FF96A7", "#FFC0CB"];
+
 
 const Dashboard = () => {
   const [genderData, setGenderData] = useState([
@@ -33,6 +37,8 @@ const Dashboard = () => {
   const [topConditions, setTopConditions] = useState([]);
   const [topMedicines, setTopMedicines] = useState([]);
   const [topComplaints, setTopComplaints] = useState([]);
+  const [maleComplaints, setMaleComplaints] = useState([]);
+  const [femaleComplaints, setFemaleComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [topVisitors, setTopVisitors] = useState([]);
 
@@ -41,14 +47,20 @@ const Dashboard = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
+    
+
         await Promise.all([
           fetchGenderData(),
           fetchConditions(),
           fetchTopRequestedMedicines(),
+          fetchGenderSpecificComplaints(),
           fetchTopComplaints(),
           fetchMedicines(),
           fetchTopVisitors(),
+        
         ]);
+
+
         setLoading(false);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -81,6 +93,47 @@ const Dashboard = () => {
       setTopVisitors(sortedVisitors);
     } catch (error) {
       console.error("Error fetching top visitors:", error);
+    }
+  };
+
+  const fetchGenderSpecificComplaints = async () => {
+    try {
+      const requestsSnapshot = await getDocs(collection(db, "medicineRequests"));
+      
+      // Count complaints by gender
+      const maleComplaintMap = {};
+      const femaleComplaintMap = {};
+      
+      requestsSnapshot.forEach((doc) => {
+        const data = doc.data();
+        const gender = data.gender;
+        const complaint = data.complaint;
+        
+        if (!complaint) return;
+        
+        if (gender === "Male") {
+          maleComplaintMap[complaint] = (maleComplaintMap[complaint] || 0) + 1;
+        } else if (gender === "Female") {
+          femaleComplaintMap[complaint] = (femaleComplaintMap[complaint] || 0) + 1;
+        }
+      });
+      
+      // Sort and get top 10 complaints for each gender
+      const sortedMaleComplaints = Object.entries(maleComplaintMap)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10);
+        
+      const sortedFemaleComplaints = Object.entries(femaleComplaintMap)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10);
+        
+      setMaleComplaints(sortedMaleComplaints);
+      setFemaleComplaints(sortedFemaleComplaints);
+      
+    } catch (error) {
+      console.error("Error fetching gender-specific complaints:", error);
     }
   };
   
@@ -177,7 +230,7 @@ const Dashboard = () => {
       console.error("Error fetching top complaints:", error);
     }
   };
-
+ 
   const fetchMedicines = async () => {
     try {
       const db = getFirestore(app);
@@ -290,6 +343,9 @@ const Dashboard = () => {
           <InventoryAlert medicines={medicines} />
         </div>
 
+        
+    
+
         <div className="dashboard-grid">
           <PieChartCard 
             title="Patient Gender Distribution" 
@@ -318,6 +374,20 @@ const Dashboard = () => {
   data={topVisitors} 
   colors={["#5C7AEA", "#82ca9d", "#8884d8", "#ffc658", "#ff8a65"]} 
   icon="🧍" 
+/>
+
+<BarChartCard 
+  title="Top 10 Male Patient Complaints" 
+  data={maleComplaints} 
+  colors={MALE_COLORS} 
+  icon="♂️" 
+/>
+
+<BarChartCard 
+  title="Top 10 Female Patient Complaints" 
+  data={femaleComplaints} 
+  colors={FEMALE_COLORS} 
+  icon="♀️" 
 />
 
         </div>
