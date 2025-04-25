@@ -326,6 +326,63 @@ const RequestMedicine = () => {
       setLastVisitInfo(null);
     }
   };
+  const checkRecentMedicineRequest = async (employeeID, selectedMedicine) => {
+    try {
+      const medicineRequestsRef = collection(db, "medicineRequests");
+      const fourHoursAgo = new Date();
+      fourHoursAgo.setHours(fourHoursAgo.getHours() - 4);
+
+      // Create query to find medicine requests in the last 4 hours with same medicine
+      const q = query(
+        medicineRequestsRef,
+        where("employeeID", "==", employeeID),
+        where("medicine", "==", selectedMedicine),
+        where("dateVisit", ">=", fourHoursAgo),
+        orderBy("dateVisit", "desc")
+      );
+
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        // Found recent request with same medicine
+        const doc = querySnapshot.docs[0];
+        const data = doc.data();
+
+        let requestDate = null;
+        if (data.dateVisit) {
+          if (typeof data.dateVisit.toDate === "function") {
+            requestDate = data.dateVisit.toDate();
+          } else if (data.dateVisit instanceof Date) {
+            requestDate = data.dateVisit;
+          } else if (typeof data.dateVisit === "string") {
+            requestDate = new Date(data.dateVisit);
+          }
+        }
+
+        return {
+          recentRequestExists: true,
+          requestData: {
+            ...data,
+            dateVisit: requestDate || new Date(),
+          },
+        };
+      }
+
+      return { recentRequestExists: false };
+    } catch (error) {
+      console.error("Error checking recent medicine requests:", error);
+      return { recentRequestExists: false, error };
+    }
+  };
+  const isMedicineLocked = () => {
+    if (!lastVisitInfo || !medicine || lastVisitInfo.medicine !== medicine) {
+      return false;
+    }
+
+    const hoursSinceLastRequest =
+      (new Date() - lastVisitInfo.dateVisit) / (1000 * 60 * 60);
+    return hoursSinceLastRequest < 4;
+  };
 
   useEffect(() => {
     if (!formVisible) return;
@@ -393,6 +450,23 @@ const RequestMedicine = () => {
       if (selectedMedicine && selectedMedicine.stock < quantityDispensed) {
         toast.error(
           `Sorry, not enough stock! Only ${selectedMedicine.stock} available.`
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      const recentRequestCheck = await checkRecentMedicineRequest(
+        scannedData,
+        medicine
+      );
+      if (recentRequestCheck.recentRequestExists) {
+        const requestTime = recentRequestCheck.requestData.dateVisit;
+        const currentTime = new Date();
+        const hoursDifference = (currentTime - requestTime) / (1000 * 60 * 60);
+        const hoursRemaining = Math.ceil(4 - hoursDifference);
+
+        toast.error(
+          `This employee requested the same medicine within the last 4 hours. Please wait ${hoursRemaining} more hour(s) before requesting again.`
         );
         setIsSubmitting(false);
         return;
@@ -808,6 +882,29 @@ const RequestMedicine = () => {
                                   </div>
                                 )}
 
+                                {/* Add the lock period warning here, after the other warnings */}
+                                {lastVisitInfo &&
+                                  lastVisitInfo.medicine === medicine &&
+                                  (new Date() - lastVisitInfo.dateVisit) /
+                                    (1000 * 60 * 60) <
+                                    4 && (
+                                    <div style={styles.lockWarning}>
+                                      <span style={styles.warningIcon}>🔒</span>
+                                      <span>
+                                        This medicine was already dispensed
+                                        within the last 4 hours.{" "}
+                                        {Math.ceil(
+                                          4 -
+                                            (new Date() -
+                                              lastVisitInfo.dateVisit) /
+                                              (1000 * 60 * 60)
+                                        )}{" "}
+                                        hour(s) remaining before it can be
+                                        requested again.
+                                      </span>
+                                    </div>
+                                  )}
+
                                 {med.stock > 0 && (
                                   <div style={styles.quantityNote}>
                                     <span style={styles.infoIcon}>ℹ️</span>
@@ -834,7 +931,8 @@ const RequestMedicine = () => {
                           !medicine ||
                           isSubmitting ||
                           filteredMedicines.find((med) => med.name === medicine)
-                            ?.stock === 0
+                            ?.stock === 0 ||
+                          isMedicineLocked()
                             ? 0.6
                             : 1,
                       }}
@@ -845,7 +943,8 @@ const RequestMedicine = () => {
                         !medicine ||
                         isSubmitting ||
                         filteredMedicines.find((med) => med.name === medicine)
-                          ?.stock === 0
+                          ?.stock === 0 ||
+                        isMedicineLocked()
                       }
                     >
                       {isSubmitting ? (
@@ -1197,6 +1296,16 @@ const styles = {
     padding: "0.75rem",
     color: "#6b7280",
     fontStyle: "italic",
+  },
+  lockWarning: {
+    backgroundColor: "#fee2e2",
+    color: "#b91c1c",
+    padding: "8px 12px",
+    borderRadius: "4px",
+    marginTop: "12px",
+    display: "flex",
+    alignItems: "center",
+    fontSize: "14px",
   },
   "@keyframes spin": {
     "0%": { transform: "rotate(0deg)" },
