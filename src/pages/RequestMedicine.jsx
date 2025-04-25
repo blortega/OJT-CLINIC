@@ -6,12 +6,12 @@ import {
   query,
   where,
   getDocs,
-  addDoc,
-  serverTimestamp,
   doc,
-  updateDoc,
-  writeBatch,
   getDoc,
+  writeBatch,
+  serverTimestamp,
+  orderBy,
+  limit,
 } from "firebase/firestore";
 import Sidebar from "../components/Sidebar";
 import { db } from "../firebase";
@@ -36,6 +36,7 @@ const RequestMedicine = () => {
   const bufferRef = useRef("");
   const timeoutRef = useRef(null);
   const [debugInfo, setDebugInfo] = useState({});
+  const [lastVisitInfo, setLastVisitInfo] = useState(null);
 
   // User cache for reducing employee ID lookups
   const [userCache, setUserCache] = useState({});
@@ -218,6 +219,8 @@ const RequestMedicine = () => {
       // Check if user data is in the in-memory cache
       if (userCache[employeeID]) {
         setUserData(userCache[employeeID]);
+        // Fetch last visit data even for cached users
+        await fetchLastVisitInfo(employeeID);
         toast.success("Employee found!");
         setIsSearching(false);
         return;
@@ -229,6 +232,8 @@ const RequestMedicine = () => {
         setUserData(cachedUser);
         // Also update in-memory cache
         setUserCache((prev) => ({ ...prev, [employeeID]: cachedUser }));
+        // Fetch last visit data even for cached users
+        await fetchLastVisitInfo(employeeID);
         toast.success("Employee found!");
         setIsSearching(false);
         return;
@@ -243,10 +248,13 @@ const RequestMedicine = () => {
         const userDoc = querySnapshot.docs[0];
         const userData = userDoc.data();
 
-        // Update both caches
+        // Update caches
         setUserData(userData);
         setUserCache((prev) => ({ ...prev, [employeeID]: userData }));
         saveToCache(`user_${employeeID}`, userData);
+
+        // Fetch last visit data
+        await fetchLastVisitInfo(employeeID);
 
         toast.success("Employee found!");
       } else {
@@ -259,6 +267,63 @@ const RequestMedicine = () => {
       toast.error("Error fetching user data");
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const fetchLastVisitInfo = async (employeeID) => {
+    try {
+      // Clear previous last visit info
+      setLastVisitInfo(null);
+
+      const medicineRequestsRef = collection(db, "medicineRequests");
+
+      // Create query to find the most recent visit
+      const q = query(
+        medicineRequestsRef,
+        where("employeeID", "==", employeeID),
+        orderBy("dateVisit", "desc"),
+        limit(1)
+      );
+
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs[0];
+        const data = doc.data();
+
+        // Convert timestamp to Date object if it exists and is a timestamp
+        let visitDate = null;
+
+        if (data.dateVisit) {
+          // Handle both Firestore Timestamp objects and string dates
+          if (typeof data.dateVisit.toDate === "function") {
+            visitDate = data.dateVisit.toDate();
+          } else if (data.dateVisit instanceof Date) {
+            visitDate = data.dateVisit;
+          } else if (typeof data.dateVisit === "string") {
+            visitDate = new Date(data.dateVisit);
+          }
+        }
+
+        // Set the last visit info with proper date handling
+        setLastVisitInfo({
+          id: doc.id,
+          ...data,
+          dateVisit: visitDate || new Date(),
+        });
+
+        console.log("Last visit found:", {
+          id: doc.id,
+          ...data,
+          dateVisit: visitDate || new Date(),
+        });
+      } else {
+        console.log("No previous visits found for this employee");
+        setLastVisitInfo(null);
+      }
+    } catch (error) {
+      console.error("Error fetching last visit info:", error);
+      setLastVisitInfo(null);
     }
   };
 
@@ -356,8 +421,6 @@ const RequestMedicine = () => {
               ...currentMedicineData,
             };
           }
-          // Save updated medicines to cache inside the state update function
-          saveToCache("medicines", updatedMedicines);
           return updatedMedicines;
         });
 
@@ -422,12 +485,14 @@ const RequestMedicine = () => {
             status: newStatus,
           };
         }
-        // Save updated medicines to cache inside the state update function
-        saveToCache("medicines", updatedMedicines);
         return updatedMedicines;
       });
 
       toast.success("Medicine request submitted successfully!");
+
+      // Refetch last visit info to show the new request
+      await fetchLastVisitInfo(scannedData);
+
       resetUserSelection();
 
       setIsScannerActive(true);
@@ -457,6 +522,7 @@ const RequestMedicine = () => {
     setScannedData("");
     setComplaint("");
     setMedicine("");
+    setLastVisitInfo(null);
     bufferRef.current = "";
   };
 
@@ -488,6 +554,15 @@ const RequestMedicine = () => {
           border: "#d1d5db",
         };
     }
+  };
+
+  const formatDateTime = (date) => {
+    if (!date || !(date instanceof Date) || isNaN(date)) return "Unknown date";
+
+    return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`;
   };
 
   return (
@@ -532,31 +607,68 @@ const RequestMedicine = () => {
                   <div style={styles.loadingSpinner}></div>
                 </div>
               ) : userData ? (
-                <div style={styles.userInfo}>
-                  <div style={styles.infoGrid}>
-                    <div style={styles.infoItem}>
-                      <span style={styles.infoLabel}>Employee ID:</span>
-                      <span style={styles.infoValue}>{scannedData}</span>
-                    </div>
-                    <div style={styles.infoItem}>
-                      <span style={styles.infoLabel}>Name:</span>
-                      <span style={styles.infoValue}>
-                        {userData.firstname} {userData.middleInitial}.{" "}
-                        {userData.lastname}
-                      </span>
-                    </div>
-                    <div style={styles.infoItem}>
-                      <span style={styles.infoLabel}>Gender:</span>
-                      <span style={styles.infoValue}>{userData.gender}</span>
-                    </div>
-                    <div style={styles.infoItem}>
-                      <span style={styles.infoLabel}>Department:</span>
-                      <span style={styles.infoValue}>
-                        {userData.department}
-                      </span>
+                <>
+                  <div style={styles.userInfo}>
+                    <div style={styles.infoGrid}>
+                      <div style={styles.infoItem}>
+                        <span style={styles.infoLabel}>Employee ID:</span>
+                        <span style={styles.infoValue}>{scannedData}</span>
+                      </div>
+                      <div style={styles.infoItem}>
+                        <span style={styles.infoLabel}>Name:</span>
+                        <span style={styles.infoValue}>
+                          {userData.firstname} {userData.middleInitial}.{" "}
+                          {userData.lastname}
+                        </span>
+                      </div>
+                      <div style={styles.infoItem}>
+                        <span style={styles.infoLabel}>Gender:</span>
+                        <span style={styles.infoValue}>{userData.gender}</span>
+                      </div>
+                      <div style={styles.infoItem}>
+                        <span style={styles.infoLabel}>Department:</span>
+                        <span style={styles.infoValue}>
+                          {userData.department}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
+
+                  {/* Last Visit Information Section */}
+                  <div style={styles.lastVisitSection}>
+                    <h3 style={styles.subsectionHeading}>
+                      Last Visit Information
+                    </h3>
+                    {lastVisitInfo ? (
+                      <div style={styles.lastVisitInfo}>
+                        <div style={styles.infoGrid}>
+                          <div style={styles.infoItem}>
+                            <span style={styles.infoLabel}>Date:</span>
+                            <span style={styles.infoValue}>
+                              {formatDateTime(lastVisitInfo.dateVisit)}
+                            </span>
+                          </div>
+                          <div style={styles.infoItem}>
+                            <span style={styles.infoLabel}>Complaint:</span>
+                            <span style={styles.infoValue}>
+                              {lastVisitInfo.complaint}
+                            </span>
+                          </div>
+                          <div style={styles.infoItem}>
+                            <span style={styles.infoLabel}>Medicine:</span>
+                            <span style={styles.infoValue}>
+                              {lastVisitInfo.medicine}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={styles.noVisitInfo}>
+                        <p>No previous visits found</p>
+                      </div>
+                    )}
+                  </div>
+                </>
               ) : (
                 <div style={styles.scanPrompt}>
                   <p>Scan employee ID to fetch data</p>
@@ -1034,6 +1146,30 @@ const styles = {
     width: "18px",
     height: "18px",
     animation: "spin 1s linear infinite",
+  },
+  lastVisitSection: {
+    marginTop: "1rem",
+    backgroundColor: "#f8f9fa",
+    padding: "1rem",
+    borderRadius: "0.5rem",
+    borderLeft: "4px solid #3b82f6",
+  },
+  subsectionHeading: {
+    fontSize: "1.1rem",
+    fontWeight: "600",
+    color: "#1e40af",
+    marginBottom: "0.75rem",
+  },
+  lastVisitInfo: {
+    backgroundColor: "#ffffff",
+    padding: "0.75rem",
+    borderRadius: "0.375rem",
+    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+  },
+  noVisitInfo: {
+    padding: "0.75rem",
+    color: "#6b7280",
+    fontStyle: "italic",
   },
   "@keyframes spin": {
     "0%": { transform: "rotate(0deg)" },
