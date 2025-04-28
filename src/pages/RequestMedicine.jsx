@@ -812,10 +812,17 @@ const RequestMedicine = () => {
                           type="text"
                           value={userData?.department || ""}
                           onChange={(e) => {
-                            // Capitalize first letter only
-                            const value =
-                              e.target.value.charAt(0).toUpperCase() +
-                              e.target.value.slice(1).toLowerCase();
+                            const value = e.target.value
+                              .split(" ")
+                              .map((word) => {
+                                if (word.toLowerCase() === "and") return "and";
+                                return (
+                                  word.charAt(0).toUpperCase() +
+                                  word.slice(1).toLowerCase()
+                                );
+                              })
+                              .join(" ");
+
                             setUserData((prev) => ({
                               ...prev,
                               department: value,
