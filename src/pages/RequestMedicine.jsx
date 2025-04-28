@@ -21,6 +21,7 @@ const CACHE_DURATION = 60 * 60 * 1000;
 
 const RequestMedicine = () => {
   const [scannedData, setScannedData] = useState("");
+  const [isScannedUser, setIsScannedUser] = useState(false);
   const [isScannerActive, setIsScannerActive] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [userData, setUserData] = useState(null);
@@ -219,6 +220,7 @@ const RequestMedicine = () => {
       // Check if user data is in the in-memory cache
       if (userCache[employeeID]) {
         setUserData(userCache[employeeID]);
+        setIsScannedUser(true);
         // Fetch last visit data even for cached users
         await fetchLastVisitInfo(employeeID);
         toast.success("Employee found!");
@@ -249,7 +251,8 @@ const RequestMedicine = () => {
         const userData = userDoc.data();
 
         // Update caches
-        setUserData(userData);
+        setUserData({ ...userData, employeeID });
+        setIsScannedUser(true);
         setUserCache((prev) => ({ ...prev, [employeeID]: userData }));
         saveToCache(`user_${employeeID}`, userData);
 
@@ -258,8 +261,8 @@ const RequestMedicine = () => {
 
         toast.success("Employee found!");
       } else {
-        console.log("No user found with this employeeID.");
-        setUserData(null);
+        setUserData((prev) => ({ ...prev, employeeID }));
+        setIsScannedUser(false);
         toast.error("No user found with this Employee ID");
       }
     } catch (error) {
@@ -423,17 +426,34 @@ const RequestMedicine = () => {
 
   const handleRequestClick = () => {
     setFormVisible(true);
-    resetUserSelection();
+    // Initialize empty user data structure
+    setUserData({
+      employeeID: "",
+      firstname: "",
+      lastname: "",
+      middleInitial: "",
+      gender: "",
+      department: "",
+    });
+    setIsScannedUser(false);
   };
 
   // Use batch writes to reduce write operations
   const handleSave = async () => {
-    if (!userData || !complaint || !medicine) {
+    if (
+      !userData ||
+      !userData.employeeID ||
+      !userData.firstname ||
+      !userData.lastname ||
+      !userData.gender ||
+      !userData.department ||
+      !complaint ||
+      !medicine
+    ) {
       toast.warn("Please fill all required fields");
       return;
     }
 
-    // Fixed quantity to always be 1
     const quantityDispensed = 1;
 
     setIsSubmitting(true);
@@ -455,8 +475,10 @@ const RequestMedicine = () => {
         return;
       }
 
+      const employeeID = userData.employeeID;
+
       const recentRequestCheck = await checkRecentMedicineRequest(
-        scannedData,
+        employeeID,
         medicine
       );
       if (recentRequestCheck.recentRequestExists) {
@@ -507,15 +529,15 @@ const RequestMedicine = () => {
 
       // Create medicine request data
       const requestData = {
-        employeeID: scannedData,
+        employeeID: employeeID,
         firstname: userData.firstname,
         lastname: userData.lastname,
-        middleInitial: userData.middleInitial,
+        middleInitial: userData.middleInitial || "",
         gender: userData.gender,
         department: userData.department,
         complaint: complaint,
         medicine: medicine,
-        quantityDispensed: quantityDispensed, // Always 1
+        quantityDispensed: quantityDispensed,
         status: "Completed",
         dateVisit: serverTimestamp(),
       };
@@ -594,6 +616,7 @@ const RequestMedicine = () => {
   const resetUserSelection = () => {
     setUserData(null);
     setScannedData("");
+    setIsScannedUser(false);
     setComplaint("");
     setMedicine("");
     setLastVisitInfo(null);
@@ -643,19 +666,19 @@ const RequestMedicine = () => {
     <Sidebar>
       <ToastContainer position="top-right" autoClose={3000} />
       <div style={styles.container}>
-      <div style={styles.dashboardContainer}>
-  <div style={styles.dashboardHeader}>
-    <h1 style={styles.dashboardTitle}>Clinic Medicine Request</h1>
-    <p style={styles.dashboardDate}>
-      {new Date().toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })}
-    </p>
-  </div>
-</div>
+        <div style={styles.dashboardContainer}>
+          <div style={styles.dashboardHeader}>
+            <h1 style={styles.dashboardTitle}>Clinic Medicine Request</h1>
+            <p style={styles.dashboardDate}>
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </p>
+          </div>
+        </div>
 
         {!formVisible && (
           <button style={styles.requestButton} onClick={handleRequestClick}>
@@ -698,24 +721,109 @@ const RequestMedicine = () => {
                     <div style={styles.infoGrid}>
                       <div style={styles.infoItem}>
                         <span style={styles.infoLabel}>Employee ID:</span>
-                        <span style={styles.infoValue}>{scannedData}</span>
+                        <input
+                          type="text"
+                          value={userData?.employeeID || scannedData}
+                          onChange={(e) => {
+                            const value = e.target.value.toUpperCase();
+                            setUserData((prev) => ({
+                              ...prev,
+                              employeeID: value,
+                            }));
+                            setScannedData(value);
+                          }}
+                          style={styles.inputField}
+                          disabled={isScannedUser && isSearching}
+                        />
                       </div>
                       <div style={styles.infoItem}>
-                        <span style={styles.infoLabel}>Name:</span>
-                        <span style={styles.infoValue}>
-                          {userData.firstname} {userData.middleInitial}.{" "}
-                          {userData.lastname}
-                        </span>
+                        <span style={styles.infoLabel}>First Name:</span>
+                        <input
+                          type="text"
+                          value={userData?.firstname || ""}
+                          onChange={(e) => {
+                            const value = e.target.value.toUpperCase();
+                            setUserData((prev) => ({
+                              ...prev,
+                              firstname: value,
+                            }));
+                          }}
+                          style={styles.inputField}
+                          disabled={isScannedUser}
+                        />
+                      </div>
+                      <div style={styles.infoItem}>
+                        <span style={styles.infoLabel}>Middle Initial:</span>
+                        <input
+                          type="text"
+                          value={userData?.middleInitial || ""}
+                          onChange={(e) => {
+                            const value = e.target.value.toUpperCase();
+                            setUserData((prev) => ({
+                              ...prev,
+                              middleInitial: value,
+                            }));
+                          }}
+                          style={styles.inputField}
+                          maxLength={1}
+                          disabled={isScannedUser}
+                        />
+                      </div>
+                      <div style={styles.infoItem}>
+                        <span style={styles.infoLabel}>Last Name:</span>
+                        <input
+                          type="text"
+                          value={userData?.lastname || ""}
+                          onChange={(e) => {
+                            const value = e.target.value.toUpperCase();
+                            setUserData((prev) => ({
+                              ...prev,
+                              lastname: value,
+                            }));
+                          }}
+                          style={styles.inputField}
+                          disabled={isScannedUser}
+                        />
                       </div>
                       <div style={styles.infoItem}>
                         <span style={styles.infoLabel}>Gender:</span>
-                        <span style={styles.infoValue}>{userData.gender}</span>
+                        <select
+                          value={userData?.gender || ""}
+                          onChange={(e) => {
+                            // Capitalize first letter only
+                            const value =
+                              e.target.value.charAt(0).toUpperCase() +
+                              e.target.value.slice(1).toLowerCase();
+                            setUserData((prev) => ({ ...prev, gender: value }));
+                          }}
+                          style={styles.select}
+                          disabled={isScannedUser}
+                        >
+                          <option value="" disabled>
+                            Select Gender
+                          </option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                        </select>
                       </div>
                       <div style={styles.infoItem}>
                         <span style={styles.infoLabel}>Department:</span>
-                        <span style={styles.infoValue}>
-                          {userData.department}
-                        </span>
+                        <input
+                          type="text"
+                          value={userData?.department || ""}
+                          onChange={(e) => {
+                            // Capitalize first letter only
+                            const value =
+                              e.target.value.charAt(0).toUpperCase() +
+                              e.target.value.slice(1).toLowerCase();
+                            setUserData((prev) => ({
+                              ...prev,
+                              department: value,
+                            }));
+                          }}
+                          style={styles.inputField}
+                          disabled={isScannedUser}
+                        />
                       </div>
                     </div>
                   </div>
@@ -970,28 +1078,26 @@ const RequestMedicine = () => {
 const styles = {
   container: {
     padding: "32px",
-    minHeight: '100vh',
-    
+    minHeight: "100vh",
   },
   dashboardHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '24px',
-    paddingBottom: '12px',
-    borderBottom: '1px solid #e0e4e8',
-
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "24px",
+    paddingBottom: "12px",
+    borderBottom: "1px solid #e0e4e8",
   },
   dashboardTitle: {
-    fontSize: '24px',
+    fontSize: "24px",
     fontWeight: 600,
-    color: '#2563eb',
+    color: "#2563eb",
     margin: 0,
   },
   dashboardDate: {
-    color: '#7f8c8d',
-    fontSize: '14px',
-    fontWeight: 'bold',
+    color: "#7f8c8d",
+    fontSize: "14px",
+    fontWeight: "bold",
     margin: 0,
   },
   requestButton: {
