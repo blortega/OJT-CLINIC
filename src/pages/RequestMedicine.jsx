@@ -21,6 +21,7 @@ const CACHE_DURATION = 60 * 60 * 1000;
 
 const RequestMedicine = () => {
   const [scannedData, setScannedData] = useState("");
+  const [isScannedUser, setIsScannedUser] = useState(false);
   const [isScannerActive, setIsScannerActive] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [userData, setUserData] = useState(null);
@@ -37,6 +38,8 @@ const RequestMedicine = () => {
   const timeoutRef = useRef(null);
   const [debugInfo, setDebugInfo] = useState({});
   const [lastVisitInfo, setLastVisitInfo] = useState(null);
+  const [hoveredInput, setHoveredInput] = useState(null);
+  const [focusedInput, setFocusedInput] = useState(null);
 
   // User cache for reducing employee ID lookups
   const [userCache, setUserCache] = useState({});
@@ -144,7 +147,13 @@ const RequestMedicine = () => {
 
   // Process scanned data
   const processScannedData = (rawData) => {
-    const data = rawData.replace(/Shift/g, "").trim();
+    const data = rawData
+      // Remove specific key names including 'Control'
+      .replace(/Shift|Backspace|Tab|CapsLock|Alt|NumLock|Control/g, "")
+      // Remove all non-alphanumeric characters
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .trim();
+
     const matchedID = findEmployeeIDInScan(data);
 
     if (matchedID) {
@@ -219,6 +228,7 @@ const RequestMedicine = () => {
       // Check if user data is in the in-memory cache
       if (userCache[employeeID]) {
         setUserData(userCache[employeeID]);
+        setIsScannedUser(true);
         // Fetch last visit data even for cached users
         await fetchLastVisitInfo(employeeID);
         toast.success("Employee found!");
@@ -249,7 +259,8 @@ const RequestMedicine = () => {
         const userData = userDoc.data();
 
         // Update caches
-        setUserData(userData);
+        setUserData({ ...userData, employeeID });
+        setIsScannedUser(true);
         setUserCache((prev) => ({ ...prev, [employeeID]: userData }));
         saveToCache(`user_${employeeID}`, userData);
 
@@ -258,8 +269,8 @@ const RequestMedicine = () => {
 
         toast.success("Employee found!");
       } else {
-        console.log("No user found with this employeeID.");
-        setUserData(null);
+        setUserData((prev) => ({ ...prev, employeeID }));
+        setIsScannedUser(false);
         toast.error("No user found with this Employee ID");
       }
     } catch (error) {
@@ -423,17 +434,34 @@ const RequestMedicine = () => {
 
   const handleRequestClick = () => {
     setFormVisible(true);
-    resetUserSelection();
+    // Initialize empty user data structure
+    setUserData({
+      employeeID: "",
+      firstname: "",
+      lastname: "",
+      middleInitial: "",
+      gender: "",
+      department: "",
+    });
+    setIsScannedUser(false);
   };
 
   // Use batch writes to reduce write operations
   const handleSave = async () => {
-    if (!userData || !complaint || !medicine) {
+    if (
+      !userData ||
+      !userData.employeeID ||
+      !userData.firstname ||
+      !userData.lastname ||
+      !userData.gender ||
+      !userData.department ||
+      !complaint ||
+      !medicine
+    ) {
       toast.warn("Please fill all required fields");
       return;
     }
 
-    // Fixed quantity to always be 1
     const quantityDispensed = 1;
 
     setIsSubmitting(true);
@@ -455,8 +483,10 @@ const RequestMedicine = () => {
         return;
       }
 
+      const employeeID = userData.employeeID;
+
       const recentRequestCheck = await checkRecentMedicineRequest(
-        scannedData,
+        employeeID,
         medicine
       );
       if (recentRequestCheck.recentRequestExists) {
@@ -507,15 +537,15 @@ const RequestMedicine = () => {
 
       // Create medicine request data
       const requestData = {
-        employeeID: scannedData,
+        employeeID: employeeID,
         firstname: userData.firstname,
         lastname: userData.lastname,
-        middleInitial: userData.middleInitial,
+        middleInitial: userData.middleInitial || "",
         gender: userData.gender,
         department: userData.department,
         complaint: complaint,
         medicine: medicine,
-        quantityDispensed: quantityDispensed, // Always 1
+        quantityDispensed: quantityDispensed,
         status: "Completed",
         dateVisit: serverTimestamp(),
       };
@@ -594,6 +624,7 @@ const RequestMedicine = () => {
   const resetUserSelection = () => {
     setUserData(null);
     setScannedData("");
+    setIsScannedUser(false);
     setComplaint("");
     setMedicine("");
     setLastVisitInfo(null);
@@ -643,19 +674,19 @@ const RequestMedicine = () => {
     <Sidebar>
       <ToastContainer position="top-right" autoClose={3000} />
       <div style={styles.container}>
-      <div style={styles.dashboardContainer}>
-  <div style={styles.dashboardHeader}>
-    <h1 style={styles.dashboardTitle}>Clinic Medicine Request</h1>
-    <p style={styles.dashboardDate}>
-      {new Date().toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })}
-    </p>
-  </div>
-</div>
+        <div style={styles.dashboardContainer}>
+          <div style={styles.dashboardHeader}>
+            <h1 style={styles.dashboardTitle}>Clinic Medicine Request</h1>
+            <p style={styles.dashboardDate}>
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </p>
+          </div>
+        </div>
 
         {!formVisible && (
           <button style={styles.requestButton} onClick={handleRequestClick}>
@@ -696,26 +727,186 @@ const RequestMedicine = () => {
                 <>
                   <div style={styles.userInfo}>
                     <div style={styles.infoGrid}>
+                      {/* Employee ID */}
                       <div style={styles.infoItem}>
                         <span style={styles.infoLabel}>Employee ID:</span>
-                        <span style={styles.infoValue}>{scannedData}</span>
+                        <input
+                          type="text"
+                          value={userData?.employeeID || scannedData}
+                          onChange={(e) => {
+                            const value = e.target.value.toUpperCase();
+                            setUserData((prev) => ({
+                              ...prev,
+                              employeeID: value,
+                            }));
+                            setScannedData(value);
+                          }}
+                          style={{
+                            ...styles.inputField,
+                            ...(hoveredInput === "employeeID"
+                              ? styles.inputFieldHover
+                              : {}),
+                            ...(focusedInput === "employeeID"
+                              ? styles.inputFieldFocus
+                              : {}),
+                          }}
+                          onMouseEnter={() => setHoveredInput("employeeID")}
+                          onMouseLeave={() => setHoveredInput(null)}
+                          onFocus={() => setFocusedInput("employeeID")}
+                          onBlur={() => setFocusedInput(null)}
+                          disabled={isScannedUser && isSearching}
+                        />
                       </div>
-                      <div style={styles.infoItem}>
-                        <span style={styles.infoLabel}>Name:</span>
-                        <span style={styles.infoValue}>
-                          {userData.firstname} {userData.middleInitial}.{" "}
-                          {userData.lastname}
-                        </span>
-                      </div>
+
+                      {/* Gender (No hover logic needed) */}
                       <div style={styles.infoItem}>
                         <span style={styles.infoLabel}>Gender:</span>
-                        <span style={styles.infoValue}>{userData.gender}</span>
+                        <select
+                          value={userData?.gender || ""}
+                          onChange={(e) => {
+                            const value =
+                              e.target.value.charAt(0).toUpperCase() +
+                              e.target.value.slice(1).toLowerCase();
+                            setUserData((prev) => ({ ...prev, gender: value }));
+                          }}
+                          style={styles.select}
+                          disabled={isScannedUser}
+                        >
+                          <option value="" disabled>
+                            Select Gender
+                          </option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                        </select>
                       </div>
+
+                      {/* Department */}
                       <div style={styles.infoItem}>
                         <span style={styles.infoLabel}>Department:</span>
-                        <span style={styles.infoValue}>
-                          {userData.department}
-                        </span>
+                        <input
+                          type="text"
+                          value={userData?.department || ""}
+                          onChange={(e) => {
+                            const value = e.target.value
+                              .split(" ")
+                              .map((word) =>
+                                word.toLowerCase() === "and"
+                                  ? "and"
+                                  : word.charAt(0).toUpperCase() +
+                                    word.slice(1).toLowerCase()
+                              )
+                              .join(" ");
+                            setUserData((prev) => ({
+                              ...prev,
+                              department: value,
+                            }));
+                          }}
+                          style={{
+                            ...styles.inputField,
+                            ...(hoveredInput === "department"
+                              ? styles.inputFieldHover
+                              : {}),
+                            ...(focusedInput === "department"
+                              ? styles.inputFieldFocus
+                              : {}),
+                          }}
+                          onMouseEnter={() => setHoveredInput("department")}
+                          onMouseLeave={() => setHoveredInput(null)}
+                          onFocus={() => setFocusedInput("department")}
+                          onBlur={() => setFocusedInput(null)}
+                          disabled={isScannedUser}
+                        />
+                      </div>
+
+                      {/* First Name */}
+                      <div style={styles.infoItem}>
+                        <span style={styles.infoLabel}>First Name:</span>
+                        <input
+                          type="text"
+                          value={userData?.firstname || ""}
+                          onChange={(e) => {
+                            const value = e.target.value.toUpperCase();
+                            setUserData((prev) => ({
+                              ...prev,
+                              firstname: value,
+                            }));
+                          }}
+                          style={{
+                            ...styles.inputField,
+                            ...(hoveredInput === "firstname"
+                              ? styles.inputFieldHover
+                              : {}),
+                            ...(focusedInput === "firstname"
+                              ? styles.inputFieldFocus
+                              : {}),
+                          }}
+                          onMouseEnter={() => setHoveredInput("firstname")}
+                          onMouseLeave={() => setHoveredInput(null)}
+                          onFocus={() => setFocusedInput("firstname")}
+                          onBlur={() => setFocusedInput(null)}
+                          disabled={isScannedUser}
+                        />
+                      </div>
+
+                      {/* Middle Initial */}
+                      <div style={styles.infoItem}>
+                        <span style={styles.infoLabel}>Middle Initial:</span>
+                        <input
+                          type="text"
+                          value={userData?.middleInitial || ""}
+                          onChange={(e) => {
+                            const value = e.target.value.toUpperCase();
+                            setUserData((prev) => ({
+                              ...prev,
+                              middleInitial: value,
+                            }));
+                          }}
+                          style={{
+                            ...styles.inputField,
+                            ...(hoveredInput === "middleInitial"
+                              ? styles.inputFieldHover
+                              : {}),
+                            ...(focusedInput === "middleInitial"
+                              ? styles.inputFieldFocus
+                              : {}),
+                          }}
+                          onMouseEnter={() => setHoveredInput("middleInitial")}
+                          onMouseLeave={() => setHoveredInput(null)}
+                          onFocus={() => setFocusedInput("middleInitial")}
+                          onBlur={() => setFocusedInput(null)}
+                          maxLength={1}
+                          disabled={isScannedUser}
+                        />
+                      </div>
+
+                      {/* Last Name */}
+                      <div style={styles.infoItem}>
+                        <span style={styles.infoLabel}>Last Name:</span>
+                        <input
+                          type="text"
+                          value={userData?.lastname || ""}
+                          onChange={(e) => {
+                            const value = e.target.value.toUpperCase();
+                            setUserData((prev) => ({
+                              ...prev,
+                              lastname: value,
+                            }));
+                          }}
+                          style={{
+                            ...styles.inputField,
+                            ...(hoveredInput === "lastname"
+                              ? styles.inputFieldHover
+                              : {}),
+                            ...(focusedInput === "lastname"
+                              ? styles.inputFieldFocus
+                              : {}),
+                          }}
+                          onMouseEnter={() => setHoveredInput("lastname")}
+                          onMouseLeave={() => setHoveredInput(null)}
+                          onFocus={() => setFocusedInput("lastname")}
+                          onBlur={() => setFocusedInput(null)}
+                          disabled={isScannedUser}
+                        />
                       </div>
                     </div>
                   </div>
@@ -970,28 +1161,26 @@ const RequestMedicine = () => {
 const styles = {
   container: {
     padding: "32px",
-    minHeight: '100vh',
-    
+    minHeight: "100vh",
   },
   dashboardHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '24px',
-    paddingBottom: '12px',
-    borderBottom: '1px solid #e0e4e8',
-
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "24px",
+    paddingBottom: "12px",
+    borderBottom: "1px solid #e0e4e8",
   },
   dashboardTitle: {
-    fontSize: '24px',
+    fontSize: "24px",
     fontWeight: 600,
-    color: '#2563eb',
+    color: "#2563eb",
     margin: 0,
   },
   dashboardDate: {
-    color: '#7f8c8d',
-    fontSize: '14px',
-    fontWeight: 'bold',
+    color: "#7f8c8d",
+    fontSize: "14px",
+    fontWeight: "bold",
     margin: 0,
   },
   requestButton: {
@@ -1049,23 +1238,69 @@ const styles = {
     paddingBottom: "8px",
     borderBottom: "1px solid #e5e7eb",
   },
+  inputField: {
+    width: "93.5%",
+    padding: "12px 14px",
+    fontSize: "15px",
+    borderRadius: "6px",
+    border: "1px solid #d1d5db",
+    backgroundColor: "#f9fafb",
+    color: "#111827",
+    transition: "all 0.3s ease",
+    marginTop: "4px",
+    outline: "none",
+    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+    fontFamily: "'Inter', sans-serif",
+  },
+  inputFieldHover: {
+    borderColor: "#3b82f6",
+    backgroundColor: "#f3f4f6",
+    cursor: "text",
+  },
+
+  inputFieldFocus: {
+    borderColor: "#2563eb",
+    boxShadow: "0 0 0 3px rgba(37, 99, 235, 0.25)",
+    backgroundColor: "#ffffff",
+  },
+
+  select: {
+    width: "100%",
+    padding: "12px 14px",
+    fontSize: "16px",
+    borderRadius: "6px",
+    border: "1px solid #d1d5db",
+    backgroundColor: "#f9fafb",
+    color: "#111827",
+    transition: "border-color 0.3s ease",
+    marginTop: "4px",
+    outline: "none",
+    fontFamily: "'Inter', sans-serif",
+  },
   userInfo: {
-    marginBottom: "24px",
+    marginBottom: "32px",
+    padding: "24px",
+    backgroundColor: "#ffffff",
+    borderRadius: "12px",
+    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.05)",
+    fontFamily: "'Inter', sans-serif",
   },
   infoGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+    gridTemplateColumns: "repeat(3, 1fr)",
     gap: "16px",
+    marginBottom: "16px",
   },
   infoItem: {
     display: "flex",
     flexDirection: "column",
-    gap: "4px",
+    gap: "6px",
   },
   infoLabel: {
     fontSize: "14px",
     color: "#6b7280",
     fontWeight: "500",
+    marginBottom: "4px",
   },
   infoValue: {
     fontSize: "16px",
@@ -1093,18 +1328,6 @@ const styles = {
     fontSize: "14px",
     fontWeight: "500",
     color: "#4b5563",
-  },
-  select: {
-    width: "100%",
-    padding: "10px 12px",
-    fontSize: "16px",
-    borderRadius: "6px",
-    border: "1px solid #d1d5db",
-    backgroundColor: "#f9fafb",
-    color: "#111827",
-    transition: "border-color 0.2s ease",
-    marginTop: "4px",
-    outline: "none",
   },
   medicineInfo: {
     backgroundColor: "#f0f7ff",
