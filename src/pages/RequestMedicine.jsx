@@ -38,8 +38,8 @@ const RequestMedicine = () => {
   const timeoutRef = useRef(null);
   const [debugInfo, setDebugInfo] = useState({});
   const [lastVisitInfo, setLastVisitInfo] = useState(null);
-  const [isHovered, setIsHovered] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
+  const [hoveredInput, setHoveredInput] = useState(null);
+  const [focusedInput, setFocusedInput] = useState(null);
 
   // User cache for reducing employee ID lookups
   const [userCache, setUserCache] = useState({});
@@ -721,6 +721,7 @@ const RequestMedicine = () => {
                 <>
                   <div style={styles.userInfo}>
                     <div style={styles.infoGrid}>
+                      {/* Employee ID */}
                       <div style={styles.infoItem}>
                         <span style={styles.infoLabel}>Employee ID:</span>
                         <input
@@ -734,16 +735,29 @@ const RequestMedicine = () => {
                             }));
                             setScannedData(value);
                           }}
-                          style={styles.inputField}
+                          style={{
+                            ...styles.inputField,
+                            ...(hoveredInput === "employeeID"
+                              ? styles.inputFieldHover
+                              : {}),
+                            ...(focusedInput === "employeeID"
+                              ? styles.inputFieldFocus
+                              : {}),
+                          }}
+                          onMouseEnter={() => setHoveredInput("employeeID")}
+                          onMouseLeave={() => setHoveredInput(null)}
+                          onFocus={() => setFocusedInput("employeeID")}
+                          onBlur={() => setFocusedInput(null)}
                           disabled={isScannedUser && isSearching}
                         />
                       </div>
+
+                      {/* Gender (No hover logic needed) */}
                       <div style={styles.infoItem}>
                         <span style={styles.infoLabel}>Gender:</span>
                         <select
                           value={userData?.gender || ""}
                           onChange={(e) => {
-                            // Capitalize first letter only
                             const value =
                               e.target.value.charAt(0).toUpperCase() +
                               e.target.value.slice(1).toLowerCase();
@@ -759,6 +773,8 @@ const RequestMedicine = () => {
                           <option value="Female">Female</option>
                         </select>
                       </div>
+
+                      {/* Department */}
                       <div style={styles.infoItem}>
                         <span style={styles.infoLabel}>Department:</span>
                         <input
@@ -767,24 +783,36 @@ const RequestMedicine = () => {
                           onChange={(e) => {
                             const value = e.target.value
                               .split(" ")
-                              .map((word) => {
-                                if (word.toLowerCase() === "and") return "and";
-                                return (
-                                  word.charAt(0).toUpperCase() +
-                                  word.slice(1).toLowerCase()
-                                );
-                              })
+                              .map((word) =>
+                                word.toLowerCase() === "and"
+                                  ? "and"
+                                  : word.charAt(0).toUpperCase() +
+                                    word.slice(1).toLowerCase()
+                              )
                               .join(" ");
-
                             setUserData((prev) => ({
                               ...prev,
                               department: value,
                             }));
                           }}
-                          style={styles.inputField}
+                          style={{
+                            ...styles.inputField,
+                            ...(hoveredInput === "department"
+                              ? styles.inputFieldHover
+                              : {}),
+                            ...(focusedInput === "department"
+                              ? styles.inputFieldFocus
+                              : {}),
+                          }}
+                          onMouseEnter={() => setHoveredInput("department")}
+                          onMouseLeave={() => setHoveredInput(null)}
+                          onFocus={() => setFocusedInput("department")}
+                          onBlur={() => setFocusedInput(null)}
                           disabled={isScannedUser}
                         />
                       </div>
+
+                      {/* First Name */}
                       <div style={styles.infoItem}>
                         <span style={styles.infoLabel}>First Name:</span>
                         <input
@@ -797,10 +825,24 @@ const RequestMedicine = () => {
                               firstname: value,
                             }));
                           }}
-                          style={styles.inputField}
+                          style={{
+                            ...styles.inputField,
+                            ...(hoveredInput === "firstname"
+                              ? styles.inputFieldHover
+                              : {}),
+                            ...(focusedInput === "firstname"
+                              ? styles.inputFieldFocus
+                              : {}),
+                          }}
+                          onMouseEnter={() => setHoveredInput("firstname")}
+                          onMouseLeave={() => setHoveredInput(null)}
+                          onFocus={() => setFocusedInput("firstname")}
+                          onBlur={() => setFocusedInput(null)}
                           disabled={isScannedUser}
                         />
                       </div>
+
+                      {/* Middle Initial */}
                       <div style={styles.infoItem}>
                         <span style={styles.infoLabel}>Middle Initial:</span>
                         <input
@@ -813,11 +855,25 @@ const RequestMedicine = () => {
                               middleInitial: value,
                             }));
                           }}
-                          style={styles.inputField}
+                          style={{
+                            ...styles.inputField,
+                            ...(hoveredInput === "middleInitial"
+                              ? styles.inputFieldHover
+                              : {}),
+                            ...(focusedInput === "middleInitial"
+                              ? styles.inputFieldFocus
+                              : {}),
+                          }}
+                          onMouseEnter={() => setHoveredInput("middleInitial")}
+                          onMouseLeave={() => setHoveredInput(null)}
+                          onFocus={() => setFocusedInput("middleInitial")}
+                          onBlur={() => setFocusedInput(null)}
                           maxLength={1}
                           disabled={isScannedUser}
                         />
                       </div>
+
+                      {/* Last Name */}
                       <div style={styles.infoItem}>
                         <span style={styles.infoLabel}>Last Name:</span>
                         <input
@@ -830,7 +886,19 @@ const RequestMedicine = () => {
                               lastname: value,
                             }));
                           }}
-                          style={styles.inputField}
+                          style={{
+                            ...styles.inputField,
+                            ...(hoveredInput === "lastname"
+                              ? styles.inputFieldHover
+                              : {}),
+                            ...(focusedInput === "lastname"
+                              ? styles.inputFieldFocus
+                              : {}),
+                          }}
+                          onMouseEnter={() => setHoveredInput("lastname")}
+                          onMouseLeave={() => setHoveredInput(null)}
+                          onFocus={() => setFocusedInput("lastname")}
+                          onBlur={() => setFocusedInput(null)}
                           disabled={isScannedUser}
                         />
                       </div>
@@ -1179,14 +1247,17 @@ const styles = {
     fontFamily: "'Inter', sans-serif",
   },
   inputFieldHover: {
-    borderColor: "#2563eb",
-    backgroundColor: "#f1f5f9",
+    borderColor: "#3b82f6",
+    backgroundColor: "#f3f4f6",
+    cursor: "text",
   },
 
   inputFieldFocus: {
-    borderColor: "#1e40af",
-    boxShadow: "0 0 0 3px rgba(56, 189, 248, 0.5)",
+    borderColor: "#2563eb",
+    boxShadow: "0 0 0 3px rgba(37, 99, 235, 0.25)",
+    backgroundColor: "#ffffff",
   },
+
   select: {
     width: "100%",
     padding: "12px 14px",
