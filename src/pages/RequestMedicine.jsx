@@ -147,7 +147,13 @@ const RequestMedicine = () => {
 
   // Process scanned data
   const processScannedData = (rawData) => {
-    const data = rawData.replace(/Shift/g, "").trim();
+    const data = rawData
+      // Remove specific key names including 'Control'
+      .replace(/Shift|Backspace|Tab|CapsLock|Alt|NumLock|Control/g, "")
+      // Remove all non-alphanumeric characters
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .trim();
+
     const matchedID = findEmployeeIDInScan(data);
 
     if (matchedID) {
