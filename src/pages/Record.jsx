@@ -4,8 +4,9 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Sidebar from "../components/Sidebar";
 import { db } from "../firebase";
-import { FaTrash, FaEye } from "react-icons/fa";
+import { FaTrash, FaEye, FaPrint } from "react-icons/fa";
 import "../styles/Records.css";
+import logo from "../assets/innodatalogo.png"; // Fixed path with proper slash
 
 const Record = () => {
   const [records, setRecords] = useState([]);
@@ -15,12 +16,82 @@ const Record = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(null);
+
+  // Inline styles for the enhanced controls
+  const styles = {
+    controlsRow: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: "20px",
+      backgroundColor: "#f9fafb",
+      padding: "15px",
+      borderRadius: "8px",
+      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)"
+    },
+    filterContainer: {
+      display: "flex",
+      alignItems: "center"
+    },
+    filterLabel: {
+      fontWeight: "600",
+      marginRight: "10px",
+      color: "#374151"
+    },
+    monthSelect: {
+      padding: "8px 12px",
+      border: "1px solid #d1d5db",
+      borderRadius: "6px",
+      backgroundColor: "white",
+      color: "#1f2937",
+      fontSize: "14px",
+      minWidth: "180px",
+      cursor: "pointer",
+      transition: "all 0.2s",
+      outline: "none"
+    },
+    printButton: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#3b82f6",
+      color: "white",
+      padding: "8px 16px",
+      border: "none",
+      borderRadius: "6px",
+      fontWeight: "500",
+      cursor: "pointer",
+      transition: "background-color 0.2s"
+    },
+    printButtonHover: {
+      backgroundColor: "#2563eb"
+    },
+    printIcon: {
+      marginRight: "8px"
+    }
+  };
+
+  const months = [
+    { label: "January", value: 1 },
+    { label: "February", value: 2 },
+    { label: "March", value: 3 },
+    { label: "April", value: 4 },
+    { label: "May", value: 5 },
+    { label: "June", value: 6 },
+    { label: "July", value: 7 },
+    { label: "August", value: 8 },
+    { label: "September", value: 9 },
+    { label: "October", value: 10 },
+    { label: "November", value: 11 },
+    { label: "December", value: 12 },
+  ];
 
   const fetchRecords = async () => {
     setLoading(true);
     try {
       const snapshot = await getDocs(collection(db, "medicineRequests"));
-      const recordList = snapshot.docs.map((doc) => {
+      let recordList = snapshot.docs.map((doc) => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -29,9 +100,7 @@ const Record = () => {
           middleInitial: data.middleInitial || "",
           lastname: data.lastname || "",
           fullName: data.firstname
-            ? `${data.firstname} ${
-                data.middleInitial ? data.middleInitial + ". " : ""
-              }${data.lastname || ""}`
+            ? `${data.firstname} ${data.middleInitial ? data.middleInitial + ". " : ""}${data.lastname || ""}`
             : "Not Available",
           gender: data.gender || "Not Available",
           medicine: data.medicine || "Not Available",
@@ -43,6 +112,14 @@ const Record = () => {
           additionalNotes: data.additionalNotes || "None",
         };
       });
+
+      // Filter records by selected month
+      if (selectedMonth) {
+        recordList = recordList.filter((record) => {
+          const recordDate = new Date(record.dateVisit.seconds * 1000); // convert timestamp to date
+          return recordDate.getMonth() + 1 === selectedMonth; // getMonth() returns 0-based index (0 = January, 1 = February, etc.)
+        });
+      }
 
       recordList.sort((a, b) => {
         if (!a.rawDate) return 1;
@@ -61,7 +138,7 @@ const Record = () => {
 
   useEffect(() => {
     fetchRecords();
-  }, []);
+  }, [selectedMonth]);
 
   const handleView = (record) => {
     setSelectedRecord(record);
@@ -87,13 +164,224 @@ const Record = () => {
     }
   };
 
+  const handlePrint = () => {
+    // Create a new window for printing
+    const printWindow = window.open("", "_blank");
+    
+    // Convert logo to base64 to use in the print window
+    const img = new Image();
+    img.src = logo;
+    
+    img.onload = () => {
+      // Create a canvas element to draw the image
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      
+      // Get base64 representation of the image
+      const logoBase64 = canvas.toDataURL('image/png');
+      
+      // Create a simple HTML content for the print window
+      const printContent = `
+        <html>
+          <head>
+            <title>Print Records</title>
+            <style>
+              body { font-family: Arial, sans-serif; }
+              .header { display: flex; align-items: center; margin-bottom: 20px; }
+              .logo { height: 60px; margin-right: 20px; }
+              .header-text { flex: 1; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f2f2f2; }
+              .status-badge { padding: 3px 8px; color: white; font-size: 12px; border-radius: 3px; }
+              .print-date { font-size: 12px; color: #666; margin-top: 5px; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <img src="${logoBase64}" alt="Innodata Logo" class="logo">
+              <div class="header-text">
+                <h2>Medicine Request Records</h2>
+                <p class="print-date">Printed on: ${new Date().toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}</p>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Employee ID</th>
+                  <th>Name</th>
+                  <th>Gender</th>
+                  <th>Medicine</th>
+                  <th>Complaint</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${records
+                  .map(
+                    (record) => `
+                      <tr>
+                        <td>${record.employeeID}</td>
+                        <td>${record.fullName}</td>
+                        <td>${record.gender}</td>
+                        <td>${record.medicine}</td>
+                        <td>${record.complaint}</td>
+                        <td><span class="status-badge" style="background-color: ${
+                          record.status === "Approved"
+                            ? "#10b981"
+                            : record.status === "Completed"
+                            ? "#10b981"
+                            : record.status === "Rejected"
+                            ? "#ef4444"
+                            : record.status === "Pending"
+                            ? "#f59e0b"
+                            : "#6b7280"
+                        }">${record.status}</span></td>
+                        <td>${record.date}</td>
+                      </tr>
+                    `
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+
+      // Write the content to the print window and trigger the print dialog
+      printWindow.document.open();
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      
+      // Wait a bit for the content to load properly before printing
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+    };
+    
+    // Handle loading error
+    img.onerror = () => {
+      console.error("Error loading logo for printing");
+      // Fallback to printing without logo
+      const printContent = `
+        <html>
+          <head>
+            <title>Print Records</title>
+            <style>
+              body { font-family: Arial, sans-serif; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f2f2f2; }
+              .status-badge { padding: 3px 8px; color: white; font-size: 12px; }
+              .print-date { font-size: 12px; color: #666; margin-top: 5px; }
+            </style>
+          </head>
+          <body>
+            <h2>Medicine Request Records</h2>
+            <p class="print-date">Printed on: ${new Date().toLocaleDateString()}</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Employee ID</th>
+                  <th>Name</th>
+                  <th>Gender</th>
+                  <th>Medicine</th>
+                  <th>Complaint</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${records
+                  .map(
+                    (record) => `
+                      <tr>
+                        <td>${record.employeeID}</td>
+                        <td>${record.fullName}</td>
+                        <td>${record.gender}</td>
+                        <td>${record.medicine}</td>
+                        <td>${record.complaint}</td>
+                        <td><span class="status-badge" style="background-color: ${
+                          record.status === "Approved"
+                            ? "#10b981"
+                            : record.status === "Completed"
+                            ? "#10b981"
+                            : record.status === "Rejected"
+                            ? "#ef4444"
+                            : record.status === "Pending"
+                            ? "#f59e0b"
+                            : "#6b7280"
+                        }">${record.status}</span></td>
+                        <td>${record.date}</td>
+                      </tr>
+                    `
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+      
+      printWindow.document.open();
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.print();
+    };
+  };
+
+  const [isPrintHovered, setIsPrintHovered] = useState(false);
+
   return (
     <Sidebar>
       <ToastContainer position="top-right" autoClose={3000} />
       <div className="records-container">
-      <div className="dashboard-header">
+        <div className="dashboard-header">
           <h1>Medicine Request Records</h1>
-          <p className="dashboard-date">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          <p className="dashboard-date">
+            {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+          </p>
+        </div>
+
+        {/* Controls Row - Filter and Print Button */}
+        <div style={styles.controlsRow}>
+          {/* Month Filter */}
+          <div style={styles.filterContainer}>
+            <label style={styles.filterLabel}>Select Month:</label>
+            <select
+              onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+              value={selectedMonth || ""}
+              style={styles.monthSelect}
+            >
+              <option value="">--Select Month--</option>
+              {months.map((month, index) => (
+                <option key={index} value={month.value}>
+                  {month.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Print Button */}
+          <button 
+            onClick={handlePrint} 
+            style={isPrintHovered ? {...styles.printButton, ...styles.printButtonHover} : styles.printButton}
+            onMouseEnter={() => setIsPrintHovered(true)}
+            onMouseLeave={() => setIsPrintHovered(false)}
+          >
+            <FaPrint style={styles.printIcon} /> Print Records
+          </button>
         </div>
 
         <div className="card">
@@ -103,40 +391,19 @@ const Record = () => {
             <table className="records-table">
               <thead>
                 <tr>
-                  <th className="table-head" style={{ width: "100px" }}>
-                    Employee ID
-                  </th>
-                  <th className="table-head" style={{ width: "150px" }}>
-                    Name
-                  </th>
-                  <th className="table-head" style={{ width: "120px" }}>
-                    Gender
-                  </th>
-                  <th className="table-head" style={{ width: "120px" }}>
-                    Medicine
-                  </th>
-                  <th className="table-head" style={{ width: "150px" }}>
-                    Complaint
-                  </th>
-                  <th className="table-head" style={{ width: "100px" }}>
-                    Status
-                  </th>
-                  <th className="table-head" style={{ width: "150px" }}>
-                    Date
-                  </th>
-                  <th className="table-head" style={{ width: "100px" }}>
-                    Actions
-                  </th>
+                  <th className="table-head" style={{ width: "100px" }}>Employee ID</th>
+                  <th className="table-head" style={{ width: "150px" }}>Name</th>
+                  <th className="table-head" style={{ width: "120px" }}>Gender</th>
+                  <th className="table-head" style={{ width: "120px" }}>Medicine</th>
+                  <th className="table-head" style={{ width: "150px" }}>Complaint</th>
+                  <th className="table-head" style={{ width: "100px" }}>Status</th>
+                  <th className="table-head" style={{ width: "150px" }}>Date</th>
+                  <th className="table-head" style={{ width: "100px" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {records.map((record, index) => (
-                  <tr
-                    key={record.id}
-                    className={`table-row ${
-                      index % 2 === 0 ? "even-row" : "odd-row"
-                    }`}
-                  >
+                  <tr key={record.id} className={`table-row ${index % 2 === 0 ? "even-row" : "odd-row"}`}>
                     <td className="table-cell">{record.employeeID}</td>
                     <td className="table-cell">{record.fullName}</td>
                     <td className="table-cell">{record.gender}</td>
@@ -164,33 +431,17 @@ const Record = () => {
                     <td className="table-cell">{record.date}</td>
                     <td className="action-cell">
                       <button
-                        className={`icon-button ${
-                          hoveredRecord === record.id && hoveredIcon === "view"
-                            ? "button-hover"
-                            : ""
-                        }`}
-                        onMouseEnter={() => {
-                          setHoveredRecord(record.id);
-                          setHoveredIcon("view");
-                        }}
+                        className={`icon-button ${hoveredRecord === record.id && hoveredIcon === "view" ? "button-hover" : ""}`}
+                        onMouseEnter={() => { setHoveredRecord(record.id); setHoveredIcon("view"); }}
                         onMouseLeave={() => setHoveredIcon(null)}
                         onClick={() => handleView(record)}
                         title="View Details"
                       >
                         <FaEye />
                       </button>
-
                       <button
-                        className={`icon-button ${
-                          hoveredRecord === record.id &&
-                          hoveredIcon === "delete"
-                            ? "button-hover"
-                            : ""
-                        }`}
-                        onMouseEnter={() => {
-                          setHoveredRecord(record.id);
-                          setHoveredIcon("delete");
-                        }}
+                        className={`icon-button ${hoveredRecord === record.id && hoveredIcon === "delete" ? "button-hover" : ""}`}
+                        onMouseEnter={() => { setHoveredRecord(record.id); setHoveredIcon("delete"); }}
                         onMouseLeave={() => setHoveredIcon(null)}
                         onClick={() => handleDelete(record)}
                         title="Delete"
@@ -211,167 +462,59 @@ const Record = () => {
         <div className="record-modal" onClick={() => setModalVisible(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h2>Medicine Request Details</h2>
-
-            {/* Name Row */}
+            {/* Modal Content */}
             <div className="form-row">
               <div className="third-width">
                 <div className="form-group">
                   <label>First Name:</label>
-                  <input
-                    type="text"
-                    value={selectedRecord.firstname}
-                    className="record-input"
-                    disabled
-                  />
+                  <input type="text" value={selectedRecord.firstname} className="record-input" disabled />
                 </div>
               </div>
               <div className="third-width">
                 <div className="form-group">
                   <label>Middle Initial:</label>
-                  <input
-                    type="text"
-                    value={selectedRecord.middleInitial}
-                    className="record-input"
-                    disabled
-                  />
+                  <input type="text" value={selectedRecord.middleInitial} className="record-input" disabled />
                 </div>
               </div>
               <div className="third-width">
                 <div className="form-group">
                   <label>Last Name:</label>
-                  <input
-                    type="text"
-                    value={selectedRecord.lastname}
-                    className="record-input"
-                    disabled
-                  />
+                  <input type="text" value={selectedRecord.lastname} className="record-input" disabled />
                 </div>
               </div>
             </div>
-
-            {/* Employee ID & Gender */}
+            {/* Gender and Medicine Row */}
             <div className="form-row">
-              <div className="half-width">
-                <div className="form-group">
-                  <label>Employee ID:</label>
-                  <input
-                    type="text"
-                    value={selectedRecord.employeeID}
-                    className="record-input"
-                    disabled
-                  />
-                </div>
-              </div>
               <div className="half-width">
                 <div className="form-group">
                   <label>Gender:</label>
-                  <input
-                    type="text"
-                    value={selectedRecord.gender}
-                    className="record-input"
-                    disabled
-                  />
+                  <input type="text" value={selectedRecord.gender} className="record-input" disabled />
                 </div>
               </div>
-            </div>
-
-            {/* Medicine & Complaint */}
-            <div className="form-row">
               <div className="half-width">
                 <div className="form-group">
                   <label>Medicine:</label>
-                  <input
-                    type="text"
-                    value={selectedRecord.medicine}
-                    className="record-input"
-                    disabled
-                  />
+                  <input type="text" value={selectedRecord.medicine} className="record-input" disabled />
                 </div>
               </div>
+            </div>
+            {/* Complaint, Date, and Notes Row */}
+            <div className="form-row">
               <div className="half-width">
                 <div className="form-group">
                   <label>Complaint:</label>
-                  <input
-                    type="text"
-                    value={selectedRecord.complaint}
-                    className="record-input"
-                    disabled
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Status & Date Submitted */}
-            <div className="form-row">
-              <div className="half-width">
-                <div className="form-group">
-                  <label>Status:</label>
-                  <input
-                    type="text"
-                    value={selectedRecord.status}
-                    className="record-input status-input"
-                    style={{
-                      backgroundColor:
-                        selectedRecord.status === "Approved"
-                          ? "#dcfce7"
-                          : selectedRecord.status === "Completed"
-                          ? "#dcfce7"
-                          : selectedRecord.status === "Rejected"
-                          ? "#fee2e2"
-                          : selectedRecord.status === "Pending"
-                          ? "#fef3c7"
-                          : "#f3f4f6",
-                      color:
-                        selectedRecord.status === "Approved"
-                          ? "#166534"
-                          : selectedRecord.status === "Completed"
-                          ? "#166534"
-                          : selectedRecord.status === "Rejected"
-                          ? "#991b1b"
-                          : selectedRecord.status === "Pending"
-                          ? "#92400e"
-                          : "#374151",
-                    }}
-                    disabled
-                  />
+                  <input type="text" value={selectedRecord.complaint} className="record-input" disabled />
                 </div>
               </div>
               <div className="half-width">
-                <div className="form-group">
-                  <label>Date Submitted:</label>
-                  <input
-                    type="text"
-                    value={selectedRecord.date}
-                    className="record-input"
-                    disabled
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Additional Notes */}
-            <div className="form-row">
-              <div className="full-width">
                 <div className="form-group">
                   <label>Additional Notes:</label>
-                  <textarea
-                    value={selectedRecord.additionalNotes}
-                    className="record-textarea"
-                    disabled
-                    rows={2}
-                  />
+                  <textarea value={selectedRecord.additionalNotes} className="record-input" disabled />
                 </div>
               </div>
             </div>
 
-            <div className="button-container">
-              <button
-                onClick={() => setModalVisible(false)}
-                className="close-button"
-              >
-                Close
-              </button>
-            </div>
+            <button onClick={() => setModalVisible(false)} className="close-modal-btn">Close</button>
           </div>
         </div>
       )}
