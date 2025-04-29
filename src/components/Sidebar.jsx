@@ -24,7 +24,7 @@ const sidebarLinks = [
   { to: "/manage-user", icon: <FiUsers />, label: "User Management" },
   { to: "/records", icon: <FiBell />, label: "Records" },
   { to: "/requestmedicine", icon: <FiBell />, label: "Request Medicine" },
-  { to: "/settings", icon: <FiSettings />, label: "Settings" },
+  { to: "/reports", icon: <FiSettings />, label: "Reports" },
 ];
 
 const Sidebar = ({ children }) => {
