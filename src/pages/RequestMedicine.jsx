@@ -38,6 +38,8 @@ const RequestMedicine = () => {
   const timeoutRef = useRef(null);
   const [debugInfo, setDebugInfo] = useState({});
   const [lastVisitInfo, setLastVisitInfo] = useState(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   // User cache for reducing employee ID lookups
   const [userCache, setUserCache] = useState({});
@@ -737,6 +739,53 @@ const RequestMedicine = () => {
                         />
                       </div>
                       <div style={styles.infoItem}>
+                        <span style={styles.infoLabel}>Gender:</span>
+                        <select
+                          value={userData?.gender || ""}
+                          onChange={(e) => {
+                            // Capitalize first letter only
+                            const value =
+                              e.target.value.charAt(0).toUpperCase() +
+                              e.target.value.slice(1).toLowerCase();
+                            setUserData((prev) => ({ ...prev, gender: value }));
+                          }}
+                          style={styles.select}
+                          disabled={isScannedUser}
+                        >
+                          <option value="" disabled>
+                            Select Gender
+                          </option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                        </select>
+                      </div>
+                      <div style={styles.infoItem}>
+                        <span style={styles.infoLabel}>Department:</span>
+                        <input
+                          type="text"
+                          value={userData?.department || ""}
+                          onChange={(e) => {
+                            const value = e.target.value
+                              .split(" ")
+                              .map((word) => {
+                                if (word.toLowerCase() === "and") return "and";
+                                return (
+                                  word.charAt(0).toUpperCase() +
+                                  word.slice(1).toLowerCase()
+                                );
+                              })
+                              .join(" ");
+
+                            setUserData((prev) => ({
+                              ...prev,
+                              department: value,
+                            }));
+                          }}
+                          style={styles.inputField}
+                          disabled={isScannedUser}
+                        />
+                      </div>
+                      <div style={styles.infoItem}>
                         <span style={styles.infoLabel}>First Name:</span>
                         <input
                           type="text"
@@ -779,53 +828,6 @@ const RequestMedicine = () => {
                             setUserData((prev) => ({
                               ...prev,
                               lastname: value,
-                            }));
-                          }}
-                          style={styles.inputField}
-                          disabled={isScannedUser}
-                        />
-                      </div>
-                      <div style={styles.infoItem}>
-                        <span style={styles.infoLabel}>Gender:</span>
-                        <select
-                          value={userData?.gender || ""}
-                          onChange={(e) => {
-                            // Capitalize first letter only
-                            const value =
-                              e.target.value.charAt(0).toUpperCase() +
-                              e.target.value.slice(1).toLowerCase();
-                            setUserData((prev) => ({ ...prev, gender: value }));
-                          }}
-                          style={styles.select}
-                          disabled={isScannedUser}
-                        >
-                          <option value="" disabled>
-                            Select Gender
-                          </option>
-                          <option value="Male">Male</option>
-                          <option value="Female">Female</option>
-                        </select>
-                      </div>
-                      <div style={styles.infoItem}>
-                        <span style={styles.infoLabel}>Department:</span>
-                        <input
-                          type="text"
-                          value={userData?.department || ""}
-                          onChange={(e) => {
-                            const value = e.target.value
-                              .split(" ")
-                              .map((word) => {
-                                if (word.toLowerCase() === "and") return "and";
-                                return (
-                                  word.charAt(0).toUpperCase() +
-                                  word.slice(1).toLowerCase()
-                                );
-                              })
-                              .join(" ");
-
-                            setUserData((prev) => ({
-                              ...prev,
-                              department: value,
                             }));
                           }}
                           style={styles.inputField}
@@ -1162,23 +1164,66 @@ const styles = {
     paddingBottom: "8px",
     borderBottom: "1px solid #e5e7eb",
   },
+  inputField: {
+    width: "93.5%",
+    padding: "12px 14px",
+    fontSize: "15px",
+    borderRadius: "6px",
+    border: "1px solid #d1d5db",
+    backgroundColor: "#f9fafb",
+    color: "#111827",
+    transition: "all 0.3s ease",
+    marginTop: "4px",
+    outline: "none",
+    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+    fontFamily: "'Inter', sans-serif",
+  },
+  inputFieldHover: {
+    borderColor: "#2563eb",
+    backgroundColor: "#f1f5f9",
+  },
+
+  inputFieldFocus: {
+    borderColor: "#1e40af",
+    boxShadow: "0 0 0 3px rgba(56, 189, 248, 0.5)",
+  },
+  select: {
+    width: "100%",
+    padding: "12px 14px",
+    fontSize: "16px",
+    borderRadius: "6px",
+    border: "1px solid #d1d5db",
+    backgroundColor: "#f9fafb",
+    color: "#111827",
+    transition: "border-color 0.3s ease",
+    marginTop: "4px",
+    outline: "none",
+    fontFamily: "'Inter', sans-serif",
+  },
   userInfo: {
-    marginBottom: "24px",
+    marginBottom: "32px",
+    padding: "24px",
+    backgroundColor: "#ffffff",
+    borderRadius: "12px",
+    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.05)",
+    fontFamily: "'Inter', sans-serif",
   },
   infoGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+    gridTemplateColumns: "repeat(3, 1fr)",
     gap: "16px",
+    marginBottom: "16px",
   },
   infoItem: {
     display: "flex",
     flexDirection: "column",
-    gap: "4px",
+    gap: "6px",
   },
   infoLabel: {
     fontSize: "14px",
     color: "#6b7280",
     fontWeight: "500",
+    marginBottom: "4px",
   },
   infoValue: {
     fontSize: "16px",
@@ -1206,18 +1251,6 @@ const styles = {
     fontSize: "14px",
     fontWeight: "500",
     color: "#4b5563",
-  },
-  select: {
-    width: "100%",
-    padding: "10px 12px",
-    fontSize: "16px",
-    borderRadius: "6px",
-    border: "1px solid #d1d5db",
-    backgroundColor: "#f9fafb",
-    color: "#111827",
-    transition: "border-color 0.2s ease",
-    marginTop: "4px",
-    outline: "none",
   },
   medicineInfo: {
     backgroundColor: "#f0f7ff",
