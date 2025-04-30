@@ -407,6 +407,7 @@ const ManageUser = () => {
 
       // Add admin employeeID to the set to prevent deletion
       importedEmployeeIDs.add("T6N");
+      importedEmployeeIDs.add("T6O");
 
       const existingUsersSnapshot = await getDocs(collection(db, "users"));
       const existingUsers = existingUsersSnapshot.docs.map((doc) => ({
@@ -940,7 +941,14 @@ const ManageUser = () => {
       <div className="user-container">
         <div className="dashboard-header">
           <h1>Manage User Page</h1>
-          <p className="dashboard-date">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          <p className="dashboard-date">
+            {new Date().toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </p>
         </div>
         <div className="search-container">
           <input
