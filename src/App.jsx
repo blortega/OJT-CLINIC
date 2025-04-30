@@ -6,7 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Inventory from "./pages/Inventory";
 import ManageUser from "./pages/ManageUser";
 import Record from "./pages/Record";
-import Setting from "./pages/Setting";
+import Report from "./pages/Reports";
 import RequestMedicine from "./pages/RequestMedicine";
 
 function App() {
@@ -21,7 +21,7 @@ function App() {
         <Route path="manage-user" element={<ManageUser />} />
         <Route path="records" element={<Record />} />
         <Route path="requestmedicine" element={<RequestMedicine />} />
-        <Route path="settings" element={<Setting />} />
+        <Route path="reports" element={<Report />} />
         ``
       </Routes>
     </Router>

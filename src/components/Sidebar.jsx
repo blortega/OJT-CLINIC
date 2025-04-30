@@ -10,6 +10,10 @@ import {
   FiChevronDown,
   FiUser,
   FiLogOut,
+  FiShoppingCart,
+  FiFileText,
+  FiPackage,
+  FiGrid,
 } from "react-icons/fi";
 import { NavLink, useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
@@ -19,12 +23,12 @@ import { db } from "../firebase";
 import { RingLoader } from "react-spinners"; // Import a spinner component
 
 const sidebarLinks = [
-  { to: "/dashboard", icon: <FiBarChart2 />, label: "Dashboard" },
-  { to: "/inventory", icon: <FiClipboard />, label: "Inventory" },
+  { to: "/dashboard", icon: <FiGrid />, label: "Dashboard" },
+  { to: "/inventory", icon: <FiPackage />, label: "Inventory" },
   { to: "/manage-user", icon: <FiUsers />, label: "User Management" },
-  { to: "/records", icon: <FiBell />, label: "Records" },
-  { to: "/requestmedicine", icon: <FiBell />, label: "Request Medicine" },
-  { to: "/settings", icon: <FiSettings />, label: "Settings" },
+  { to: "/records", icon: <FiFileText />, label: "Records" },
+  { to: "/requestmedicine", icon: <FiShoppingCart />, label: "Request Medicine" },
+  { to: "/reports", icon: <FiBarChart2 />, label: "Reports" },
 ];
 
 const Sidebar = ({ children }) => {
