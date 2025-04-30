@@ -490,6 +490,9 @@ const Record = () => {
             <table className="records-table">
               <thead>
                 <tr>
+                  <th className="table-head" style={{ width: "60px" }}>
+                    No.
+                  </th>
                   <th className="table-head" style={{ width: "100px" }}>
                     Employee ID
                   </th>
@@ -525,6 +528,7 @@ const Record = () => {
                         index % 2 === 0 ? "even-row" : "odd-row"
                       }`}
                     >
+                      <td className="table-cell">{index + 1}</td>
                       <td className="table-cell">{record.employeeID}</td>
                       <td className="table-cell">{record.fullName}</td>
                       <td className="table-cell">{record.gender}</td>
@@ -591,7 +595,7 @@ const Record = () => {
                 ) : (
                   <tr>
                     <td
-                      colSpan="8"
+                      colSpan="9"
                       style={{ textAlign: "center", padding: "20px" }}
                     >
                       No records found for the selected filters.
