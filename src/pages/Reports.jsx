@@ -194,14 +194,20 @@ const Reports = () => {
 
   return (
     <Sidebar>
-  <div style={styles.pageWrapper}>
-    {/* Header */}
-    <div style={styles.header}>
-      <h1 style={styles.headerTitle}>Reports Page</h1>
-      <p style={styles.headerSubtitle}>
-        View and analyze medicine requests and patient complaints
-      </p>
-    </div>
+      <div style={styles.container}>
+              <div style={styles.dashboardContainer}>
+        <div style={styles.dashboardHeader}>
+          <h1 style={styles.dashboardTitle}>Reports</h1>
+          <p style={styles.dashboardDate}>
+            {new Date().toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </p>
+        </div>
+      </div>
 
     {/* Content */}
     <div style={styles.content}>
@@ -427,9 +433,35 @@ const Reports = () => {
 
 // Add this at the top of your file
 const styles = {
+  container: {
+    padding: "24px",
+    textAlign: "center",
+    backgroundColor: "#f8fafc",
+    minHeight: '100vh',
+  },
   pageWrapper: {
     backgroundColor: '#f7fafc',
     minHeight: '100vh',
+  },
+  dashboardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '24px',
+    paddingBottom: '12px',
+    borderBottom: '1px solid #e0e4e8',
+  },
+  dashboardTitle: {
+    fontSize: '24px',
+    fontWeight: 600,
+    color: '#2563eb',
+    margin: 0,
+  },
+  dashboardDate: {
+    color: '#7f8c8d',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    margin: 0,
   },
   header: {
     background: 'linear-gradient(to right, #3182ce, #2b6cb0)',
@@ -474,6 +506,8 @@ const styles = {
     border: '1px solid #cbd5e0',
     borderRadius: '6px',
     outline: 'none',
+    backgroundColor: 'white',
+    color: 'black',
   },
   buttonPrimary: {
     backgroundColor: '#3182ce',
