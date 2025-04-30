@@ -271,6 +271,7 @@ const Record = () => {
             <table>
               <thead>
                 <tr>
+                <th>No.</th>
                   <th>Employee ID</th>
                   <th>Name</th>
                   <th>Gender</th>
@@ -283,8 +284,9 @@ const Record = () => {
               <tbody>
                 ${records
                   .map(
-                    (record) => `
-                      <tr>
+                    (record, index) => `
+                    <tr>
+                      <td>${index + 1}</td>
                         <td>${record.employeeID}</td>
                         <td>${record.fullName}</td>
                         <td>${record.gender}</td>
@@ -339,66 +341,6 @@ const Record = () => {
       } else if (selectedYear) {
         reportTitle = `Medicine Request Records - ${selectedYear}`;
       }
-
-      const printContent = `
-        <html>
-          <head>
-            <title>Print Records</title>
-            <style>
-              body { font-family: Arial, sans-serif; }
-              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background-color: #f2f2f2; }
-              .status-badge { padding: 3px 8px; color: white; font-size: 12px; }
-              .print-date { font-size: 12px; color: #666; margin-top: 5px; }
-            </style>
-          </head>
-          <body>
-            <h2>${reportTitle}</h2>
-            <p class="print-date">Printed on: ${new Date().toLocaleDateString()}</p>
-            <table>
-              <thead>
-                <tr>
-                  <th>Employee ID</th>
-                  <th>Name</th>
-                  <th>Gender</th>
-                  <th>Medicine</th>
-                  <th>Complaint</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${records
-                  .map(
-                    (record) => `
-                      <tr>
-                        <td>${record.employeeID}</td>
-                        <td>${record.fullName}</td>
-                        <td>${record.gender}</td>
-                        <td>${record.medicine}</td>
-                        <td>${record.complaint}</td>
-                        <td><span class="status-badge" style="background-color: ${
-                          record.status === "Approved"
-                            ? "#10b981"
-                            : record.status === "Completed"
-                            ? "#10b981"
-                            : record.status === "Rejected"
-                            ? "#ef4444"
-                            : record.status === "Pending"
-                            ? "#f59e0b"
-                            : "#6b7280"
-                        }">${record.status}</span></td>
-                        <td>${record.date}</td>
-                      </tr>
-                    `
-                  )
-                  .join("")}
-              </tbody>
-            </table>
-          </body>
-        </html>
-      `;
 
       printWindow.document.open();
       printWindow.document.write(printContent);
