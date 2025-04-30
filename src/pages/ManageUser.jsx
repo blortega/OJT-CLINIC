@@ -994,6 +994,9 @@ const ManageUser = () => {
             <table className="user-table">
               <thead>
                 <tr>
+                  <th className="table-head" style={{ width: "60px" }}>
+                    No.
+                  </th>
                   <th className="table-head" style={{ width: "120px" }}>
                     Employee ID
                   </th>
@@ -1030,6 +1033,7 @@ const ManageUser = () => {
                         : {}
                     }
                   >
+                    <td className="table-cell">{index + 1}</td>
                     <td className="table-cell">
                       {user.employeeID || "Not Available"}
                     </td>
