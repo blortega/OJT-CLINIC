@@ -8,11 +8,17 @@
 
 .dashboard-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: 24px;
   padding-bottom: 12px;
   border-bottom: 1px solid #e0e4e8;
+}
+
+.dashboard-subheader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
 }
 
 .dashboard-header h1 {
@@ -27,6 +33,13 @@
   font-size: 14px;
   font-weight: bold;
   margin: 0;
+}
+
+.report-title {
+  font-size: 18px;
+  color: #2563eb;
+  margin: 0.5rem 0;
+  font-weight: 600;
 }
 
 .alert-section {
@@ -115,11 +128,69 @@
   margin: 0;
 }
 
-/* Responsive adjustments */
-@media (max-width: 1100px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
+/* Month selector styling */
+.month-selector {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 1rem 0;
+  gap: 1rem;
+  background-color: white;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.selector-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.selector-dropdown {
+  padding: 0.5rem;
+  border: 1px solid #e0e4e8;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 0.9rem;
+  min-width: 120px;
+  cursor: pointer;
+  color: #2c3e50;
+}
+
+.selector-dropdown:hover {
+  border-color: #2563eb;
+}
+
+.selector-container label {
+  font-weight: 600;
+  color: #34495e;
+  font-size: 0.9rem;
+}
+
+.monthly-stats {
+  display: flex;
+  margin-left: auto;
+  gap: 1rem;
+}
+
+.stat-box {
+  background-color: #eef2ff;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border-left: 3px solid #2563eb;
+}
+
+.stat-label {
+  font-weight: 600;
+  margin-right: 0.5rem;
+  color: #34495e;
+}
+
+.stat-value {
+  font-weight: 700;
+  color: #2563eb;
 }
 
 /* Inventory Alert styling */
@@ -180,4 +251,30 @@
   font-size: 12px;
   color: #7f8c8d;
   margin-top: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1100px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-subheader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .month-selector {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .monthly-stats {
+    margin-left: 0;
+    margin-top: 1rem;
+    width: 100%;
+  }
 }

@@ -282,6 +282,14 @@
   border: 1px solid #ccc;
   margin-top: 8px;
   box-sizing: border-box;
+  background-color: #ffffff;
+  color: #000000;
+}
+.user-input:disabled,
+.user-select:disabled {
+  background-color: #fafafa;
+  cursor: not-allowed;
+  color: #555555;
 }
 
 .user-input:focus,
