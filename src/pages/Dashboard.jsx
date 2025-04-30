@@ -450,9 +450,9 @@ const Dashboard = () => {
           <PieChart>
             <Pie
               data={data}
-              cx="50%"
-              cy="45%" // Moved up slightly to give more room for labels
-              outerRadius={80} // Reduced slightly to provide more space
+              cx="48%"
+              cy="50%" // Moved up slightly to give more room for labels
+              outerRadius={70} // Reduced slightly to provide more space
               dataKey="value"
               labelLine={true} // Enable label lines
               label={({ name, value, percent }) =>
