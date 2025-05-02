@@ -405,18 +405,18 @@ const ManageUser = () => {
         users.map((user) => user.employeeID.toUpperCase())
       );
 
-      // Add admin employeeID to the set to prevent deletion
-      importedEmployeeIDs.add("T6N");
-      importedEmployeeIDs.add("T6O");
-
       const existingUsersSnapshot = await getDocs(collection(db, "users"));
       const existingUsers = existingUsersSnapshot.docs.map((doc) => ({
         id: doc.id,
         employeeID: doc.data().employeeID,
+        role: doc.data().role,
       }));
 
+      // Filter users to delete: not in imported list AND not an Admin
       const usersToDelete = existingUsers.filter(
-        (user) => !importedEmployeeIDs.has(user.employeeID?.toUpperCase())
+        (user) =>
+          !importedEmployeeIDs.has(user.employeeID?.toUpperCase()) &&
+          user.role !== "Admin"
       );
 
       // Update in-memory state to track what's being deleted
@@ -440,6 +440,18 @@ const ManageUser = () => {
         try {
           const userRef = doc(db, "users", user.employeeID);
 
+          // Check if this is an existing user who might be an Admin
+          const existingUser = existingUsers.find(
+            (eu) =>
+              eu.employeeID?.toUpperCase() === user.employeeID?.toUpperCase()
+          );
+
+          // If user exists and is an Admin, preserve Admin role
+          const role =
+            existingUser && existingUser.role === "Admin"
+              ? "Admin"
+              : "Employee";
+
           const userData = {
             employeeID: user.employeeID,
             firstname: user.firstname,
@@ -447,7 +459,7 @@ const ManageUser = () => {
             lastname: user.lastname,
             designation: user.designation,
             department: user.department,
-            role: "Employee",
+            role: role, // Use preserved role or default to Employee
             gender: user.gender,
             dob: user.dob ? Timestamp.fromDate(user.dob) : null,
             createdAt: serverTimestamp(),
@@ -488,11 +500,11 @@ const ManageUser = () => {
 
       if (errorCount === 0) {
         toast.success(
-          `Successfully processed ${successCount} employees and removed ${removedCount} employees not in the uploaded file.`
+          `Successfully processed ${successCount} employees and removed ${removedCount} employees not in the uploaded file (Admin users preserved).`
         );
       } else {
         toast.warning(
-          `Added ${successCount} employees, removed ${removedCount} employees, with ${errorCount} errors`
+          `Added ${successCount} employees, removed ${removedCount} employees (Admin users preserved), with ${errorCount} errors`
         );
       }
     } catch (error) {
@@ -652,7 +664,7 @@ const ManageUser = () => {
   const handleDeleteAll = async () => {
     if (
       !window.confirm(
-        `Are you sure you want to delete all users except the one with employeeID 'T6N'? This action cannot be undone.`
+        `Are you sure you want to delete all non-Admin users? This action cannot be undone.`
       )
     ) {
       return;
@@ -667,7 +679,8 @@ const ManageUser = () => {
 
       snapshot.forEach((docSnap) => {
         const data = docSnap.data();
-        if (data.employeeID !== "T6N") {
+        // Only include users who are NOT Admins for deletion
+        if (data.role !== "Admin") {
           usersToDelete.push(docSnap.id);
         }
       });
@@ -692,12 +705,17 @@ const ManageUser = () => {
         await batch.commit();
       }
 
-      // Update local state
-      const preservedUsers = users.filter((u) => u.employeeID === "T6N");
-      setUsers(preservedUsers);
-      saveToCache(preservedUsers);
+      // Update local state by getting remaining users (should be just Admins)
+      const remainingSnapshot = await getDocs(usersCollection);
+      const remainingUsers = remainingSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
-      toast.success("All users except T6N have been deleted.");
+      setUsers(remainingUsers);
+      saveToCache(remainingUsers);
+
+      toast.success("All non-Admin users have been deleted.");
     } catch (error) {
       console.error("Failed to delete users:", error);
       toast.error("Failed to delete users.");
@@ -958,8 +976,8 @@ const ManageUser = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value.trimStart())}
           />
-          <div className="button-container">
-            {/* Excel Upload Button */}
+          <div className="action-button-container">
+            {/* Excel Upload Button - Redesigned */}
             <label className="upload-button">
               <FiUpload className="upload-icon" />
               {isUploading ? "Uploading..." : "Upload Excel"}
@@ -971,18 +989,21 @@ const ManageUser = () => {
                 disabled={isUploading}
               />
             </label>
+
+            {/* Add Employee Button - Redesigned */}
+            <button className="add-user-button" onClick={() => handleAddUser()}>
+              <FiPlus className="add-icon" />
+              Add Employee
+            </button>
+
+            {/* Delete All Button - Redesigned */}
             <button
               className="delete-all-button"
               onClick={handleDeleteAll}
               disabled={isDeleting}
             >
               <FiTrash2 className="delete-icon" />
-              {isDeleting ? "Deleting..." : "Delete All Employee"}
-            </button>
-
-            <button className="add-user-button" onClick={() => handleAddUser()}>
-              <FiPlus className="add-icon" />
-              Add Employee
+              {isDeleting ? "Deleting..." : "Delete All"}
             </button>
           </div>
         </div>
@@ -1364,6 +1385,7 @@ const ManageUser = () => {
               </div>
             </div>
 
+            {/* Centered Save/Cancel buttons */}
             <div className="button-container">
               <button
                 onClick={handleSaveUser}
