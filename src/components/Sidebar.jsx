@@ -14,21 +14,53 @@ import {
   FiFileText,
   FiPackage,
   FiGrid,
+  FiLock,
 } from "react-icons/fi";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, Navigate } from "react-router-dom";
 import { auth } from "../firebase";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { RingLoader } from "react-spinners"; // Import a spinner component
 
+// Define the sidebar links with accessibility information
 const sidebarLinks = [
-  { to: "/dashboard", icon: <FiGrid />, label: "Dashboard" },
-  { to: "/inventory", icon: <FiPackage />, label: "Inventory" },
-  { to: "/manage-user", icon: <FiUsers />, label: "User Management" },
-  { to: "/records", icon: <FiFileText />, label: "Records" },
-  { to: "/requestmedicine", icon: <FiShoppingCart />, label: "Request Medicine" },
-  { to: "/reports", icon: <FiBarChart2 />, label: "Reports" },
+  {
+    to: "/dashboard",
+    icon: <FiGrid />,
+    label: "Dashboard",
+    guestAccess: false,
+  },
+  {
+    to: "/inventory",
+    icon: <FiPackage />,
+    label: "Inventory",
+    guestAccess: false,
+  },
+  {
+    to: "/manage-user",
+    icon: <FiUsers />,
+    label: "User Management",
+    guestAccess: false,
+  },
+  {
+    to: "/records",
+    icon: <FiFileText />,
+    label: "Records",
+    guestAccess: false,
+  },
+  {
+    to: "/requestmedicine",
+    icon: <FiShoppingCart />,
+    label: "Request Medicine",
+    guestAccess: true,
+  },
+  {
+    to: "/reports",
+    icon: <FiBarChart2 />,
+    label: "Reports",
+    guestAccess: false,
+  },
 ];
 
 const Sidebar = ({ children }) => {
@@ -41,17 +73,28 @@ const Sidebar = ({ children }) => {
   const [hoveredLink, setHoveredLink] = useState("");
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const [isGuest, setIsGuest] = useState(false);
 
   useEffect(() => {
     const storedUserData = localStorage.getItem("userData");
     if (storedUserData) {
       try {
-        setUserData(JSON.parse(storedUserData));
+        const parsedUserData = JSON.parse(storedUserData);
+        setUserData(parsedUserData);
+        setIsGuest(parsedUserData.isGuest === true);
+
+        // If user is guest and not on request medicine page, redirect them
+        if (
+          parsedUserData.isGuest === true &&
+          window.location.pathname !== "/requestmedicine"
+        ) {
+          navigate("/requestmedicine");
+        }
       } catch (error) {
         console.error("Error parsing stored user data:", error);
       }
     }
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -62,6 +105,7 @@ const Sidebar = ({ children }) => {
           if (userDoc.exists()) {
             const userDataFromFirestore = userDoc.data();
             setUserData(userDataFromFirestore);
+            setIsGuest(false); // Regular authenticated user
             localStorage.setItem(
               "userData",
               JSON.stringify(userDataFromFirestore)
@@ -71,6 +115,7 @@ const Sidebar = ({ children }) => {
             const basicUserData = {
               firstname: user.displayName || "User",
               email: user.email,
+              isGuest: false,
             };
             setUserData(basicUserData);
             localStorage.setItem("userData", JSON.stringify(basicUserData));
@@ -80,6 +125,7 @@ const Sidebar = ({ children }) => {
           const basicUserData = {
             firstname: user.displayName || "User",
             email: user.email,
+            isGuest: false,
           };
           setUserData(basicUserData);
           localStorage.setItem("userData", JSON.stringify(basicUserData));
@@ -87,8 +133,20 @@ const Sidebar = ({ children }) => {
           setUserLoading(false);
         }
       } else {
-        setUserData(null);
-        localStorage.removeItem("userData");
+        // Check if there's guest data in localStorage
+        const storedData = localStorage.getItem("userData");
+        if (storedData) {
+          const parsedData = JSON.parse(storedData);
+          if (parsedData.isGuest) {
+            setUserData(parsedData);
+            setIsGuest(true);
+          } else {
+            setUserData(null);
+            localStorage.removeItem("userData");
+          }
+        } else {
+          setUserData(null);
+        }
         setUserLoading(false);
       }
     });
@@ -100,7 +158,10 @@ const Sidebar = ({ children }) => {
     setLoading(true);
     try {
       localStorage.removeItem("userData");
-      await signOut(auth);
+      // If the user is logged in with Firebase, sign them out
+      if (auth.currentUser) {
+        await signOut(auth);
+      }
       navigate("/");
     } catch (error) {
       console.error("Logout error:", error);
@@ -108,6 +169,26 @@ const Sidebar = ({ children }) => {
       setLoading(false);
     }
   };
+
+  // Component for locked navigation item
+  const LockedNavItem = ({ icon, label }) => (
+    <div
+      style={{
+        ...styles.sidebarLink,
+        ...styles.lockedLink,
+        ...(hoveredLink === label ? styles.lockedLinkHover : {}),
+      }}
+      onMouseEnter={() => setHoveredLink(label)}
+      onMouseLeave={() => setHoveredLink("")}
+    >
+      {icon}{" "}
+      {!isCollapsed && (
+        <>
+          {label} <FiLock style={styles.lockIcon} />
+        </>
+      )}
+    </div>
+  );
 
   return (
     <div style={styles.container}>
@@ -129,23 +210,31 @@ const Sidebar = ({ children }) => {
         </button>
 
         <nav style={styles.navLinks}>
-          {sidebarLinks.map(({ to, icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              style={({ isActive }) => ({
-                ...styles.sidebarLink,
-                ...(isActive ? styles.activeLink : {}),
-                ...(hoveredLink === to && !isActive
-                  ? styles.sidebarLinkHover
-                  : {}),
-              })}
-              onMouseEnter={() => setHoveredLink(to)}
-              onMouseLeave={() => setHoveredLink("")}
-            >
-              {icon} {!isCollapsed && label}
-            </NavLink>
-          ))}
+          {sidebarLinks.map(({ to, icon, label, guestAccess }) => {
+            // For guest users, render locked or accessible links
+            if (isGuest && !guestAccess) {
+              return <LockedNavItem key={label} icon={icon} label={label} />;
+            }
+
+            // For regular users or accessible guest links
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                style={({ isActive }) => ({
+                  ...styles.sidebarLink,
+                  ...(isActive ? styles.activeLink : {}),
+                  ...(hoveredLink === to && !isActive
+                    ? styles.sidebarLinkHover
+                    : {}),
+                })}
+                onMouseEnter={() => setHoveredLink(to)}
+                onMouseLeave={() => setHoveredLink("")}
+              >
+                {icon} {!isCollapsed && label}
+              </NavLink>
+            );
+          })}
         </nav>
 
         {/* User Dropdown */}
@@ -172,7 +261,7 @@ const Sidebar = ({ children }) => {
                       {userData ? userData.firstname : "Guest"}
                     </span>
                     <p style={styles.userEmail}>
-                      {userData ? userData.email : "guest@example.com"}
+                      {userData ? userData.email : "guest@guest.com"}
                     </p>
                   </>
                 )}
@@ -194,22 +283,26 @@ const Sidebar = ({ children }) => {
               opacity: showDropdown ? 1 : 0,
             }}
           >
-            <button
-              style={{
-                ...styles.dropdownItem,
-                ...(hoveredItem === "account" ? styles.dropdownItemHover : {}),
-              }}
-              onClick={() => navigate("/account")}
-              onMouseEnter={() => setHoveredItem("account")}
-              onMouseLeave={() => setHoveredItem("")}
-            >
-              {hoveredItem === "account" ? (
-                <FiUser style={styles.dropdownItemIconHover} />
-              ) : (
-                <FiUser />
-              )}
-              Account Settings
-            </button>
+            {!isGuest && (
+              <button
+                style={{
+                  ...styles.dropdownItem,
+                  ...(hoveredItem === "account"
+                    ? styles.dropdownItemHover
+                    : {}),
+                }}
+                onClick={() => navigate("/account")}
+                onMouseEnter={() => setHoveredItem("account")}
+                onMouseLeave={() => setHoveredItem("")}
+              >
+                {hoveredItem === "account" ? (
+                  <FiUser style={styles.dropdownItemIconHover} />
+                ) : (
+                  <FiUser />
+                )}
+                Account Settings
+              </button>
+            )}
             <button
               style={{
                 ...styles.dropdownItem,
@@ -229,7 +322,7 @@ const Sidebar = ({ children }) => {
                   ) : (
                     <FiLogOut />
                   )}
-                  Sign Out
+                  {isGuest ? "Exit Guest Mode" : "Sign Out"}
                 </>
               )}
             </button>
@@ -244,7 +337,11 @@ const Sidebar = ({ children }) => {
           marginLeft: isCollapsed ? "60px" : "250px",
         }}
       >
-        {children}
+        {isGuest && window.location.pathname !== "/requestmedicine" ? (
+          <Navigate to="/requestmedicine" replace />
+        ) : (
+          children
+        )}
       </main>
     </div>
   );
@@ -321,6 +418,24 @@ const styles = {
     backgroundColor: "#2d97e9",
     color: "white",
     fontWeight: "bold",
+  },
+  // Styles for locked links
+  lockedLink: {
+    color: "#aaa",
+    cursor: "not-allowed",
+    position: "relative",
+    backgroundColor: "#f8f8f8",
+    opacity: 0.7,
+  },
+  lockedLinkHover: {
+    backgroundColor: "#f0f0f0",
+    color: "#aaa",
+    transform: "translateX(0)",
+    boxShadow: "none",
+  },
+  lockIcon: {
+    marginLeft: "5px",
+    fontSize: "0.8rem",
   },
   userContainer: {
     position: "absolute",

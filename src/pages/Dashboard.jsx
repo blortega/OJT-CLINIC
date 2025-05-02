@@ -279,19 +279,14 @@ const Dashboard = () => {
 
   const fetchGenderData = async () => {
     try {
-      const requestsSnapshot = await getDocs(
-        collection(db, "medicineRequests")
-      );
+      const usersSnapshot = await getDocs(collection(db, "users"));
       let maleCount = 0;
       let femaleCount = 0;
 
-      requestsSnapshot.forEach((doc) => {
+      usersSnapshot.forEach((doc) => {
         const data = doc.data();
-
-        // Filter by selected month/year
-        if (!isInSelectedMonth(data.dateVisit)) return;
-
         const gender = data.gender;
+
         if (gender === "Male") {
           maleCount += 1;
         } else if (gender === "Female") {
@@ -582,7 +577,7 @@ const Dashboard = () => {
 
         <div className="dashboard-grid">
           <PieChartCard
-            title="Patient Gender Distribution"
+            title="Total Gender Distribution"
             data={genderData}
             colors={GENDER_COLORS}
             icon="👥"
