@@ -50,7 +50,15 @@ const Register = () => {
 
   return (
     <div className="register-container">
-      <h2 className="register-title">Create an Account</h2>
+      <div className="register-header">
+  <button className="back-btn" onClick={() => navigate("/")}>
+    ← Back
+  </button>
+  <h2 className="register-title">Create an Account</h2>
+</div>
+
+{error && <p className="error-message">{error}</p>}
+
       {error && <p className="error-message">{error}</p>}
       <form className="register-form" onSubmit={(e) => e.preventDefault()}>
         <div className="form-group">

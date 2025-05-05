@@ -166,6 +166,9 @@ function Login() {
           <Link to="/register" className="forgotPassword">
             Forgot password?
           </Link>
+          <Link to="/register" className="forgotPassword">
+            Register
+          </Link>
         </div>
 
         <div className="button-container">
