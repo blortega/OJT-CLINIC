@@ -190,44 +190,69 @@ const Inventory = () => {
   
 
   const handleAddComplaint = async (complaintText, selectedMedicineId) => {
-    try {
-      const db = getFirestore(app);
-  
-      // 1. Find the selected medicine object
-      const selectedMed = medicines.find((m) => m.id === selectedMedicineId);
-      if (!selectedMed) {
-        toast.error("Selected medicine not found.");
-        return;
-      }
-  
-      // 2. Store complaint with proper medicineName
-      const complaintsRef = collection(db, "complaints");
-      await addDoc(complaintsRef, {
-        name: complaintText,
-        medicineName: selectedMed.name, // ✅ store actual medicine name
-        createdAt: serverTimestamp(),
-      });
-  
-      // 3. Update the medicine document to include the complaint name, not the ID
-      const medicineRef = doc(db, "medicine", selectedMedicineId);
-      const updatedMedication = [...(selectedMed.medication || []), complaintText]; // ✅ store complaint name, not ID
-  
-      await updateDoc(medicineRef, {
-        medication: updatedMedication,
-      });
-  
-      toast.success("Complaint added and medicine updated!");
-  
-      // 4. Refresh complaints and medicines
-      await refetchComplaints();
-      fetchMedicines(); // You already have this defined
-  
-    } catch (err) {
-      toast.error("Failed to add complaint");
-      console.error("Error adding complaint: ", err);
+  try {
+    // 0. Defensive check inputs
+    if (!complaintText || !selectedMedicineId) {
+      toast.error("Please provide complaint text and select a medicine.");
+      return;
     }
-  };
-  
+
+    // Check if complaint already exists for this medicine
+    const complaintExists = existingComplaints.some((c) => {
+      const existingName = (c.name || "").toLowerCase().trim();
+      const selectedName = complaintText.toLowerCase().trim();
+      const existingMedName = (c.medicineName || "").toLowerCase().trim();
+
+      // Find medicine name of the selected medicine to compare
+      const selectedMed = medicines.find((m) => m.id === selectedMedicineId);
+      if (!selectedMed) return false;
+      const selectedMedName = selectedMed.name.toLowerCase().trim();
+
+      return existingName === selectedName && existingMedName === selectedMedName;
+    });
+
+    if (complaintExists) {
+      toast.error("This complaint already exists for the selected medicine.");
+      return; // stop here, don’t add duplicate
+    }
+
+    const db = getFirestore(app);
+
+    // 1. Find the selected medicine object
+    const selectedMed = medicines.find((m) => m.id === selectedMedicineId);
+    if (!selectedMed) {
+      toast.error("Selected medicine not found.");
+      return;
+    }
+
+    // 2. Store complaint with proper medicineName
+    const complaintsRef = collection(db, "complaints");
+    await addDoc(complaintsRef, {
+      name: complaintText,
+      medicineName: selectedMed.name,
+      createdAt: serverTimestamp(),
+    });
+
+    // 3. Update the medicine document to include the complaint name
+    const medicineRef = doc(db, "medicine", selectedMedicineId);
+    const updatedMedication = [...(selectedMed.medication || []), complaintText];
+
+    await updateDoc(medicineRef, {
+      medication: updatedMedication,
+    });
+
+    toast.success("Complaint added and medicine updated!");
+
+    // 4. Refresh complaints and medicines
+    await refetchComplaints();
+    fetchMedicines();
+
+  } catch (err) {
+    toast.error("Failed to add complaint");
+    console.error("Error adding complaint: ", err);
+  }
+};
+
 
   
   
@@ -465,7 +490,8 @@ const Inventory = () => {
           <AddComplaints
             onClose={() => setIsComplaintModalOpen(false)} // Close the modal
             onAddComplaint= {handleAddComplaint}
-            medicines={medicines} // Pass the handler
+            medicines={medicines} 
+            existingComplaints={complaints}// Pass the handler
           />
         )}
         {/* Medicine List */}
